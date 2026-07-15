@@ -1,0 +1,12 @@
+node_modules
+.svelte-kit
+.vercel
+.env
+.env.local
+.env.*
+!.env.example
+graphify-output
+graphify.py
+.agents
+test-results
+playwright-report
