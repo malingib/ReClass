@@ -28,11 +28,24 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.role = null;
   event.locals.tenantId = null;
 
-  const { data: { session } } = await sb.auth.getSession();
+  let session: import('@supabase/supabase-js').Session | null = null;
+  try {
+    const { data: { session: s } } = await sb.auth.getSession();
+    session = s;
+  } catch {
+    // stale session cookie — treat as unauthenticated
+  }
   event.locals.session = session;
 
-  const { data: { user }, error } = await sb.auth.getUser();
-  if (error || !user) {
+  let user: import('@supabase/supabase-js').User | null = null;
+  try {
+    const { data: { user: u }, error } = await sb.auth.getUser();
+    if (!error) user = u;
+  } catch {
+    // stale session cookie — treat as unauthenticated
+  }
+
+  if (!user) {
     event.locals.user = null;
     cookies.delete('x-reclass-user', { path: '/' });
   } else {
