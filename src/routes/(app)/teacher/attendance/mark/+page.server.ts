@@ -7,7 +7,8 @@ export const load: PageServerLoad = async ({ locals }) => {
   if (!user) redirect(303, '/login');
 
   // Find the teacher record for this user
-  const { data: teacher } = await locals.supabase
+  const db = locals.srv;
+  const { data: teacher } = await db
     .from('teachers')
     .select('id, first_name, last_name')
     .eq('profile_id', user.id)
@@ -28,11 +29,13 @@ export const load: PageServerLoad = async ({ locals }) => {
   const supabaseDay = dayOfWeek === 0 ? 7 : dayOfWeek;
 
   // Get the teacher's groups
-  const { data: groups } = await locals.supabase
+  let gq = db
     .from('remedial_groups')
     .select('id, name, subject, grade')
     .eq('teacher_id', teacher.id)
     .eq('status', 'active');
+  if (locals.tenantId) gq = gq.eq('tenant_id', locals.tenantId);
+  const { data: groups } = await gq;
 
   const groupIds = (groups ?? []).map(g => g.id);
 
@@ -46,7 +49,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   }
 
   // Get today's sessions for these groups
-  const { data: sessions } = await locals.supabase
+  const { data: sessions } = await db
     .from('sessions')
     .select('id, group_id, day_of_week, start_time, end_time, slot, remedial_groups(name, subject, grade)')
     .in('group_id', groupIds)
@@ -56,7 +59,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const sessionIds = (sessions ?? []).map(s => s.id);
 
   // Get or create today's occurrences
-  const { data: existingOccurrences } = await locals.supabase
+  const { data: existingOccurrences } = await db
     .from('session_occurrences')
     .select('id, session_id')
     .in('session_id', sessionIds)
@@ -69,7 +72,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const createdIds: Record<string, string> = {};
 
   for (const s of toCreate) {
-    const { data: created } = await locals.supabase
+    const { data: created } = await db
       .from('session_occurrences')
       .insert({
         session_id: s.id,
@@ -103,7 +106,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const occurrenceIds = enrichedSessions.map(s => s.occurrence_id).filter(Boolean);
 
   // Get existing attendance records for today
-  const { data: existingAttendance } = await locals.supabase
+  const { data: existingAttendance } = await db
     .from('attendance')
     .select('id, student_id, occurrence_id, status')
     .in('occurrence_id', occurrenceIds);
@@ -115,11 +118,12 @@ export const load: PageServerLoad = async ({ locals }) => {
   }
 
   // Get students enrolled in each group
-  // Attempt to use group_members, fallback to all students
-  const { data: groupMembers } = await locals.supabase
+  let gmQ = db
     .from('group_members')
     .select('student_id, group_id, students(id, first_name, last_name, admission_no, grade)')
     .in('group_id', groupIds);
+  if (locals.tenantId) gmQ = gmQ.eq('tenant_id', locals.tenantId);
+  const { data: groupMembers } = await gmQ;
 
   // Build group -> students map
   const groupStudents: Record<string, any[]> = {};
@@ -147,7 +151,7 @@ export const actions: Actions = {
     const user = locals.user;
     if (!user) redirect(303, '/login');
 
-    const { data: teacher } = await locals.supabase
+    const { data: teacher } = await locals.srv
       .from('teachers')
       .select('id')
       .eq('profile_id', user.id)
@@ -181,7 +185,7 @@ export const actions: Actions = {
     });
 
     // Delete existing records for this occurrence and re-insert
-    const { error: delError } = await locals.supabase
+    const { error: delError } = await locals.srv
       .from('attendance')
       .delete()
       .eq('occurrence_id', occurrenceId);
@@ -190,7 +194,7 @@ export const actions: Actions = {
       return fail(500, { error: `Failed to clear existing attendance: ${delError.message}` });
     }
 
-    const { error: insError } = await locals.supabase
+    const { error: insError } = await locals.srv
       .from('attendance')
       .insert(upserts);
 
@@ -222,7 +226,7 @@ export const actions: Actions = {
       marked_by: user.id,
     }));
 
-    const { error: delError } = await locals.supabase
+    const { error: delError } = await locals.srv
       .from('attendance')
       .delete()
       .eq('occurrence_id', occurrenceId);
@@ -231,7 +235,7 @@ export const actions: Actions = {
       return fail(500, { error: `Failed to clear existing attendance: ${delError.message}` });
     }
 
-    const { error: insError } = await locals.supabase
+    const { error: insError } = await locals.srv
       .from('attendance')
       .insert(upserts);
 
