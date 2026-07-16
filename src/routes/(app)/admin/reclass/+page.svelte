@@ -110,10 +110,22 @@
 
     <!-- Scheduling -->
     <Card>
-      <CardHeader title="Scheduling" subtitle="View the full remedial calendar" action={openCalendarAction}>
+      <CardHeader title="Scheduling" subtitle={stat.sessionsCount > 0 ? `${stat.sessionsCount} upcoming sessions` : 'No sessions scheduled yet'} action={openCalendarAction}>
       </CardHeader>
       <CardContent>
-        <p class="text-sm text-ink-400">Sessions, rooms, and substitutes for the current month. View the full schedule in the calendar view.</p>
+        {#if stat.sessionsCount > 0}
+          <div class="grid grid-cols-3 gap-3">
+            {#each [{ l: 'Groups', v: stat.groups }, { l: 'Sessions', v: stat.sessionsCount }, { l: 'Teachers', v: stat.teachers }] as m}
+              <div class="rounded-lg border border-border/60 bg-ink-50/50 px-3 py-2 text-center">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-ink-400">{m.l}</p>
+                <p class="text-lg font-bold text-ink-900">{m.v}</p>
+              </div>
+            {/each}
+          </div>
+          <p class="mt-3 text-sm text-ink-400">Sessions, rooms, and substitutes for the current month. View the full schedule in the calendar view.</p>
+        {:else}
+          <p class="text-sm text-ink-400">No sessions scheduled yet. Use the <strong>Scheduling</strong> page to set times for your remedial groups.</p>
+        {/if}
       </CardContent>
     </Card>
 
