@@ -81,9 +81,9 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
-  if (pathname === '/login') {
+  if (pathname === '/' || pathname === '/login') {
     if (event.locals.user && event.locals.role) {
-      redirect(303, '/');
+      redirect(303, pathname === '/' ? roleRoutes[event.locals.role] : '/');
     }
     return resolve(event);
   }
