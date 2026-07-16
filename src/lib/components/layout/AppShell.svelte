@@ -4,6 +4,9 @@
   import { getSupabase } from '$lib/supabase/client';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
   import NotificationToaster from '$lib/components/NotificationToaster.svelte';
+  import { theme, type Theme } from '$lib/stores/theme';
+  import { locale, type Locale } from '$lib/stores/locale';
+  import { t } from '$lib/i18n';
 
   let {
     title,
@@ -44,6 +47,9 @@
     bell: 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0',
     calendar: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5',
     chevron: 'm19.5 8.25-7.5 7.5-7.5-7.5',
+    sun: 'M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z',
+    moon: 'M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z',
+    globe: 'M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418',
   };
 
   const roleNav: Record<string, NavGroup[]> = {
@@ -88,6 +94,7 @@
       { label: 'My child', defaultOpen: true, items: [
         { label: 'Welcome', href: '/parent', icon: 'dashboard' },
         { label: 'Remedial timetable', href: '/parent/timetable', icon: 'calendar' },
+        { label: 'Attendance', href: '/parent/attendance', icon: 'calendar' },
         { label: 'Fee structure', href: '/parent/fees', icon: 'fees' },
         { label: 'Pay via M-Pesa', href: '/parent/pay', icon: 'invoices' },
         { label: 'Payment history', href: '/parent/payments', icon: 'invoices' },
@@ -124,19 +131,25 @@
   }
 
   let NAV = $derived(roleNav[role] ?? roleNav.school_admin);
-  let openGroups = $state<Record<string, boolean>>(
-    {}
-  );
+  let openGroups = $state<Record<string, boolean>>({});
+
   $effect(() => {
     const initial = Object.fromEntries(NAV.map(g => [g.label, g.defaultOpen ?? false]));
     Object.keys(initial).forEach(k => {
       if (!(k in openGroups)) openGroups[k] = initial[k as keyof typeof initial];
     });
   });
+
   let profileOpen = $state(false);
+  let moreDrawerOpen = $state(false);
 
   const userName = $derived(user?.name ?? 'ReClass Admin');
   const userEmail = $derived(user?.email ?? 'admin@reclass.app');
+
+  // All nav items flattened for the bottom nav
+  let allItems = $derived(NAV.flatMap((group) => group.items));
+  let navItemsVisible = $derived(allItems.length <= 4 ? allItems : allItems.slice(0, 3));
+  let navItemsMore = $derived(allItems.length <= 4 ? [] : allItems.slice(3));
 
   $effect(() => {
     function handleClick(event: MouseEvent) {
@@ -168,6 +181,20 @@
     } catch {
       goto('/login');
     }
+  }
+
+  function cycleTheme() {
+    theme.update(($theme: Theme) => {
+      if ($theme === 'light') return 'dark';
+      if ($theme === 'dark') return 'system';
+      return 'light';
+    });
+  }
+
+  function cycleLocale() {
+    locale.update(($locale: Locale) => {
+      return $locale === 'en' ? 'sw' : 'en';
+    });
   }
 </script>
 
@@ -246,6 +273,27 @@
         {#if headerActions}
           {@render headerActions()}
         {/if}
+
+        <!-- Theme toggle -->
+        <button
+          onclick={cycleTheme}
+          class="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+          aria-label="Toggle dark mode"
+          title="Toggle theme"
+        >
+          {@html I($theme === 'dark' ? icons.sun : icons.moon)}
+        </button>
+
+        <!-- Locale toggle -->
+        <button
+          onclick={cycleLocale}
+          class="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+          aria-label="Toggle language"
+          title="EN / SW"
+        >
+          {@html I(icons.globe)}
+        </button>
+
         <div class="hidden items-center gap-2 rounded-md border border-border bg-ink-50 px-3 py-2 text-xs font-medium text-ink-500 sm:flex">
           <span class="h-2 w-2 rounded-full bg-success"></span>
           {new Date().toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -271,13 +319,13 @@
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a8.25 8.25 0 0 1 15 0" />
                   </svg>
-                  Profile
+                  {t('profile')}
                 </a>
                 <a href="/admin/settings" class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-50">
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.91.28.15.566.227.84.227.55 0 1.1-.25 1.47-.65l1.83-1.83a1.5 1.5 0 0 1 2.12 0l1.83 1.83a1.5 1.5 0 0 1 0 2.12l-1.83 1.83c-.4.37-.65.92-.65 1.47 0 .274.077.56.227.84.224.332.536.582.91.645l1.281.213c.542.09.94.56.94 1.11v2.593c0 .55-.398 1.02-.94 1.11l-1.281.213c-.374.063-.686.313-.91.645-.15.28-.227.566-.227.84 0 .55.25 1.1.65 1.47l1.83 1.83a1.5 1.5 0 0 1 0 2.12l-1.83 1.83a1.5 1.5 0 0 1-2.12 0l-1.83-1.83c-.37-.4-.92-.65-1.47-.65-.274 0-.56.077-.84.227-.332.224-.582.536-.645.91l-.213 1.281c-.09.542-.56.94-1.11.94h-2.593c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.313-.686-.645-.91-.28-.15-.566-.227-.84-.227-.55 0-1.1.25-1.47.65l-1.83 1.83a1.5 1.5 0 0 1-2.12 0l-1.83-1.83a1.5 1.5 0 0 1 0-2.12l1.83-1.83c.4-.37.65-.92.65-1.47 0-.274-.077-.56-.227-.84-.224-.332-.536-.582-.91-.645L3.94 13.406c-.542-.09-.94-.56-.94-1.11V9.704c0-.55.398-1.02.94-1.11l1.281-.213c.374-.063.686-.313.91-.645.15-.28.227-.566.227-.84 0-.55-.25-1.1-.65-1.47L3.94 3.94a1.5 1.5 0 0 1 0-2.12l1.83-1.83a1.5 1.5 0 0 1 2.12 0l1.83 1.83c.37.4.92.65 1.47.65.274 0 .56-.077.84-.227.332-.224.582-.536.645-.91l.213-1.281Z" />
                   </svg>
-                  Settings
+                  {t('settings')}
                 </a>
                 <button
                   onclick={handleLogout}
@@ -286,7 +334,7 @@
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
                   </svg>
-                  Logout
+                  {t('logout')}
                 </button>
               </div>
             </div>
@@ -309,13 +357,63 @@
       {/if}
     </div>
   </div>
-  <nav class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:hidden" aria-label="Primary navigation">
-    {#each NAV.flatMap((group) => group.items).slice(0, 4) as item}
+
+  <!-- Mobile bottom nav -->
+  <nav class="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:hidden" aria-label="Primary navigation">
+    {#each navItemsVisible as item}
       {@const active = isActive($page.url.pathname, item.href)}
-      <a href={item.href} class="flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[10px] font-medium {active ? 'bg-brand-50 text-brand-700' : 'text-ink-500'}">
+      <a href={item.href} class="flex min-h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[10px] font-medium {active ? 'bg-brand-50 text-brand-700' : 'text-ink-500'}">
         {@html I(icons[item.icon ?? 'dashboard'] ?? icons.dashboard)}
         <span class="truncate">{item.label}</span>
       </a>
     {/each}
+    {#if navItemsMore.length > 0}
+      <button
+        onclick={() => moreDrawerOpen = !moreDrawerOpen}
+        class="flex min-h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[10px] font-medium {moreDrawerOpen ? 'bg-brand-50 text-brand-700' : 'text-ink-500'}"
+      >
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+        </svg>
+        <span>More</span>
+      </button>
+    {/if}
   </nav>
+
+  <!-- More drawer for overflow nav items -->
+  {#if moreDrawerOpen && navItemsMore.length > 0}
+    <!-- Backdrop -->
+    <div
+      class="fixed inset-0 z-40 bg-black/30 md:hidden"
+      role="button"
+      tabindex="0"
+      onclick={() => moreDrawerOpen = false}
+      onkeydown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') moreDrawerOpen = false; }}
+      aria-label="Close navigation drawer"
+    ></div>
+    <!-- Drawer -->
+    <div class="fixed inset-x-0 bottom-0 z-50 rounded-t-xl border border-border bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-elevated md:hidden">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <p class="text-sm font-semibold text-ink-900">Navigation</p>
+        <button onclick={() => moreDrawerOpen = false} aria-label="Close drawer" class="rounded-full p-1 text-ink-400 hover:bg-ink-100 hover:text-ink-600">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="mt-3 space-y-1">
+        {#each navItemsMore as item}
+          {@const active = isActive($page.url.pathname, item.href)}
+          <a
+            href={item.href}
+            onclick={() => moreDrawerOpen = false}
+            class="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors {active ? 'bg-brand-50 text-brand-700' : 'text-ink-600 hover:bg-ink-50'}"
+          >
+            {@html I(icons[item.icon ?? 'dashboard'] ?? icons.dashboard)}
+            {item.label}
+          </a>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </div>

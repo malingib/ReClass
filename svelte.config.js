@@ -10,6 +10,10 @@ const config = {
       '@/*': './src/*',
     },
   },
+  onwarn: (warning, handler) => {
+    if (warning.code === 'state_referenced_locally') return;
+    handler(warning);
+  },
 };
 
 export default config;

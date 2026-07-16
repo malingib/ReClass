@@ -1,16 +1,30 @@
 <script lang="ts">
   import { cn } from './utils';
-  let { variant = 'primary', size = 'md', loading = false, disabled = false, class: className = '', children }: {
+
+  interface Props {
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
     size?: 'sm' | 'md' | 'lg';
-    loading?: boolean;
     disabled?: boolean;
+    loading?: boolean;
+    type?: 'button' | 'submit' | 'reset';
+    onclick?: (e: MouseEvent) => void;
     class?: string;
     children?: import('svelte').Snippet;
-  } = $props();
+    [key: string]: unknown;
+  }
+
+  let {
+    variant = 'primary',
+    size = 'md',
+    disabled = false,
+    loading = false,
+    type = 'button',
+    children,
+    ...rest
+  }: Props = $props();
 
   const variants = {
-    primary: 'rounded-lg bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800',
+    primary: 'rounded-lg bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50',
     secondary: 'rounded-lg border border-border bg-white text-ink-700 shadow-sm hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700',
     ghost: 'rounded-lg border border-transparent bg-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900',
     danger: 'rounded-lg bg-danger text-white shadow-sm hover:bg-red-700',
@@ -24,12 +38,14 @@
 </script>
 
 <button
+  {type}
   {disabled}
+  onclick={rest.onclick}
   class={cn(
-    'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+    'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed',
     variants[variant],
     sizes[size],
-    className
+    String(rest.class ?? '')
   )}
 >
   {#if loading}

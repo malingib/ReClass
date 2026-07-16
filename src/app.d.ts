@@ -9,6 +9,7 @@ declare global {
       user: User | null;
       role: Role | null;
       tenantId: string | null;
+      srv: SupabaseClient;
     }
     interface PageData {
       session?: Session | null;

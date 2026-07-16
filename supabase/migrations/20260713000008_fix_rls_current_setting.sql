@@ -60,11 +60,6 @@ DROP POLICY IF EXISTS occurrence_isolation ON public.session_occurrences;
 CREATE POLICY occurrence_isolation ON public.session_occurrences
   USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
 
--- attendance
-DROP POLICY IF EXISTS attendance_isolation ON public.attendance;
-CREATE POLICY attendance_isolation ON public.attendance
-  USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
-
 -- fee_types
 DROP POLICY IF EXISTS feetype_isolation ON public.fee_types;
 CREATE POLICY feetype_isolation ON public.fee_types

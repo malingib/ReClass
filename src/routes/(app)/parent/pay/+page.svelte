@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getSupabase } from '$lib/supabase/client';
   import DashboardContent from '$lib/components/DashboardContent.svelte';
 
   let loading = $state(false);
@@ -12,10 +13,28 @@
     loading = true;
     const form = e.target as HTMLFormElement;
     const data = new FormData(form);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    loading = false;
-    success = 'M-Pesa STK Push sent. Check your phone to confirm the paybill prompt.';
-    form.reset();
+    const studentId = data.get('student_id') as string;
+    const amount = data.get('amount') as string;
+    const phone = data.get('phone') as string;
+
+    if (!/^254[17]\d{8}$/.test(phone.replace(/\s/g, ''))) {
+      error = 'Enter a valid M-Pesa phone number (e.g. 254712345678)';
+      loading = false;
+      return;
+    }
+
+    try {
+      const { error: fnErr } = await getSupabase().functions.invoke('stk', {
+        body: { invoice_id: studentId, tenant_id: '', amount: Number(amount), phone: phone.replace(/\s/g, '') },
+      });
+      if (fnErr) throw fnErr;
+      success = 'M-Pesa STK Push sent. Check your phone to confirm the paybill prompt.';
+      form.reset();
+    } catch (e) {
+      error = 'Payment request failed. Please try again or contact the school.';
+    } finally {
+      loading = false;
+    }
   }
 </script>
 

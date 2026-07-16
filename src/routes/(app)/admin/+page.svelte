@@ -12,35 +12,8 @@
   let recentStudents = $derived(data.recentStudents);
   let recentInvoices = $derived(data.recentInvoices);
   let trend = $derived(data.trend);
+  let trendIsAllZero = $derived(trend.length > 0 && trend.every(d => d.value === 0));
   let activity = $derived(data.activity);
-
-  const calendarDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const calendarEvents: Record<number, { label: string; type: 'Session' | 'Event'; tone: string }[]> = {
-    3: [{ label: 'Mathematics · Form 2', type: 'Session', tone: 'bg-brand-50 text-brand-700' }],
-    5: [{ label: 'Fee reminder', type: 'Event', tone: 'bg-warning/10 text-warning' }],
-    8: [{ label: 'English · Form 1', type: 'Session', tone: 'bg-brand-50 text-brand-700' }],
-    12: [{ label: 'Attendance review', type: 'Event', tone: 'bg-info/10 text-info' }],
-    15: [{ label: 'Science · Form 3', type: 'Session', tone: 'bg-brand-50 text-brand-700' }],
-    19: [{ label: 'Parent meeting', type: 'Event', tone: 'bg-warning/10 text-warning' }],
-    22: [{ label: 'Mathematics · Form 4', type: 'Session', tone: 'bg-brand-50 text-brand-700' }],
-    26: [{ label: 'Term report due', type: 'Event', tone: 'bg-danger/10 text-danger' }],
-  };
-  const daysInMonth = $derived(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate());
-  const monthStartOffset = $derived((new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() + 6) % 7);
-  const calendarCells = $derived(Array.from({ length: 42 }, (_, index) => {
-    const day = index - monthStartOffset + 1;
-    return day > 0 && day <= daysInMonth ? day : null;
-  }));
-  const today = new Date();
-  const monthLabel = $derived(today.toLocaleDateString('en', { month: 'long', year: 'numeric' }));
-  const isToday = (day: number) => day === today.getDate();
-  const eventDate = (offset: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
-  const upcomingEvents = [
-    { date: eventDate(1), time: '08:00 - 09:20', title: 'Mathematics remedial session', detail: 'Form 2 · Room 4', type: 'Session' },
-    { date: eventDate(1), time: '14:30 - 15:30', title: 'Parent and teacher meeting', detail: 'Staff room', type: 'School event' },
-    { date: eventDate(2), time: '10:00 - 11:20', title: 'English remedial session', detail: 'Form 1 · Room 2', type: 'Session' },
-    { date: eventDate(4), time: '09:00 - 10:00', title: 'Attendance review', detail: 'Administration office', type: 'School event' },
-  ];
 </script>
 
 {#snippet kpi(label: string, value: string | number, sub = '', trend = '', pos = false)}
@@ -134,60 +107,29 @@
             {@render mini('AVG RATE', `${stat.attendanceRate}%`)}
             {@render mini('GROUPS', String(stat.groups), 'Active cohorts')}
           </div>
-          <LineChart data={trend} format={(v: number) => `${v}%`} height={180} color="#039855" />
+          {#if trendIsAllZero}
+            <div class="flex flex-col items-center justify-center gap-2 py-6 text-center">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-ink-50">
+                <svg class="h-5 w-5 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+              </div>
+              <p class="text-sm font-medium text-ink-500">No session data yet</p>
+              <p class="text-xs text-ink-400">Attendance trends will appear here once sessions are scheduled and marked.</p>
+            </div>
+          {:else}
+            <LineChart data={trend} format={(v: number) => `${v}%`} height={180} color="#039855" />
+          {/if}
         </CardContent>
       </Card>
       <Card>
-        <CardHeader title="Sessions & events calendar" subtitle="Remedial sessions and school events for {monthLabel}">
+        <CardHeader title="Scheduling" subtitle="View the full remedial calendar">
           {#snippet action()}
-            <button class="rounded-md border border-border bg-white px-2.5 py-1.5 text-xs font-medium text-ink-600 hover:bg-ink-50">{monthLabel}</button>
+            <a href="/admin/scheduling" class="text-xs font-semibold text-brand-700 hover:text-brand-800">Open calendar</a>
           {/snippet}
         </CardHeader>
-        <CardContent class="!p-0">
-          <div class="grid grid-cols-7 border-t border-border">
-            {#each calendarDays as weekday}
-              <div class="border-b border-r border-border bg-ink-50 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-500 last:border-r-0">{weekday}</div>
-            {/each}
-            {#each calendarCells as day, index}
-              <div class="min-h-28 border-b border-r border-border p-2 {index % 7 === 6 ? 'border-r-0' : ''} {day ? 'bg-white' : 'bg-ink-50/60'}">
-                {#if day}
-                  <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium {isToday(day) ? 'bg-brand-600 text-white' : 'text-ink-600'}">{day}</span>
-                  {#each calendarEvents[day] ?? [] as event}
-                    <span class="mt-1 block truncate rounded px-1.5 py-1 text-[10px] font-medium {event.tone}" title={`${event.type}: ${event.label}`}>
-                      {event.label}
-                    </span>
-                  {/each}
-                {/if}
-              </div>
-            {/each}
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader title="Upcoming events" subtitle="Next sessions and school events">
-          {#snippet action()}
-            <a href="/admin/scheduling" class="text-xs font-semibold text-brand-700 hover:text-brand-800">View calendar</a>
-          {/snippet}
-        </CardHeader>
-        <CardContent class="!pt-1">
-          <div class="space-y-1">
-            {#each upcomingEvents as event}
-              <div class="flex gap-3 border-b border-border py-3 last:border-b-0">
-                <div class="flex w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-ink-50 px-1 py-2 text-center">
-                  <span class="text-[10px] font-semibold uppercase tracking-wide text-ink-500">{event.date.toLocaleDateString('en', { month: 'short' })}</span>
-                  <span class="mt-0.5 text-lg font-semibold leading-none text-ink-900">{event.date.getDate()}</span>
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="truncate text-sm font-semibold text-ink-800">{event.title}</p>
-                    <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold {event.type === 'Session' ? 'bg-brand-50 text-brand-700' : 'bg-warning/10 text-warning'}">{event.type}</span>
-                  </div>
-                  <p class="mt-1 text-xs text-ink-500">{event.detail}</p>
-                  <p class="mt-1 text-xs font-medium text-ink-600">{event.time}</p>
-                </div>
-              </div>
-            {/each}
-          </div>
+        <CardContent>
+          <p class="text-sm text-ink-500">Sessions, rooms, and substitutes for the current month. View the full schedule in the calendar view.</p>
         </CardContent>
       </Card>
     </div>

@@ -69,12 +69,6 @@ DROP POLICY IF EXISTS occurrence_isolation ON public.session_occurrences;
 CREATE POLICY occurrence_isolation ON public.session_occurrences
   USING (tenant_id = current_setting('app.tenant_id')::uuid);
 
--- attendance
-ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS attendance_isolation ON public.attendance;
-CREATE POLICY attendance_isolation ON public.attendance
-  USING (tenant_id = current_setting('app.tenant_id')::uuid);
-
 -- fee_types
 ALTER TABLE public.fee_types ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS feetype_isolation ON public.fee_types;

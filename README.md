@@ -8,7 +8,7 @@ Built by **Mobiwave Innovations Ltd**. Anchor tenant: **Malingi High School**.
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14 (App Router), React, TypeScript, TailwindCSS |
+|| Frontend | SvelteKit 5, Svelte 5, TypeScript, TailwindCSS 4 |
 | Database | Supabase (PostgreSQL), Row Level Security, Edge Functions |
 | Auth | Supabase Auth (email/password, invite-only) |
 | Payments | M-Pesa Daraja API (STK Push) |
@@ -19,8 +19,8 @@ Built by **Mobiwave Innovations Ltd**. Anchor tenant: **Malingi High School**.
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  Next.js     │────▶│  Supabase    │────▶│  PostgreSQL  │
-│  (App Router)│     │  Auth + RLS  │     │  + Vault     │
+|  SvelteKit   |────▶│  Supabase    │────▶│  PostgreSQL  │
+|  + Svelte 5  |     │  Auth + RLS  │     │  + Vault     │
 │  + middleware │     │  + Functions │     │  + Encryption │
 └─────────────┘     └──────────────┘     └─────────────┘
        │                     │

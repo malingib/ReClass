@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { getServerSupabase } from '$lib/supabase/server';
+import { getServerSupabase, getServiceClient } from '$lib/supabase/server';
 import { roleRoutes, isRole, type Role } from '$lib/auth';
 import type { Handle } from '@sveltejs/kit';
 
@@ -8,8 +8,9 @@ export const handle: Handle = async ({ event, resolve }) => {
   const cookies = event.cookies;
 
   const sb = getServerSupabase(cookies);
-
   event.locals.supabase = sb;
+  event.locals.srv = getServiceClient();
+
   event.locals.session = null;
   event.locals.user = null;
   event.locals.role = null;
@@ -39,6 +40,10 @@ export const handle: Handle = async ({ event, resolve }) => {
     const cachedRole = resolveRole(user);
     if (cachedRole) {
       event.locals.role = cachedRole;
+      const meta = user?.user_metadata as Record<string, unknown> | undefined;
+      if (meta?.tenant_id) {
+        event.locals.tenantId = meta.tenant_id as string;
+      }
     } else {
       const { data: roleRow } = await sb.from('user_roles').select('role, tenant_id').eq('user_id', user.id).maybeSingle();
       if (roleRow) {
@@ -65,6 +70,11 @@ export const handle: Handle = async ({ event, resolve }) => {
   const role = event.locals.role;
   if (!role) {
     redirect(303, '/login');
+  }
+
+  const publicPaths = ['/account', '/notifications'];
+  if (publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+    return resolve(event);
   }
 
   const target = roleRoutes[role];
