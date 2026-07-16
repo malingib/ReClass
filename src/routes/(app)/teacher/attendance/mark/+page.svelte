@@ -104,8 +104,8 @@
       {@const students = occurrenceStudents(session)}
       <Card>
         <CardHeader
-          title="{session.remedial_groups?.name ?? 'Session'} — {session.remedial_groups?.subject ?? 'No subject'}"
-          subtitle="{session.start_time?.slice(0, 5)} - {session.end_time?.slice(0, 5)} | {session.slot ?? 'Regular'} | {students.length} student(s)"
+          title="{session.remedial_groups?.name ?? 'Session'}"
+          subtitle="{session.start_time?.slice(0, 5)} - {session.end_time?.slice(0, 5)} | {students.length} student(s)"
         >
           {#snippet action()}
             <button

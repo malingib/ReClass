@@ -1,45 +1,49 @@
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const sb = locals.supabase;
+  const db = locals.srv;
+  const countInTable = async (table: string, filter?: { column: string; value: string }) => {
+    let q = db.from(table).select('*', { count: 'exact', head: true });
+    if (locals.tenantId) q = q.eq('tenant_id', locals.tenantId);
+    if (filter) q = q.eq(filter.column, filter.value);
+    const { count } = await q;
+    return count ?? 0;
+  };
 
-  const [
-    { count: totalStudents },
-    { count: totalAttendance },
-    { count: presentCount },
-    { count: lateCount },
-    { count: absentCount },
-    { count: excusedCount },
-    { data: recentSessions },
-  ] = await Promise.all([
-    sb.from('students').select('*', { count: 'exact', head: true }),
-    sb.from('attendance').select('*', { count: 'exact', head: true }),
-    sb.from('attendance').select('*', { count: 'exact', head: true }).eq('status', 'present'),
-    sb.from('attendance').select('*', { count: 'exact', head: true }).eq('status', 'late'),
-    sb.from('attendance').select('*', { count: 'exact', head: true }).eq('status', 'absent'),
-    sb.from('attendance').select('*', { count: 'exact', head: true }).eq('status', 'excused'),
-    sb.from('session_occurrences')
-      .select('id, occurs_on, start_time, status, sessions(name)')
-      .order('occurs_on', { ascending: false })
-      .limit(10),
-  ]);
+  const [totalStudents, totalAttendance, presentCount, lateCount, absentCount, excusedCount, recentSessions] =
+    await Promise.all([
+      countInTable('students'),
+      countInTable('attendance'),
+      countInTable('attendance', { column: 'status', value: 'present' }),
+      countInTable('attendance', { column: 'status', value: 'late' }),
+      countInTable('attendance', { column: 'status', value: 'absent' }),
+      countInTable('attendance', { column: 'status', value: 'excused' }),
+      db.from('session_occurrences')
+        .select('id, occurs_on, start_time, status, sessions!inner(id, group_id, remedial_groups!inner(name))')
+        .order('occurs_on', { ascending: false })
+        .limit(10)
+        .then(r => r.data ?? []),
+    ]);
 
-  const total = totalAttendance ?? 1;
-  const attendanceRate = Math.round((((presentCount ?? 0) + (lateCount ?? 0)) / total) * 100);
+  const total = totalAttendance || 1;
+  const attendanceRate = Math.round(((presentCount + lateCount) / total) * 100);
 
   return {
     stats: {
-      totalStudents: totalStudents ?? 0,
-      totalAttendance: totalAttendance ?? 0,
-      presentCount: presentCount ?? 0,
-      lateCount: lateCount ?? 0,
-      absentCount: absentCount ?? 0,
-      excusedCount: excusedCount ?? 0,
+      totalStudents,
+      totalAttendance,
+      presentCount,
+      lateCount,
+      absentCount,
+      excusedCount,
       attendanceRate,
     },
     recentSessions: (recentSessions ?? []).map((s: any) => ({
-      ...s,
-      session_name: s.sessions?.name ?? '—',
+      id: s.id,
+      occurs_on: s.occurs_on,
+      start_time: s.start_time,
+      status: s.status,
+      session_name: s.sessions?.remedial_groups?.name ?? '—',
     })),
   };
 };

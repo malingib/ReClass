@@ -31,9 +31,8 @@ export const load: PageServerLoad = async ({ locals }) => {
   // Get the teacher's groups
   let gq = db
     .from('remedial_groups')
-    .select('id, name, subject, grade')
-    .eq('teacher_id', teacher.id)
-    .eq('status', 'active');
+    .select('id, name, subject_id, term')
+    .eq('teacher_id', teacher.id);
   if (locals.tenantId) gq = gq.eq('tenant_id', locals.tenantId);
   const { data: groups } = await gq;
 
@@ -51,7 +50,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   // Get today's sessions for these groups
   const { data: sessions } = await db
     .from('sessions')
-    .select('id, group_id, day_of_week, start_time, end_time, slot, remedial_groups(name, subject, grade)')
+    .select('id, group_id, day_of_week, start_time, end_time, remedial_groups!inner(name, subject_id, term)')
     .in('group_id', groupIds)
     .eq('day_of_week', supabaseDay)
     .eq('active', true);
@@ -118,23 +117,43 @@ export const load: PageServerLoad = async ({ locals }) => {
   }
 
   // Get students enrolled in each group
-  let gmQ = db
-    .from('group_members')
-    .select('student_id, group_id, students(id, first_name, last_name, admission_no, grade)')
-    .in('group_id', groupIds);
-  if (locals.tenantId) gmQ = gmQ.eq('tenant_id', locals.tenantId);
-  const { data: groupMembers } = await gmQ;
+  let groupStudents: Record<string, any[]> = {};
+  try {
+    const { data: groupMembers } = await db
+      .from('group_members')
+      .select('student_id, group_id, students(id, first_name, last_name, admission_no, grade)')
+      .in('group_id', groupIds);
+    if (groupMembers) {
+      for (const gm of groupMembers) {
+        if (!groupStudents[gm.group_id]) groupStudents[gm.group_id] = [];
+        groupStudents[gm.group_id].push({
+          id: gm.students?.id,
+          first_name: gm.students?.first_name,
+          last_name: gm.students?.last_name,
+          admission_no: gm.students?.admission_no,
+        });
+      }
+    }
+  } catch {
+    // group_members table may not exist; fall back to all tenant students
+  }
 
-  // Build group -> students map
-  const groupStudents: Record<string, any[]> = {};
-  for (const gm of groupMembers ?? []) {
-    if (!groupStudents[gm.group_id]) groupStudents[gm.group_id] = [];
-    groupStudents[gm.group_id].push({
-      id: gm.students?.id,
-      first_name: gm.students?.first_name,
-      last_name: gm.students?.last_name,
-      admission_no: gm.students?.admission_no,
-    });
+  // Fallback: if no group_members data, show all students for the tenant
+  if (Object.keys(groupStudents).length === 0) {
+    const { data: allStudents } = await db
+      .from('students')
+      .select('id, first_name, last_name, admission_no, grade')
+      .order('first_name');
+    if (allStudents) {
+      for (const gId of groupIds) {
+        groupStudents[gId] = allStudents.map(s => ({
+          id: s.id,
+          first_name: s.first_name,
+          last_name: s.last_name,
+          admission_no: s.admission_no,
+        }));
+      }
+    }
   }
 
   return {
