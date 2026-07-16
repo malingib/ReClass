@@ -13,14 +13,14 @@
 </script>
 
 <svelte:head>
-  <title>ReClass — Remedial Classes Management</title>
+  <title>eShule — School Management Platform</title>
 </svelte:head>
 
 <div class="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,_rgba(0,197,115,0.18),_transparent_24%),linear-gradient(135deg,_#f4f7fb_0%,_#f8fbff_100%)]">
   <header class="flex items-center justify-between px-6 py-4 sm:px-10">
     <div class="flex items-center gap-3">
-      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-sm font-bold text-white shadow-[0_4px_12px_rgba(0,197,115,0.28)]">R</div>
-      <span class="text-lg font-semibold text-ink-900">ReClass</span>
+      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-sm font-bold text-white shadow-[0_4px_12px_rgba(0,197,115,0.28)]">e</div>
+      <span class="text-lg font-semibold text-ink-900">eShule</span>
     </div>
     <button onclick={goLogin} class="rounded-xl border border-ink-200 bg-white px-5 py-2 text-sm font-medium text-ink-700 shadow-sm transition-all hover:border-ink-300 hover:shadow-md">
       Sign in
@@ -61,6 +61,6 @@
   </main>
 
   <footer class="border-t border-ink-100 px-6 py-4 text-center text-xs text-ink-300 sm:px-10">
-    &copy; {new Date().getFullYear()} ReClass &mdash; Mobiwave Innovations Ltd
+    &copy; {new Date().getFullYear()} eShule &mdash; Mobiwave Innovations Ltd
   </footer>
 </div>
