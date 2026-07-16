@@ -2,7 +2,13 @@
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const sb = locals.supabase;
+  const db = locals.srv;
+
+  // Helper to apply tenant filter
+  const applyTenant = (q: any) => {
+    if (locals.tenantId) return q.eq('tenant_id', locals.tenantId);
+    return q;
+  };
 
   // Get counts/aggregates for each report card
   const [
@@ -14,16 +20,16 @@ export const load: PageServerLoad = async ({ locals }) => {
     { count: paidInvoices },
     { data: revenueSum },
   ] = await Promise.all([
-    sb.from('teacher_attendance').select('*', { count: 'exact', head: true }),
-    sb.from('teacher_attendance').select('*', { count: 'exact', head: true }).in('status', ['present', 'late']),
-    sb.from('teacher_attendance').select('*', { count: 'exact', head: true }).eq('status', 'absent'),
-    sb.from('session_occurrences').select('*', { count: 'exact', head: true }).eq('status', 'done'),
-    sb.from('invoices').select('*', { count: 'exact', head: true }),
-    sb.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'paid'),
-    sb.from('invoices').select('amount_paid').eq('status', 'paid'),
+    applyTenant(db.from('teacher_attendance').select('*', { count: 'exact', head: true })),
+    applyTenant(db.from('teacher_attendance').select('*', { count: 'exact', head: true }).in('status', ['present', 'late'])),
+    applyTenant(db.from('teacher_attendance').select('*', { count: 'exact', head: true }).eq('status', 'absent')),
+    applyTenant(db.from('session_occurrences').select('*', { count: 'exact', head: true }).eq('status', 'done')),
+    applyTenant(db.from('invoices').select('*', { count: 'exact', head: true })),
+    applyTenant(db.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'paid')),
+    applyTenant(db.from('invoices').select('amount_paid').eq('status', 'paid')),
   ]);
 
-  const totalPayments = (revenueSum ?? []).reduce((sum, r: any) => sum + Number(r.amount_paid), 0);
+  const totalPayments = (revenueSum ?? []).reduce((sum: number, r: any) => sum + Number(r.amount_paid), 0);
   const attendanceRate = attendanceTotal ? Math.round(((attendancePresent ?? 0) / attendanceTotal) * 100) : 0;
 
   return {

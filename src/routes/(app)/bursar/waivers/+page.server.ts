@@ -2,24 +2,33 @@ import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const sb = locals.supabase;
+  const db = locals.srv;
+
+  const tenantFilter = (q: any) => {
+    if (locals.tenantId) return q.eq('tenant_id', locals.tenantId);
+    return q;
+  };
 
   const [waiversRes, invoicesRes] = await Promise.all([
-    sb
-      .from('waivers')
-      .select(`
-        id, amount, reason, created_at,
-        invoices!inner(amount_due, amount_paid, status, students!inner(first_name, last_name, admission_no))
-      `)
-      .order('created_at', { ascending: false })
-      .limit(100),
-    sb
-      .from('invoices')
-      .select('id, amount_due, amount_paid, status, students(first_name, last_name, admission_no)')
-      .not('status', 'eq', 'paid')
-      .not('status', 'eq', 'waived')
-      .order('created_at', { ascending: false })
-      .limit(500),
+    tenantFilter(
+      db
+        .from('waivers')
+        .select(`
+          id, amount, reason, created_at,
+          invoices!inner(amount_due, amount_paid, status, students!inner(first_name, last_name, admission_no))
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100)
+    ),
+    tenantFilter(
+      db
+        .from('invoices')
+        .select('id, amount_due, amount_paid, status, students(first_name, last_name, admission_no)')
+        .not('status', 'eq', 'paid')
+        .not('status', 'eq', 'waived')
+        .order('created_at', { ascending: false })
+        .limit(500)
+    ),
   ]);
 
   const invoiceData = (invoicesRes.data ?? []).map((inv: any) => {
@@ -50,7 +59,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   create: async ({ locals, request }) => {
-    const sb = locals.supabase;
+    const db = locals.srv;
     const form = await request.formData();
 
     const invoiceId = form.get('invoice_id') as string;
@@ -62,7 +71,7 @@ export const actions: Actions = {
     }
 
     // Verify the invoice exists and get its current state
-    const { data: invoice } = await sb
+    const { data: invoice } = await db
       .from('invoices')
       .select('id, amount_due, amount_paid, status')
       .eq('id', invoiceId)
@@ -81,7 +90,7 @@ export const actions: Actions = {
     }
 
     // Create the waiver
-    const { data: waiver, error: waiverError } = await sb
+    const { data: waiver, error: waiverError } = await db
       .from('waivers')
       .insert({
         tenant_id: locals.tenantId,
@@ -102,13 +111,13 @@ export const actions: Actions = {
     const newPaid = Number(invoice.amount_paid) + amount;
     const newStatus = newPaid >= Number(invoice.amount_due) ? 'waived' : invoice.status;
 
-    await sb
+    await db
       .from('invoices')
       .update({ amount_paid: newPaid, status: newStatus })
       .eq('id', invoiceId);
 
     // Write audit log
-    await sb.from('audit_log').insert({
+    await db.from('audit_log').insert({
       tenant_id: locals.tenantId,
       actor_id: locals.user?.id,
       action: 'waiver_granted',
