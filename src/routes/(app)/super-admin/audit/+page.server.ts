@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const { data: logs } = await locals.supabase
+  const { data: logs } = await locals.srv
     .from('audit_log')
     .select('id, action, created_at, user_id, details')
     .order('created_at', { ascending: false })

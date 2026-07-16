@@ -3,6 +3,18 @@ import { getServerSupabase, getServiceClient } from '$lib/supabase/server';
 import { roleRoutes, isRole, type Role } from '$lib/auth';
 import type { Handle } from '@sveltejs/kit';
 
+// Validate required env vars at startup
+const REQUIRED_ENV_VARS = [
+  ['PUBLIC_SUPABASE_URL', 'Supabase project URL'],
+  ['PUBLIC_SUPABASE_ANON_KEY', 'Supabase anonymous key'],
+  ['SUPABASE_SERVICE_ROLE_KEY', 'Supabase service role key (bypasses RLS)'],
+] as const;
+for (const [key, label] of REQUIRED_ENV_VARS) {
+  if (!process.env[key]) {
+    throw new Error(`Missing ${key} (${label}). Check your .env file.`);
+  }
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
   const { pathname } = event.url;
   const cookies = event.cookies;

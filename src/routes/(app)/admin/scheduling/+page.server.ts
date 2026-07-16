@@ -1,8 +1,7 @@
-// @ts-nocheck
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const { data: schedules } = await locals.supabase
+  const { data: schedules } = await locals.srv
     .from('sessions')
     .select(`
       id,
@@ -14,12 +13,12 @@ export const load: PageServerLoad = async ({ locals }) => {
       group_id,
       remedial_groups!inner (
         name,
-        grade,
         room,
         subject_id,
         subjects!inner ( name )
       )
     `)
+    .eq('tenant_id', locals.tenantId)
     .order('day_of_week');
 
   // Flatten to the Session interface the page expects
@@ -27,7 +26,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     id: s.id,
     title: s.remedial_groups?.name ?? '',
     subject: s.remedial_groups?.subjects?.name ?? '',
-    grade: s.remedial_groups?.grade ?? '',
+    grade: '',
     day_of_week: s.day_of_week,
     start_time: s.start_time,
     end_time: s.end_time,

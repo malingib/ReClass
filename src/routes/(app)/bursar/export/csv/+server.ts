@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
-  const sb = locals.supabase;
+  const sb = locals.srv;
 
   const { data: invoices } = await sb
     .from('invoices')
@@ -10,6 +10,7 @@ export const GET: RequestHandler = async ({ locals }) => {
       id, amount_due, amount_paid, status, due_date, created_at,
       students!inner(first_name, last_name, admission_no, grade)
     `)
+    .eq('tenant_id', locals.tenantId)
     .order('created_at', { ascending: false })
     .limit(10000);
 
@@ -36,7 +37,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 
   const csv = [
     headers.join(','),
-    ...rows.map((r) => r.map((v: string) => `"${v.replace(/"/g, '""')}"`).join(',')),
+    ...rows.map((r: any) => r.map((v: string) => `"${v.replace(/"/g, '""')}"`).join(',')),
   ].join('\n');
 
   return new Response(csv, {

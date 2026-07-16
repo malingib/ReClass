@@ -8,20 +8,21 @@ Built by **Mobiwave Innovations Ltd**. Anchor tenant: **Malingi High School**.
 
 | Layer | Technology |
 |-------|-----------|
-|| Frontend | SvelteKit 5, Svelte 5, TypeScript, TailwindCSS 4 |
+| Frontend | SvelteKit 5, Svelte 5 runes, TypeScript (strict), TailwindCSS 4 |
 | Database | Supabase (PostgreSQL), Row Level Security, Edge Functions |
 | Auth | Supabase Auth (email/password, invite-only) |
 | Payments | M-Pesa Daraja API (STK Push) |
 | SMS | Mobiwave API |
-| Infra | Docker, DirectAdmin EVO VPS |
+| UI | bits-ui, Lucide Icons, LayerCake (charts) |
+| CI | Playwright (E2E), Vitest (unit) |
 
 ## Architecture
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-|  SvelteKit   |────▶│  Supabase    │────▶│  PostgreSQL  │
-|  + Svelte 5  |     │  Auth + RLS  │     │  + Vault     │
-│  + middleware │     │  + Functions │     │  + Encryption │
+│  SvelteKit  │────▶│  Supabase    │────▶│  PostgreSQL  │
+│  + Svelte 5 │     │  Auth + REST │     │  + Vault     │
+│  + SSR      │     │  + Functions │     │  + Encrypt   │
 └─────────────┘     └──────────────┘     └─────────────┘
        │                     │
        │ M-Pesa STK          │ SMS via
@@ -31,16 +32,20 @@ Built by **Mobiwave Innovations Ltd**. Anchor tenant: **Malingi High School**.
    Safaricom            Parents' Phones
 ```
 
-## Multi-Tenancy
+### RLS Strategy
 
-ReClass uses **isolated rows** (not isolated databases). Every table has `tenant_id` with RLS policies enforced by `app.tenant_id` JWT claim:
+RLS is bypassed on the server side via a **service role client** (`locals.srv`) with explicit `.eq('tenant_id', ...)` filters. This avoids the transaction-scoped `current_setting` issue with PostgREST. The service role key is never exposed to the client.
 
-- `super_admin` — all tenants
-- `school_admin` — their tenant (students, teachers, scheduling, fees)
-- `teacher` — their groups, their sessions
-- `parent` — their children's data only
-- `bursar` — their tenant's financial records
-- `principal` — their tenant's oversight data
+## Roles
+
+| Role | Route | Access |
+|------|-------|--------|
+| `super_admin` | `/super-admin` | All tenants, audit logs |
+| `school_admin` | `/admin` | Full CRUD for their tenant |
+| `principal` | `/principal` | Oversight, effectiveness reports |
+| `teacher` | `/teacher` | Mark attendance, view timetable |
+| `bursar` | `/bursar` | Invoices, waivers, revenue |
+| `parent` | `/parent` | Child's attendance, fees, payments |
 
 ## Quick Start
 
@@ -48,66 +53,76 @@ ReClass uses **isolated rows** (not isolated databases). Every table has `tenant
 # Install
 npm install
 
-# Copy environment
-cp .env.example .env.local
-# Edit .env.local with your Supabase project credentials
-
-# Run Supabase locally
-npx supabase start
+# Set up environment variables in .env
+# Required: PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 
 # Run dev server
 npm run dev
 
+# Type-check
+npm run check
+
 # Build
 npm run build
-```
 
-## Deployment
-
-See [docs/deployment.md](docs/deployment.md) for full production setup.
-
-```bash
-# Docker
-docker compose build
-docker compose up -d
+# Test
+npm run test
 ```
 
 ## Project Structure
 
 ```
 src/
-├── app/           # Next.js App Router pages
-│   ├── admin/     # School admin portal (11 pages)
-│   ├── teacher/   # Teacher portal (3 pages)
-│   ├── parent/    # Parent portal (8 pages)
-│   ├── principal/ # Principal dashboard (3 pages)
-│   ├── bursar/    # Bursar portal (4 pages)
-│   ├── super-admin/ # Platform admin (2 pages)
-│   ├── account/   # User account settings
-│   ├── login/     # Auth pages
-│   └── api/       # API routes
-├── components/    # Reusable UI components
-├── lib/           # Utilities (Supabase clients, auth helpers)
-└── middleware.ts  # Auth + role-based routing
+├── routes/
+│   ├── (app)/              # Authenticated routes
+│   │   ├── admin/          # School admin (17 pages)
+│   │   ├── teacher/        # Teacher (3 pages)
+│   │   ├── parent/         # Parent (5 pages)
+│   │   ├── principal/      # Principal (3 pages)
+│   │   ├── bursar/         # Bursar (5 pages)
+│   │   ├── super-admin/    # Platform admin (3 pages)
+│   │   ├── account/        # User account
+│   │   └── notifications/  # Notifications
+│   ├── login/              # Auth page
+│   └── +error.svelte       # Global error boundary
+├── lib/
+│   ├── auth.ts             # Role definitions, route map
+│   ├── cn.ts               # Tailwind class merge utility
+│   ├── components/         # Shared UI components
+│   │   ├── layout/         # AppShell, sidebars, nav
+│   │   ├── ui/             # Button, Card, DataTable, KpiCard
+│   │   └── DashboardContent.svelte
+│   ├── stores/             # Theme store
+│   └── supabase/
+│       ├── client.ts       # Browser client (anon key)
+│       └── server.ts       # Server client + service role client
+├── hooks.server.ts         # Auth, RLS bypass, env validation
+└── app.d.ts                # Locals type definitions
 
 supabase/
-├── migrations/   # 6 migration files
-├── functions/    # 4 Edge Functions (stk, callback, notify, test)
-└── seed.sql      # Malingi High School seed data
+├── migrations/             # 15 migration files (unapplied to hosted DB)
+├── functions/              # 4 Edge Functions (stk, callback, notify, test)
+└── seed/                   # Seed data scripts
 ```
 
-## Documentation
+## Key Commands
 
-| Doc | Contents |
-|-----|----------|
-| [SRS](docs/srs.md) | Software Requirements Specification |
-| [Architecture](docs/architecture.md) | System architecture |
-| [Database](docs/database.md) | Schema and RLS policies |
-| [API](docs/api.md) | API reference |
-| [Security](docs/security.md) | Security model |
-| [Deployment](docs/deployment.md) | Production deployment guide |
-| [Sprint Plan](docs/sprint-plan.md) | 8-sprint delivery plan |
-| [CHANGELOG](docs/CHANGELOG.md) | Version history |
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start dev server |
+| `npm run check` | Type-check (0 errors target) |
+| `npm run build` | Production build (Vercel adapter) |
+| `npm run test` | Run Vitest unit tests |
+| `npm run lint` | ESLint check |
+| `npm run format` | Prettier format |
+
+## Known Limitations
+
+- Database migrations must be applied via Supabase SQL Editor (pg port blocked from dev network)
+- `teacher_attendance` and `group_members` tables require manual creation (see `missing_tables.sql`)
+- Edge Functions deployed but not yet wired from frontend
+- 25+ files use `// @ts-nocheck` due to Zod/Superforms v3 type incompatibility
+- No git remote configured
 
 ## License
 

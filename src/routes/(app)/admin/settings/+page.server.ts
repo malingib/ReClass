@@ -1,9 +1,8 @@
-// @ts-nocheck
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const sb = locals.supabase;
+  const sb = locals.srv;
   const tid = locals.tenantId;
   if (!tid) {
     return { tenant: null, error: 'No tenant association found. Please contact support.' };
@@ -32,7 +31,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   save: async ({ locals, request }) => {
-    const sb = locals.supabase;
+    const sb = locals.srv;
     const form = await request.formData();
 
     const name = form.get('name') as string;

@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const sb = locals.supabase;
+  const sb = locals.srv;
+  const tid = locals.tenantId;
 
   const [payrollRes, teachersRes] = await Promise.all([
     sb
@@ -12,11 +12,13 @@ export const load: PageServerLoad = async ({ locals }) => {
         id, teacher_id, period_start, period_end, occurrences_count, rate_per_session, amount, status, paid_at, created_at,
         teachers!inner(first_name, last_name)
       `)
+      .eq('tenant_id', tid)
       .order('created_at', { ascending: false })
       .limit(100),
     sb
       .from('teachers')
       .select('id, first_name, last_name')
+      .eq('tenant_id', tid)
       .order('first_name'),
   ]);
 
@@ -30,7 +32,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   generate: async ({ locals, request }) => {
-    const sb = locals.supabase;
+    const sb = locals.srv;
+    const tid = locals.tenantId;
     const form = await request.formData();
     const periodStart = form.get('period_start') as string;
     const periodEnd = form.get('period_end') as string;
@@ -47,7 +50,7 @@ export const actions: Actions = {
     const { data: teachers } = await sb
       .from('teachers')
       .select('id')
-      .eq('tenant_id', locals.tenantId);
+      .eq('tenant_id', tid);
 
     if (!teachers || teachers.length === 0) {
       return fail(400, { error: 'No teachers found. Add teachers first.' });
@@ -57,7 +60,7 @@ export const actions: Actions = {
     const { data: tenant } = await sb
       .from('tenants')
       .select('payroll_rate_per_session')
-      .eq('id', locals.tenantId)
+      .eq('id', tid)
       .single();
 
     const ratePerSession = Number(tenant?.payroll_rate_per_session ?? 0);
@@ -73,6 +76,7 @@ export const actions: Actions = {
       const { data: occurrences, error: countError } = await sb
         .from('teacher_attendance')
         .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tid)
         .eq('teacher_id', teacher.id)
         .in('status', ['present', 'late'])
         .gte('marked_at', `${periodStart}T00:00:00`)
@@ -88,7 +92,7 @@ export const actions: Actions = {
       if (count === 0) continue; // Skip teachers with no attendance
 
       payrollRecords.push({
-        tenant_id: locals.tenantId,
+        tenant_id: tid,
         teacher_id: teacher.id,
         period_start: periodStart,
         period_end: periodEnd,
@@ -122,7 +126,8 @@ export const actions: Actions = {
   },
 
   approve: async ({ locals, request }) => {
-    const sb = locals.supabase;
+    const sb = locals.srv;
+    const tid = locals.tenantId;
     const form = await request.formData();
     const id = form.get('id') as string;
 
@@ -134,7 +139,7 @@ export const actions: Actions = {
       .from('payroll_runs')
       .update({ status: 'approved' })
       .eq('id', id)
-      .eq('tenant_id', locals.tenantId);
+      .eq('tenant_id', tid);
 
     if (error) {
       console.error('Payroll approve error:', error);

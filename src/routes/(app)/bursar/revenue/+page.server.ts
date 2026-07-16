@@ -2,9 +2,10 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const yearStart = new Date(Date.now() - 365 * 864e5).toISOString();
-  const { data: revenue } = await locals.supabase
+  const { data: revenue } = await locals.srv
     .from('invoices')
     .select('amount_paid, paid_at')
+    .eq('tenant_id', locals.tenantId)
     .gte('paid_at', yearStart)
     .eq('status', 'paid')
     .limit(5000);

@@ -2,7 +2,8 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
-  const sb = locals.supabase;
+  const sb = locals.srv;
+  const tid = locals.tenantId;
 
   const { data: invoices } = await sb
     .from('invoices')
@@ -10,8 +11,9 @@ export const GET: RequestHandler = async ({ locals }) => {
       id, amount_due, amount_paid, status, due_date, created_at,
       students!inner(first_name, last_name, admission_no, grade)
     `)
+    .eq('tenant_id', tid)
     .eq('status', 'paid')
-    .order('paid_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(10000);
 
   if (!invoices) {

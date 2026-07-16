@@ -2,7 +2,8 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
-  const sb = locals.supabase;
+  const sb = locals.srv;
+  const tid = locals.tenantId;
 
   const { data: attendance } = await sb
     .from('teacher_attendance')
@@ -11,9 +12,10 @@ export const GET: RequestHandler = async ({ locals }) => {
       teachers!inner(first_name, last_name),
       session_occurrences!inner(
         occurs_on, start_time, end_time,
-        sessions!inner(name, slot)
+        sessions!inner(day_of_week, slot)
       )
     `)
+    .eq('tenant_id', tid)
     .order('marked_at', { ascending: false })
     .limit(10000);
 
@@ -24,7 +26,7 @@ export const GET: RequestHandler = async ({ locals }) => {
   const headers = ['Teacher', 'Session', 'Slot', 'Date', 'Start', 'End', 'Status', 'Marked At'];
   const rows = attendance.map((r: any) => [
     `${r.teachers?.first_name ?? ''} ${r.teachers?.last_name ?? ''}`,
-    r.session_occurrences?.sessions?.name ?? '',
+    '',
     r.session_occurrences?.sessions?.slot ?? '',
     r.session_occurrences?.occurs_on ?? '',
     r.session_occurrences?.start_time?.slice(0, 5) ?? '',

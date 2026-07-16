@@ -1,9 +1,8 @@
-// @ts-nocheck
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const sb = locals.supabase;
+  const sb = locals.srv;
 
   const { data: credentials } = await sb
     .from('credentials')
@@ -17,7 +16,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   save: async ({ locals, request }) => {
-    const sb = locals.supabase;
+    const sb = locals.srv;
     const form = await request.formData();
 
     const id = form.get('id') as string;
@@ -71,7 +70,7 @@ export const actions: Actions = {
   },
 
   delete: async ({ locals, request }) => {
-    const sb = locals.supabase;
+    const sb = locals.srv;
     const form = await request.formData();
     const id = form.get('id') as string;
 
@@ -94,7 +93,7 @@ export const actions: Actions = {
   },
 
   test: async ({ locals, request }) => {
-    const sb = locals.supabase;
+    const sb = locals.srv;
     const form = await request.formData();
     const id = form.get('id') as string;
 

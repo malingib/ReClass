@@ -1,7 +1,8 @@
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const sb = locals.supabase;
+  const sb = locals.srv;
+  const tid = locals.tenantId;
   const since = new Date(Date.now() - 14 * 864e5).toISOString();
 
   const [
@@ -10,19 +11,19 @@ export const load: PageServerLoad = async ({ locals }) => {
     { data: rs }, { data: ri }, { data: ta }, { data: taTrend }, { data: occ }, { data: sessionsByStatus },
     { data: sum },
   ] = await Promise.all([
-    sb.from('students').select('*', { count: 'exact', head: true }),
-    sb.from('teachers').select('*', { count: 'exact', head: true }),
-    sb.from('subjects').select('*', { count: 'exact', head: true }),
-    sb.from('remedial_groups').select('*', { count: 'exact', head: true }),
-    sb.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'unpaid'),
-    sb.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'paid'),
-    sb.from('students').select('id,admission_no,first_name,last_name,grade,created_at').order('created_at', { ascending: false }).limit(5),
-    sb.from('invoices').select('id,amount_due,amount_paid,parent,parent_phone,status,due_date,students(first_name,last_name,admission_no)').order('created_at', { ascending: false }).limit(5),
-    sb.from('teacher_attendance').select('*').gte('marked_at', since),
-    sb.from('teacher_attendance').select('status,marked_at').gte('marked_at', since),
-    sb.from('session_occurrences').select('id, start_at, status').gte('start_at', since),
-    sb.from('session_occurrences').select('status, start_at').gte('start_at', since),
-    sb.from('invoices').select('amount_due,amount_paid,status').eq('status', 'unpaid'),
+    sb.from('students').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+    sb.from('teachers').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+    sb.from('subjects').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+    sb.from('remedial_groups').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+    sb.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'unpaid'),
+    sb.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'paid'),
+    sb.from('students').select('id,admission_no,first_name,last_name,grade,created_at').eq('tenant_id', tid).order('created_at', { ascending: false }).limit(5),
+    sb.from('invoices').select('id,amount_due,amount_paid,status,due_date,created_at,students(first_name,last_name,admission_no)').eq('tenant_id', tid).order('created_at', { ascending: false }).limit(5),
+    sb.from('teacher_attendance').select('*').eq('tenant_id', tid).gte('marked_at', since),
+    sb.from('teacher_attendance').select('status,marked_at').eq('tenant_id', tid).gte('marked_at', since),
+    sb.from('session_occurrences').select('id, occurs_on, status').eq('tenant_id', tid).gte('occurs_on', since),
+    sb.from('session_occurrences').select('status, occurs_on').eq('tenant_id', tid).gte('occurs_on', since),
+    sb.from('invoices').select('amount_due,amount_paid,status').eq('tenant_id', tid).eq('status', 'unpaid'),
   ]);
 
   const total = ta?.length ?? 0;
@@ -51,11 +52,11 @@ export const load: PageServerLoad = async ({ locals }) => {
     })),
     ...(ri || []).slice(0, 3).map((i: any) => ({
       id: `pmt-${i.id}`,
-      name: i.parent ?? (i.students ? `${i.students.first_name} ${i.students.last_name}` : 'Unknown'),
+      name: i.students ? `${i.students.first_name} ${i.students.last_name}` : 'Unknown',
       detail: `${i.students ? `Adm ${i.students.admission_no ?? ''} · ` : ''}KES ${Number(i.amount_paid ?? 0).toLocaleString()} via M-Pesa paybill`,
       time: i.due_date ? new Date(i.due_date).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '',
       kind: 'payment',
-      badge: i.status === 'paid' ? 'Paid' : i.status === 'partially_paid' ? 'Partial' : 'Pending',
+      badge: i.status === 'paid' ? 'Paid' : i.status === 'partial' ? 'Partial' : 'Pending',
     })),
   ];
 
@@ -72,7 +73,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       sessionsCount,
     },
     recentStudents: rs ?? [],
-    recentInvoices: (ri ?? []).map((i: any) => ({ ...i, parent: i.parent ?? (i.students ? `Parent of ${i.students.first_name} ${i.students.last_name}` : 'Unknown parent') })),
+    recentInvoices: (ri ?? []).map((i: any) => ({ ...i, parent: i.students ? `Parent of ${i.students.first_name} ${i.students.last_name}` : 'Unknown parent' })),
     trend,
     activity,
     sessionsSummary: sessionsByStatus ?? [],

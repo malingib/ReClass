@@ -28,7 +28,12 @@ export const actions: Actions = {
 
     if (records.length === 0) return fail(400, { error: 'No records provided' });
 
-    const { data, error } = await locals.supabase.from('students').insert(records).select();
+    // Attach tenant_id to every record
+    for (const record of records) {
+      record.tenant_id = locals.tenantId;
+    }
+
+    const { data, error } = await locals.srv.from('students').insert(records).select();
 
     if (error) return fail(500, { error: error.message });
     return { success: true, count: data?.length ?? 0 };

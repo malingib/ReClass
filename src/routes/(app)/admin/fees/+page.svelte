@@ -36,9 +36,8 @@
       id: f.id,
       name: f.name,
       amount: f.amount,
-      grade: f.grade ?? '',
-      frequency: f.frequency ?? '',
-      status: f.status,
+      due_date: f.due_date ?? '',
+      term: f.term ?? '',
     });
     showCreate = true;
   }
@@ -60,9 +59,8 @@
     columns={[
       { key: 'name', label: 'Fee', sortable: true },
       { key: 'amount', label: 'Amount', render: (f: any) => `KES ${Number(f.amount).toLocaleString()}` },
-      { key: 'grade', label: 'Cohort', sortable: true },
-      { key: 'frequency', label: 'Cadence' },
-      { key: 'status', label: 'Status', sortable: true },
+      { key: 'due_date', label: 'Due Date', sortable: true },
+      { key: 'term', label: 'Term', sortable: true },
     ]}
     emptyMessage="No remedial fee definitions yet"
     onEdit={openEdit}
@@ -100,25 +98,16 @@
             {#if errors.amount}<p class="text-xs text-danger">{errors.amount}</p>{/if}
           </div>
           <div class="space-y-1.5">
-            <label for="grade" class="text-xs font-medium text-ink-700">Cohort / Grade</label>
-            <input id="grade" name="grade" type="text" bind:value={feeForm.grade} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Form 1" />
-            {#if errors.grade}<p class="text-xs text-danger">{errors.grade}</p>{/if}
+            <label for="due_date" class="text-xs font-medium text-ink-700">Due Date</label>
+            <input id="due_date" name="due_date" type="date" bind:value={feeForm.due_date} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" />
+            {#if errors.due_date}<p class="text-xs text-danger">{errors.due_date}</p>{/if}
           </div>
         </div>
 
         <div class="space-y-1.5">
-          <label for="frequency" class="text-xs font-medium text-ink-700">Frequency / Cadence</label>
-          <input id="frequency" name="frequency" type="text" bind:value={feeForm.frequency} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Termly" />
-          {#if errors.frequency}<p class="text-xs text-danger">{errors.frequency}</p>{/if}
-        </div>
-
-        <div class="space-y-1.5">
-          <label for="status" class="text-xs font-medium text-ink-700">Status</label>
-          <select id="status" name="status" bind:value={feeForm.status} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20">
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          {#if errors.status}<p class="text-xs text-danger">{errors.status}</p>{/if}
+          <label for="term" class="text-xs font-medium text-ink-700">Term</label>
+          <input id="term" name="term" type="text" bind:value={feeForm.term} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Term 1, 2026" />
+          {#if errors.term}<p class="text-xs text-danger">{errors.term}</p>{/if}
         </div>
 
         {#if message}
