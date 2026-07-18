@@ -2,9 +2,9 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let waivers = $derived(data.waivers ?? []);
-  let invoices = $derived(data.invoices ?? []);
+  const { data } = $props();
+  const waivers = $derived(data.waivers ?? []);
+  const invoices = $derived(data.invoices ?? []);
 </script>
 
 <DashboardContent title="Fee waivers" subtitle="Approve waivers alongside M-Pesa reconciliation">

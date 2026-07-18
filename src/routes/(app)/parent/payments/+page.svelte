@@ -2,8 +2,8 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let invoices = $derived(data.invoices);
+  const { data } = $props();
+  const invoices = $derived(data.invoices);
 </script>
 
 <DashboardContent title="Payments" subtitle="Payment history">

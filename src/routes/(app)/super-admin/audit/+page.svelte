@@ -2,8 +2,8 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let logs = $derived(data.logs);
+  const { data } = $props();
+  const logs = $derived(data.logs);
 </script>
 
 <DashboardContent title="Audit Log" subtitle="Full platform audit trail">

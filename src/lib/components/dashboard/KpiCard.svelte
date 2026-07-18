@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { label, value, sub = '', trend, pos }: {
+  const { label, value, sub = '', trend, pos }: {
     label: string; value: string | number; sub?: string; trend?: string; pos?: boolean;
   } = $props();
 </script>

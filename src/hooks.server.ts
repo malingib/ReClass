@@ -2,15 +2,18 @@ import { redirect } from '@sveltejs/kit';
 import { getServerSupabase, getServiceClient } from '$lib/supabase/server';
 import { roleRoutes, isRole, type Role } from '$lib/auth';
 import type { Handle } from '@sveltejs/kit';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 
-// Validate required env vars at startup
+// Validate required env vars at startup (read the SvelteKit-loaded values,
+// since process.env is not populated from .env for SSR hooks under vite dev).
 const REQUIRED_ENV_VARS = [
-  ['PUBLIC_SUPABASE_URL', 'Supabase project URL'],
-  ['PUBLIC_SUPABASE_ANON_KEY', 'Supabase anonymous key'],
-  ['SUPABASE_SERVICE_ROLE_KEY', 'Supabase service role key (bypasses RLS)'],
+  [PUBLIC_SUPABASE_URL, 'PUBLIC_SUPABASE_URL', 'Supabase project URL'],
+  [PUBLIC_SUPABASE_ANON_KEY, 'PUBLIC_SUPABASE_ANON_KEY', 'Supabase anonymous key'],
+  [SUPABASE_SERVICE_ROLE_KEY, 'SUPABASE_SERVICE_ROLE_KEY', 'Supabase service role key (bypasses RLS)'],
 ] as const;
-for (const [key, label] of REQUIRED_ENV_VARS) {
-  if (!process.env[key]) {
+for (const [value, key, label] of REQUIRED_ENV_VARS) {
+  if (!value) {
     throw new Error(`Missing ${key} (${label}). Check your .env file.`);
   }
 }
@@ -27,6 +30,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.user = null;
   event.locals.role = null;
   event.locals.tenantId = null;
+  event.locals.impersonating = false;
 
   let session: import('@supabase/supabase-js').Session | null = null;
   try {
@@ -79,6 +83,26 @@ export const handle: Handle = async ({ event, resolve }) => {
         }
       }
     }
+    }
+
+    // A tenant-scoped role with no tenant_id is a provisioning failure, not an
+    // empty dashboard. Redirect to a clear page instead of silently showing
+    // nothing (every .eq('tenant_id', null) returns zero rows). super_admin is
+    // cross-tenant by design and is exempt.
+    if (event.locals.user && event.locals.role && event.locals.role !== 'super_admin' && !event.locals.tenantId) {
+    if (pathname !== '/not-provisioned') {
+      redirect(303, '/not-provisioned');
+    }
+    return resolve(event);
+    }
+
+    // Super-admin tenant drill-down: if impersonating via the tenants console,
+  // adopt that tenant_id so the admin UI renders real customer data. Guarded by
+  // role === 'super_admin' only — regular roles can never set this cookie's effect.
+  const impersonateCookie = cookies.get('x-reclass-impersonate');
+  if (event.locals.role === 'super_admin' && impersonateCookie && event.locals.tenantId !== impersonateCookie) {
+    event.locals.tenantId = impersonateCookie;
+    event.locals.impersonating = true;
   }
 
   if (pathname === '/' || pathname === '/login') {
@@ -105,7 +129,9 @@ export const handle: Handle = async ({ event, resolve }) => {
   const target = roleRoutes[role];
 
   const prefix = '/' + pathname.split('/')[1];
-  if (pathname === '/' || prefix !== target) {
+  // super_admin is normally locked to /super-admin, but while impersonating a
+  // tenant it may operate inside /admin to support/investigate that school.
+  if (pathname === '/' || (prefix !== target && !(role === 'super_admin' && event.locals.impersonating && prefix === '/admin'))) {
     redirect(303, target);
   }
 

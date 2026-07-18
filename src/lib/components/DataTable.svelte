@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   interface Column<T> {
     key: string;
     label: string;
@@ -6,7 +8,7 @@
     render?: (_item: T) => string;
   }
 
-  let {
+  const {
     columns,
     data,
     loading = false,
@@ -15,6 +17,7 @@
     deleteLabel = 'Delete',
     emptyMessage,
     pageSize = 25,
+    rowExtra,
   }: {
     columns: Column<any>[];
     data: any[];
@@ -24,6 +27,7 @@
     deleteLabel?: string;
     emptyMessage?: string;
     pageSize?: number;
+    rowExtra?: Snippet<[any]>;
   } = $props();
 
   let sortKey = $state<string | null>(null);
@@ -36,7 +40,7 @@
     else { sortKey = key; sortDir = 'asc'; }
   }
 
-  let filtered = $derived(
+  const filtered = $derived(
     searchQuery
       ? data.filter((item: any) => {
           const q = searchQuery.toLowerCase();
@@ -48,7 +52,7 @@
       : data
   );
 
-  let sorted = $derived(
+  const sorted = $derived(
     [...filtered].sort((a, b) => {
       if (!sortKey) return 0;
       const aVal = String(a[sortKey] ?? '');
@@ -57,7 +61,7 @@
     })
   );
 
-  let totalPages = $derived(Math.max(1, Math.ceil(sorted.length / pageSize)));
+  const totalPages = $derived(Math.max(1, Math.ceil(sorted.length / pageSize)));
 
   // Reset to page 1 when search or data changes
   $effect(() => {
@@ -66,11 +70,11 @@
     }
   });
 
-  let paginated = $derived(
+  const paginated = $derived(
     sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   );
 
-  let hasRowActions = $derived(!!onEdit || !!onDelete);
+  const hasRowActions = $derived(!!onEdit || !!onDelete);
 
   function prevPage() {
     if (currentPage > 1) currentPage--;
@@ -134,6 +138,9 @@
             {#if hasRowActions}
               <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.26em] text-ink-400">Actions</th>
             {/if}
+            {#if rowExtra}
+              <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.26em] text-ink-400">Manage</th>
+            {/if}
           </tr>
         </thead>
         <tbody>
@@ -154,6 +161,11 @@
                       <button onclick={() => onDelete(item)} class="text-xs font-medium text-ink-400 transition-colors hover:text-danger">{deleteLabel}</button>
                     {/if}
                   </div>
+                </td>
+              {/if}
+              {#if rowExtra}
+                <td class="px-4 py-3 text-right">
+                  {@render rowExtra(item)}
                 </td>
               {/if}
             </tr>

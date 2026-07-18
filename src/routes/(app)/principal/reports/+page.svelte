@@ -5,9 +5,9 @@
   import CardHeader from '$lib/components/ui/card-header.svelte';
   import CardContent from '$lib/components/ui/card-content.svelte';
 
-  let { data } = $props();
-  let stats = $derived(data.stats);
-  let recentSessions = $derived(data.recentSessions);
+  const { data } = $props();
+  const stats = $derived(data.stats);
+  const recentSessions = $derived(data.recentSessions);
 </script>
 
 <DashboardContent title="Reports" subtitle="Student attendance and academic reports">

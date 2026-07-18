@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from './utils';
-  let { class: className = '', children }: {
+  const { class: className = '', children }: {
     class?: string;
     children?: import('svelte').Snippet;
   } = $props();

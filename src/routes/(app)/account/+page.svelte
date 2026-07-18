@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
 
-  let userInfo = $derived({
+  const userInfo = $derived({
     name: $page.data?.user?.user_metadata?.full_name ?? $page.data?.user?.email ?? 'User',
     email: $page.data?.user?.email ?? '',
     role: $page.data?.role ?? '',

@@ -7,9 +7,9 @@
   let open = $state(false);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
-  let seenToastIds = new Set<string>();
+  const seenToastIds = new Set<string>();
 
-  let supabase = getSupabase();
+  const supabase = getSupabase();
 
   async function loadNotifications() {
     isLoading = true;

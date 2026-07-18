@@ -3,9 +3,9 @@
   import Button from '$lib/components/ui/button.svelte';
   import { enhance } from '$app/forms';
 
-  let { data, form } = $props();
-  let pending = $derived(data.pending);
-  let pendingCount = $derived(data.pendingCount);
+  const { data, form } = $props();
+  const pending = $derived(data.pending);
+  const pendingCount = $derived(data.pendingCount);
 
   let selected = $state<Set<string>>(new Set());
   let approving = $state(false);

@@ -3,8 +3,8 @@
   import Button from '$lib/components/ui/button.svelte';
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
 
-  let { data } = $props();
-  let stats = $derived(data.stats);
+  const { data } = $props();
+  const stats = $derived(data.stats);
 </script>
 
 <DashboardContent title="Reports" subtitle="Exports that feed principal weekly reviews">

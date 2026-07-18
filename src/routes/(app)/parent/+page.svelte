@@ -2,9 +2,9 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let students = $derived(data.students);
-  let invoices = $derived(data.invoices);
+  const { data } = $props();
+  const students = $derived(data.students);
+  const invoices = $derived(data.invoices);
 </script>
 
 <DashboardContent title="Welcome back" subtitle="Your child's remedial schedule and M-Pesa payments">

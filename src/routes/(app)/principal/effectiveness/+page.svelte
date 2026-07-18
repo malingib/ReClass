@@ -2,9 +2,9 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import LineChart from '$lib/components/charts/LineChart.svelte';
 
-  let { data } = $props();
-  let trend = $derived(data.trend ?? []);
-  let summary = $derived(data.summary ?? []);
+  const { data } = $props();
+  const trend = $derived(data.trend ?? []);
+  const summary = $derived(data.summary ?? []);
 </script>
 
 <DashboardContent title="Program Effectiveness" subtitle="Teacher attendance rate trends and remediation impact">

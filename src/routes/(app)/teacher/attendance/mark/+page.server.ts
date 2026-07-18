@@ -28,30 +28,13 @@ export const load: PageServerLoad = async ({ locals }) => {
   const dayOfWeek = new Date().getDay(); // 0=Sun, 1=Mon, ...
   const supabaseDay = dayOfWeek === 0 ? 7 : dayOfWeek;
 
-  // Get the teacher's groups
-  let gq = db
-    .from('remedial_groups')
-    .select('id, name, subject_id, term')
-    .eq('teacher_id', teacher.id);
-  if (locals.tenantId) gq = gq.eq('tenant_id', locals.tenantId);
-  const { data: groups } = await gq;
+  // No group lookup needed — sessions are class-scoped and filtered by teacher_id above.
 
-  const groupIds = (groups ?? []).map(g => g.id);
-
-  if (groupIds.length === 0) {
-    return {
-      sessions: [],
-      groups: groups ?? [],
-      teacher,
-      existingAttendance: {},
-    };
-  }
-
-  // Get today's sessions for these groups
+  // Get the teacher's sessions for today (sessions are class-scoped, not group-scoped)
   const { data: sessions } = await db
     .from('sessions')
-    .select('id, group_id, day_of_week, start_time, end_time, remedial_groups!inner(name, subject_id, term)')
-    .in('group_id', groupIds)
+    .select('id, class, day_of_week, start_time, end_time, subject_id, subjects!inner(name)')
+    .eq('teacher_id', teacher.id)
     .eq('day_of_week', supabaseDay)
     .eq('active', true);
 
@@ -100,67 +83,41 @@ export const load: PageServerLoad = async ({ locals }) => {
     occurrence_id: occurrenceMap[s.id] ?? null,
   })).filter(s => s.occurrence_id);
 
-  // Get enrolled students for each group via group_members
-  // Since group_members may not exist, fall back to basic data
-  const occurrenceIds = enrichedSessions.map(s => s.occurrence_id).filter(Boolean);
-
-  // Get existing attendance records for today
-  const { data: existingAttendance } = await db
-    .from('attendance')
-    .select('id, student_id, occurrence_id, status')
-    .in('occurrence_id', occurrenceIds);
-
-  const attendanceMap: Record<string, Record<string, any>> = {};
-  for (const a of existingAttendance ?? []) {
-    if (!attendanceMap[a.occurrence_id]) attendanceMap[a.occurrence_id] = {};
-    attendanceMap[a.occurrence_id][a.student_id] = a;
+  // Build the roster per session: students in the same grade (class) as the session.
+  const classBySession: Record<string, string> = {};
+  for (const s of enrichedSessions) {
+    classBySession[s.id] = (s as any).class;
   }
+  const classes = [...new Set(Object.values(classBySession).filter(Boolean))];
 
-  // Get students enrolled in each group
-  let groupStudents: Record<string, any[]> = {};
-  try {
-    const { data: groupMembers } = await db
-      .from('group_members')
-      .select('student_id, group_id, students(id, first_name, last_name, admission_no, grade)')
-      .in('group_id', groupIds);
-    if (groupMembers) {
-      for (const gm of groupMembers) {
-        if (!groupStudents[gm.group_id]) groupStudents[gm.group_id] = [];
-        groupStudents[gm.group_id].push({
-          id: gm.students?.id,
-          first_name: gm.students?.first_name,
-          last_name: gm.students?.last_name,
-          admission_no: gm.students?.admission_no,
-        });
-      }
-    }
-  } catch {
-    // group_members table may not exist; fall back to all tenant students
-  }
-
-  // Fallback: if no group_members data, show all students for the tenant
-  if (Object.keys(groupStudents).length === 0) {
-    const { data: allStudents } = await db
+  const studentsByClass: Record<string, any[]> = {};
+  if (classes.length > 0) {
+    const { data: classStudents } = await db
       .from('students')
       .select('id, first_name, last_name, admission_no, grade')
+      .in('grade', classes)
       .order('first_name');
-    if (allStudents) {
-      for (const gId of groupIds) {
-        groupStudents[gId] = allStudents.map(s => ({
-          id: s.id,
-          first_name: s.first_name,
-          last_name: s.last_name,
-          admission_no: s.admission_no,
-        }));
-      }
+    for (const s of classStudents ?? []) {
+      const g = s.grade ?? '';
+      if (!studentsByClass[g]) studentsByClass[g] = [];
+      studentsByClass[g].push({
+        id: s.id,
+        first_name: s.first_name,
+        last_name: s.last_name,
+        admission_no: s.admission_no,
+      });
     }
+  }
+
+  // Map session_id -> roster (students in that session's class)
+  const groupStudents: Record<string, any[]> = {};
+  for (const [sessionId, cls] of Object.entries(classBySession)) {
+    groupStudents[sessionId] = studentsByClass[cls ?? ''] ?? [];
   }
 
   return {
     sessions: enrichedSessions,
-    groups: groups ?? [],
     teacher,
-    existingAttendance: attendanceMap,
     groupStudents,
   };
 };

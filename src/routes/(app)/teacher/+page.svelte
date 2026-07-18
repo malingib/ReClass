@@ -2,8 +2,8 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
 
-  let { data } = $props();
-  let stats = $derived(data.stats);
+  const { data } = $props();
+  const stats = $derived(data.stats);
 </script>
 
 <DashboardContent title="Remedial teacher workflow" subtitle="Sessions today and your attendance marks">

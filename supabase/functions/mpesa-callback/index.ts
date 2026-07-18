@@ -31,11 +31,16 @@ Deno.serve(async (req) => {
       p_phone: PhoneNumber ?? '', p_tenant_id: cr.tenant_id
     });
     await supabase.from('checkout_requests').update({ status: 'completed' }).eq('id', cr.id);
-    await supabase.from('notifications').insert({
-      tenant_id: cr.tenant_id, related_type: 'invoice', related_id: cr.invoice_id, channel: 'sms',
-      recipient: PhoneNumber ?? '', body: `ReClass: Payment of KES ${Amount ?? cr.amount} received. Receipt: ${CheckoutRequestID.slice(0, 8)}`,
-      status: 'queued'
-    });
+    // Respect the per-tenant sms_payment_receipt toggle before enqueuing a receipt SMS.
+    const { data: receiptOn } = await supabase.rpc('tenant_setting_enabled',
+      { p_tenant: cr.tenant_id, p_key: 'sms_payment_receipt' });
+    if (receiptOn) {
+      await supabase.from('notifications').insert({
+        tenant_id: cr.tenant_id, related_type: 'invoice', related_id: cr.invoice_id, channel: 'sms',
+        recipient: PhoneNumber ?? '', body: `ReClass: Payment of KES ${Amount ?? cr.amount} received. Receipt: ${CheckoutRequestID.slice(0, 8)}`,
+        status: 'queued'
+      });
+    }
     return new Response(JSON.stringify(rec), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: corsHeaders });

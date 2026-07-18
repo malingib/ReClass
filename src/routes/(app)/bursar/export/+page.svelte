@@ -6,19 +6,19 @@
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
   import { enhance } from '$app/forms';
 
-  let { data } = $props();
-  let invoices = $derived(data.invoices ?? []);
-  let statusCounts = $derived(data.statusCounts ?? {});
-  let totalDue = $derived(data.totalDue ?? 0);
-  let totalPaid = $derived(data.totalPaid ?? 0);
-  let outstanding = $derived(data.outstanding ?? 0);
+  const { data } = $props();
+  const invoices = $derived(data.invoices ?? []);
+  const statusCounts = $derived(data.statusCounts ?? {});
+  const totalDue = $derived(data.totalDue ?? 0);
+  const totalPaid = $derived(data.totalPaid ?? 0);
+  const outstanding = $derived(data.outstanding ?? 0);
 
   let searchQuery = $state('');
   let statusFilter = $state('all');
   let dateFrom = $state('');
   let dateTo = $state('');
 
-  let filtered = $derived.by(() => {
+  const filtered = $derived.by(() => {
     let result = invoices;
     // Search filter
     if (searchQuery) {

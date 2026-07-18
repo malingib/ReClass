@@ -13,7 +13,7 @@
     [key: string]: unknown;
   }
 
-  let {
+  const {
     variant = 'primary',
     size = 'md',
     disabled = false,

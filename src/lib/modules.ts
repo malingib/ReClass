@@ -33,7 +33,7 @@ export const suiteModules: SuiteModule[] = [
   {
     id: 'student-information',
     name: 'Student Information System',
-    description: 'Admissions, student records, parent contacts, and everyday school administration.',
+    description: 'Cross-school SIS: admissions, records, parent contacts and everyday administration beyond the ReClass module.',
     status: 'coming-soon',
     icon: 'students',
     accent: 'blue',
@@ -41,7 +41,7 @@ export const suiteModules: SuiteModule[] = [
   {
     id: 'academics',
     name: 'Academics',
-    description: 'Classes, subjects, timetables, examinations, and academic progress.',
+    description: 'Timetables, examinations and academic progress across the full curriculum.',
     status: 'coming-soon',
     icon: 'academics',
     accent: 'amber',
@@ -49,7 +49,7 @@ export const suiteModules: SuiteModule[] = [
   {
     id: 'hr-payroll',
     name: 'HR & Payroll',
-    description: 'Staff, departments, leave, payroll, and workforce records.',
+    description: 'School-wide HR: staff, departments, leave and payroll administration across all modules.',
     status: 'coming-soon',
     icon: 'people',
     accent: 'cyan',
@@ -57,7 +57,7 @@ export const suiteModules: SuiteModule[] = [
   {
     id: 'communications',
     name: 'Communications',
-    description: 'Announcements, notices, events, SMS, and school messages.',
+    description: 'Announcements, notices, events, SMS and school messaging across all modules.',
     status: 'coming-soon',
     icon: 'communications',
     accent: 'orange',
@@ -65,7 +65,7 @@ export const suiteModules: SuiteModule[] = [
   {
     id: 'reports',
     name: 'Reports & Analytics',
-    description: 'Academic, attendance, finance, and leadership reporting.',
+    description: 'Cross-module academic, attendance, finance and leadership reporting.',
     status: 'coming-soon',
     icon: 'reports',
     accent: 'slate',

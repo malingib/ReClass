@@ -8,7 +8,7 @@
   import { locale, type Locale } from '$lib/stores/locale';
   import { t } from '$lib/i18n';
 
-  let {
+  const {
     title,
     subtitle = '',
     headerActions,
@@ -63,8 +63,6 @@
       ]},
       { label: 'Remedial program', defaultOpen: true, items: [
         { label: 'Subjects', href: '/admin/subjects', icon: 'subjects' },
-        { label: 'Remedial groups', href: '/admin/groups', icon: 'groups' },
-        { label: 'Enrollment', href: '/admin/enrollment', icon: 'students' },
         { label: 'Scheduling', href: '/admin/scheduling', icon: 'calendar' },
         { label: 'Teacher attendance', href: '/admin/attendance', icon: 'calendar' },
       ]},
@@ -130,8 +128,8 @@
     return href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
   }
 
-  let NAV = $derived(roleNav[role] ?? roleNav.school_admin);
-  let openGroups = $state<Record<string, boolean>>({});
+  const NAV = $derived(roleNav[role] ?? roleNav.school_admin);
+  const openGroups = $state<Record<string, boolean>>({});
 
   $effect(() => {
     const initial = Object.fromEntries(NAV.map(g => [g.label, g.defaultOpen ?? false]));
@@ -147,9 +145,9 @@
   const userEmail = $derived(user?.email ?? 'admin@reclass.app');
 
   // All nav items flattened for the bottom nav
-  let allItems = $derived(NAV.flatMap((group) => group.items));
-  let navItemsVisible = $derived(allItems.length <= 4 ? allItems : allItems.slice(0, 3));
-  let navItemsMore = $derived(allItems.length <= 4 ? [] : allItems.slice(3));
+  const allItems = $derived(NAV.flatMap((group) => group.items));
+  const navItemsVisible = $derived(allItems.length <= 4 ? allItems : allItems.slice(0, 3));
+  const navItemsMore = $derived(allItems.length <= 4 ? [] : allItems.slice(3));
 
   $effect(() => {
     function handleClick(event: MouseEvent) {

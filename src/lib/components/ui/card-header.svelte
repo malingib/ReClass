@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn } from './utils';
-  let { title, subtitle, action, class: className = '' }: {
+  const { title, subtitle, action, class: className = '' }: {
     title: string;
     subtitle?: string;
     action?: import('svelte').Snippet;

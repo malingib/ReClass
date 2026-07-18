@@ -2,13 +2,13 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let allInvoices = $derived(data.allInvoices);
-  let stats = $derived(data.stats);
+  const { data } = $props();
+  const allInvoices = $derived(data.allInvoices);
+  const stats = $derived(data.stats);
 
   let filter = $state<'all' | 'paid' | 'unpaid' | 'partial'>('all');
 
-  let filteredInvoices = $derived(
+  const filteredInvoices = $derived(
     filter === 'all' ? allInvoices : allInvoices.filter((i: any) => i.status === filter)
   );
 </script>

@@ -24,12 +24,22 @@ Deno.serve(async (req) => {
       )
       .limit(200);
 
+    // Respect the per-tenant sms_payment_reminder toggle.
+    const enabledTenants = new Set<string>();
+    for (const inv of overdue ?? []) {
+      if (enabledTenants.has(inv.tenant_id)) continue;
+      const { data: on } = await supabase
+        .rpc('tenant_setting_enabled', { p_tenant: inv.tenant_id, p_key: 'sms_payment_reminder' });
+      if (on) enabledTenants.add(inv.tenant_id);
+    }
+
     if (!overdue?.length) {
       return new Response(JSON.stringify({ processed: 0 }), { headers: corsHeaders });
     }
 
     let created = 0;
     for (const inv of overdue) {
+      if (!enabledTenants.has(inv.tenant_id)) continue;
       const parent = (inv as any).parents?.[0]?.parents;
       if (!parent?.phone) continue;
 

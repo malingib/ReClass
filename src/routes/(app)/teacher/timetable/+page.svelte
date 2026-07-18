@@ -2,8 +2,8 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let timetable = $derived(data.timetable);
+  const { data } = $props();
+  const timetable = $derived(data.timetable);
 </script>
 
 <DashboardContent title="Timetable" subtitle="Your teaching schedule">

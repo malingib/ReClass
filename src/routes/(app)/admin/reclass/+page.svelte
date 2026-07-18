@@ -7,13 +7,13 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import RecentActivity from '$lib/components/dashboard/RecentActivity.svelte';
 
-  let { data } = $props();
-  let stat = $derived(data.stat);
-  let recentStudents = $derived(data.recentStudents);
-  let recentInvoices = $derived(data.recentInvoices);
-  let trend = $derived(data.trend);
-  let trendIsAllZero = $derived(trend.length > 0 && trend.every(d => d.value === 0));
-  let activity = $derived(data.activity);
+  const { data } = $props();
+  const stat = $derived(data.stat);
+  const recentStudents = $derived(data.recentStudents);
+  const recentInvoices = $derived(data.recentInvoices);
+  const trend = $derived(data.trend);
+  const trendIsAllZero = $derived(trend.length > 0 && trend.every(d => d.value === 0));
+  const activity = $derived(data.activity);
 </script>
 
 {#snippet manageStudentsAction()}
@@ -58,7 +58,7 @@
     <!-- KPIs -->
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {@render kpi('Today', stat.sessionsCount ? 'Active' : 'Jul 16', `${stat.sessionsCount} session${stat.sessionsCount !== 1 ? 's' : ''} today`)}
-      {@render kpi('Remedial groups', stat.groups, `${stat.subjects} subjects`)}
+      {@render kpi('Remedial sessions', stat.sessions, `${stat.subjects} subjects`)}
       {@render kpi('Teacher attendance', `${stat.attendanceRate}%`, 'Last 14 days')}
       {@render kpi('Outstanding', `KES ${(stat.unpaidAmount ?? 0).toLocaleString()}`, `${stat.unpaid} unpaid invoices`)}
     </div>
@@ -68,7 +68,7 @@
       <Card>
         <CardContent class="space-y-3">
           <div class="grid grid-cols-2 gap-3">
-            {@render mini('Remedial groups', `${stat.groups}`, 'Subject cohorts')}
+            {@render mini('Remedial sessions', `${stat.sessions}`, 'Subject cohorts')}
             {@render mini('Remedial teachers', `${stat.teachers}`, 'On roster')}
             {@render mini('Enrolled students', `${stat.students}`, 'Linked parents')}
             {@render mini('Teacher attendance', `${stat.attendanceRate}%`, '+3.5%')}
@@ -79,11 +79,11 @@
       </Card>
 
       <Card>
-        <CardHeader title="Remedial session coverage" subtitle="Teacher attendance rate over the last 14 days">
+        <CardHeader title="Remedial session coverage" subtitle="Sessions scheduled per day over the last 14 days">
         </CardHeader>
         <CardContent>
           <div class="grid grid-cols-4 gap-2 pb-4">
-            {#each [{ l: 'Sessions', v: `${stat.sessionsCount}` }, { l: 'Teachers', v: `${stat.teachers}`, sub: 'On roster' }, { l: 'Avg rate', v: `${stat.attendanceRate}%` }, { l: 'Groups', v: `${stat.groups}`, sub: 'Active cohorts' }] as m}
+            {#each [{ l: 'Sessions', v: `${stat.sessionsCount}` }, { l: 'Teachers', v: `${stat.teachers}`, sub: 'On roster' }, { l: 'Avg rate', v: `${stat.attendanceRate}%` }, { l: 'Groups', v: `${stat.sessions}`, sub: 'Active cohorts' }] as m}
               <div class="rounded-lg border border-border/60 bg-ink-50/50 px-3 py-2 text-center">
                 <p class="text-[10px] font-semibold uppercase tracking-wider text-ink-400">{m.l}</p>
                 <p class="text-xl font-bold text-ink-900">{m.v}</p>
@@ -94,14 +94,14 @@
             {/each}
           </div>
           {#if trend.length > 0 && !trendIsAllZero}
-            <LineChart data={trend} />
+            <LineChart data={trend} unit="sessions" />
           {:else}
             <div class="flex flex-col items-center justify-center py-12 text-ink-300">
               <svg class="mb-3 h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125z" />
               </svg>
               <p class="text-sm font-medium text-ink-400">No session data yet</p>
-              <p class="text-xs text-ink-300">Attendance trends will appear here once sessions are scheduled and marked.</p>
+              <p class="text-xs text-ink-300">Daily session counts will appear here once sessions are scheduled.</p>
             </div>
           {/if}
         </CardContent>
@@ -115,7 +115,7 @@
       <CardContent>
         {#if stat.sessionsCount > 0}
           <div class="grid grid-cols-3 gap-3">
-            {#each [{ l: 'Groups', v: stat.groups }, { l: 'Sessions', v: stat.sessionsCount }, { l: 'Teachers', v: stat.teachers }] as m}
+            {#each [{ l: 'Groups', v: stat.sessions }, { l: 'Sessions', v: stat.sessionsCount }, { l: 'Teachers', v: stat.teachers }] as m}
               <div class="rounded-lg border border-border/60 bg-ink-50/50 px-3 py-2 text-center">
                 <p class="text-[10px] font-semibold uppercase tracking-wider text-ink-400">{m.l}</p>
                 <p class="text-lg font-bold text-ink-900">{m.v}</p>

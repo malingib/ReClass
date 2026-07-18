@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { data }: { data: Record<string, never> } = $props();
+  const { data }: { data: Record<string, never> } = $props();
 </script>
 
 <svelte:head>

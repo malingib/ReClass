@@ -18,9 +18,9 @@ export const load: PageServerLoad = async ({ locals }) => {
   const total = 0;
   const rate = 0;
 
-  const { data: groups } = await db
-    .from('remedial_groups')
-    .select('id, name, status')
+  const { count: sessions } = await db
+    .from('sessions')
+    .select('*', { count: 'exact', head: true })
     .eq('tenant_id', locals.tenantId);
 
   return {
@@ -28,8 +28,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       students: students ?? 0,
       teachers: teachers ?? 0,
       attendanceRate: rate,
-      groups: groups?.length ?? 0,
+      sessions: sessions ?? 0,
     },
-    groups: groups ?? [],
   };
 };

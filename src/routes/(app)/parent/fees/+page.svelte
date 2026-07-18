@@ -2,8 +2,8 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let fees = $derived(data.fees);
+  const { data } = $props();
+  const fees = $derived(data.fees);
 </script>
 
 <DashboardContent title="Remedial fee structure" subtitle="What your child's remediation costs and when">

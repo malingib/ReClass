@@ -32,9 +32,11 @@ Built by **Mobiwave Innovations Ltd**. Anchor tenant: **Malingi High School**.
    Safaricom            Parents' Phones
 ```
 
-### RLS Strategy
+### Tenant isolation strategy
 
-RLS is bypassed on the server side via a **service role client** (`locals.srv`) with explicit `.eq('tenant_id', ...)` filters. This avoids the transaction-scoped `current_setting` issue with PostgREST. The service role key is never exposed to the client.
+ReClass uses a **service-role client** (`locals.srv`) on the server and enforces tenant isolation in **application code** via a mandatory `.eq('tenant_id', locals.tenantId)` filter on every query (reads and writes). RLS policies are intentionally NOT used — the `current_setting('app.tenant_id')` pattern conflicts with PostgREST transaction scoping, and the service-role client bypasses RLS anyway, so RLS would be dead code.
+
+**Consequence (security contract):** tenant isolation depends entirely on every server query including `.eq('tenant_id', locals.tenantId)`. Never write a server-side query against tenant-scoped tables without it, and never use the service-role client from the browser. The single exception is `super-admin`, which is cross-tenant by design (tenants + audit). Money-path writes (`reconcile_payment`) are tenant-scoped inside the RPC via `p_tenant_id`.
 
 ## Roles
 

@@ -1,8 +1,8 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
 
-  let { data } = $props();
-  let total = $derived(data.total);
+  const { data } = $props();
+  const total = $derived(data.total);
 </script>
 
 <DashboardContent title="Revenue" subtitle="M-Pesa STK collections over the last 12 months">

@@ -6,8 +6,8 @@
   import CardContent from '$lib/components/ui/card-content.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data, form } = $props();
-  let credentials = $derived(data.credentials);
+  const { data, form } = $props();
+  const credentials = $derived(data.credentials);
 
   let showForm = $state(false);
   let editId = $state<string | null>(null);

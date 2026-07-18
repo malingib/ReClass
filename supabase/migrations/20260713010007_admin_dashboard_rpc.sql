@@ -14,7 +14,7 @@ BEGIN
     'students',      (SELECT count(*) FROM public.students WHERE deleted_at IS NULL),
     'teachers',      (SELECT count(*) FROM public.teachers WHERE deleted_at IS NULL),
     'subjects',      (SELECT count(*) FROM public.subjects WHERE deleted_at IS NULL),
-    'groups',        (SELECT count(*) FROM public.remedial_groups WHERE deleted_at IS NULL),
+    'groups',        (SELECT count(*) FROM public.sessions WHERE deleted_at IS NULL),
     'unpaid',        (SELECT count(*) FROM public.invoices WHERE status = 'unpaid' AND deleted_at IS NULL),
     'paidInvoices',  (SELECT count(*) FROM public.invoices WHERE status = 'paid' AND deleted_at IS NULL),
     'unpaidAmount',  (SELECT COALESCE(SUM(amount_due - COALESCE(amount_paid, 0)), 0) FROM public.invoices WHERE status = 'unpaid' AND deleted_at IS NULL),
@@ -25,7 +25,7 @@ BEGIN
       FROM public.teacher_attendance
       WHERE marked_at >= since AND deleted_at IS NULL
     ),
-    'sessionsCount', (SELECT count(*) FROM public.session_occurrences WHERE start_at >= since),
+    'sessionsCount', (SELECT count(*) FROM public.session_occurrences WHERE occurs_on >= since),
     'recentStudents', (
       SELECT jsonb_agg(jsonb_build_object(
         'id', id, 'admission_no', admission_no, 'first_name', first_name,

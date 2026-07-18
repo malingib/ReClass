@@ -6,9 +6,9 @@
   import Card from '$lib/components/ui/card.svelte';
   import CardContent from '$lib/components/ui/card-content.svelte';
 
-  let { data, form } = $props();
-  let tenant = $derived(data.tenant);
-  let settings = $derived(tenant.settings ?? {});
+  const { data, form } = $props();
+  const tenant = $derived(data.tenant);
+  const settings = $derived(tenant.settings ?? {});
 
   let activeTab = $state<'school' | 'academic' | 'financial' | 'sms'>('school');
   let saving = $state(false);
@@ -159,7 +159,7 @@
 
         {#if activeTab === 'sms'}
           <div class="space-y-5">
-            <p class="text-sm text-ink-500">Configure which SMS notifications are sent to parents.</p>
+            <p class="text-sm text-ink-500">Control teacher alerts and which SMS notifications are sent to parents.</p>
             <label class="flex items-center gap-3 rounded-lg border border-ink-200 p-4 hover:bg-ink-50/50">
               <input
                 type="checkbox" name="sms_attendance"
@@ -167,8 +167,8 @@
                 class="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
               />
               <div>
-                <p class="text-sm font-medium text-ink-700">Attendance SMS</p>
-                <p class="text-xs text-ink-400">Send SMS when attendance is marked</p>
+                <p class="text-sm font-medium text-ink-700">Teacher Attendance SMS</p>
+                <p class="text-xs text-ink-400">In-app alert when a teacher is marked absent/late for a remedial session</p>
               </div>
             </label>
             <label class="flex items-center gap-3 rounded-lg border border-ink-200 p-4 hover:bg-ink-50/50">

@@ -6,9 +6,9 @@
   import CardContent from '$lib/components/ui/card-content.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data, form } = $props();
-  let payroll = $derived(data.payroll);
-  let teachers = $derived(data.teachers);
+  const { data, form } = $props();
+  const payroll = $derived(data.payroll);
+  const teachers = $derived(data.teachers);
 
   let periodStart = $state('');
   let periodEnd = $state('');

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
 
-  let { error }: { error: App.Error } = $props();
-  let status = $derived($page.status);
+  const { error }: { error: App.Error } = $props();
+  const status = $derived($page.status);
 </script>
 
 <svelte:head>

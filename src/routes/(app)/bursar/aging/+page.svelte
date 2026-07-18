@@ -2,8 +2,8 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let aging = $derived(data.aging);
+  const { data } = $props();
+  const aging = $derived(data.aging);
 </script>
 
 <DashboardContent title="Aging" subtitle="Parental M-Pesa payments overdue">

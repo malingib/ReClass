@@ -1,17 +1,18 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
 
-  let { data } = $props();
+  const { data } = $props();
 
   interface Session {
-    id: string; title: string; subject: string; grade: string;
+    id: string; title: string; subject: string; grade: string; teacher: string;
     day_of_week: number; start_time: string; end_time: string; slot: string | null; active: boolean;
   }
 
-  interface Group { id: string; name: string; }
+  interface Option { id: string; name: string; }
 
-  let groups: Group[] = $derived((data as any).groups ?? []);
-  let sessions: Session[] = $derived((data as any).schedules ?? []);
+  const subjects: Option[] = $derived((data as any).subjects ?? []);
+  const teachers: Option[] = $derived((data as any).teachers ?? []);
+  const sessions: Session[] = $derived((data as any).schedules ?? []);
 
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const dayOptions = dayLabels.map((l, i) => ({ value: i + 1, label: l }));
@@ -20,18 +21,18 @@
   let currentMonth = $state(new Date().getMonth());
   let currentYear = $state(new Date().getFullYear());
 
-  let daysInMonth = $derived(new Date(currentYear, currentMonth + 1, 0).getDate());
-  let monthStartOffset = $derived((new Date(currentYear, currentMonth, 1).getDay() + 6) % 7);
-  let monthLabel = $derived(new Date(currentYear, currentMonth).toLocaleDateString('en', { month: 'long', year: 'numeric' }));
+  const daysInMonth = $derived(new Date(currentYear, currentMonth + 1, 0).getDate());
+  const monthStartOffset = $derived((new Date(currentYear, currentMonth, 1).getDay() + 6) % 7);
+  const monthLabel = $derived(new Date(currentYear, currentMonth).toLocaleDateString('en', { month: 'long', year: 'numeric' }));
 
-  let calendarCells = $derived(
+  const calendarCells = $derived(
     Array.from({ length: 42 }, (_, index) => {
       const day = index - monthStartOffset + 1;
       return day > 0 && day <= daysInMonth ? day : null;
     })
   );
 
-  let sessionsByDay = $derived.by(() => {
+  const sessionsByDay = $derived.by(() => {
     const map: Record<number, Session[]> = {};
     for (const s of sessions) {
       if (!map[s.day_of_week]) map[s.day_of_week] = [];
@@ -59,13 +60,15 @@
 
   // New session form state
   let showForm = $state(false);
-  let newGroup = $state('');
+  let newClass = $state('');
+  let newSubject = $state('');
+  let newTeacher = $state('');
   let newDay = $state('1');
   let newStart = $state('14:00');
   let newEnd = $state('15:00');
-  let newSlot = $state('');
-  let submitting = $state(false);
-  let formError = $state('');
+  const newSlot = $state('');
+  const submitting = $state(false);
+  const formError = $state('');
 
   function confirmDelete(e: Event) {
     if (!confirm('Delete this session?')) e.preventDefault();
@@ -74,7 +77,7 @@
   const dayColors: Record<number, string> = { 1: 'bg-brand-50 text-brand-700', 2: 'bg-violet-50 text-violet-700', 3: 'bg-amber-50 text-amber-700', 4: 'bg-rose-50 text-rose-700', 5: 'bg-cyan-50 text-cyan-700', 6: 'bg-emerald-50 text-emerald-700', 7: 'bg-slate-50 text-slate-700' };
 </script>
 
-<DashboardContent title="Remedial scheduling" subtitle="Set times for remedial groups — calendar view with session badges">
+<DashboardContent title="Remedial scheduling" subtitle="Set times for remedial classes — calendar view with session badges">
   {#snippet headerActions()}
     <div class="flex items-center gap-2">
       <button onclick={() => showForm = !showForm}
@@ -95,10 +98,22 @@
       <input type="hidden" name="slot" value={newSlot} />
       <div class="flex flex-wrap items-end gap-4">
         <div>
-          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Group</label>
-          <select name="group_id" bind:value={newGroup} required class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
-            <option value="">Select group…</option>
-            {#each groups as g}<option value={g.id}>{g.name}</option>{/each}
+          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Class</label>
+          <input name="class" bind:value={newClass} required placeholder="e.g. Form 2"
+            class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900" />
+        </div>
+        <div>
+          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Subject</label>
+          <select name="subject_id" bind:value={newSubject} required class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
+            <option value="">Select subject…</option>
+            {#each subjects as s}<option value={s.id}>{s.name}</option>{/each}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Teacher</label>
+          <select name="teacher_id" bind:value={newTeacher} required class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
+            <option value="">Select teacher…</option>
+            {#each teachers as t (t.id)}<option value={t.id}>{(t as any).first_name} {(t as any).last_name}</option>{/each}
           </select>
         </div>
         <div>
@@ -196,7 +211,7 @@
               </td>
             </tr>
           {:else}
-            <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-ink-500">No sessions scheduled. Use <strong>+ Add session</strong> above to set times for remedial groups.</td></tr>
+            <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-ink-500">No sessions scheduled. Use <strong>+ Add session</strong> above to set times for a class.</td></tr>
           {/each}
         </tbody>
       </table>

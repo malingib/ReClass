@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { title, subtitle = '', headerActions, rightRail, children }: {
+  const { title, subtitle = '', headerActions, rightRail, children }: {
     title: string;
     subtitle?: string;
     headerActions?: import('svelte').Snippet;

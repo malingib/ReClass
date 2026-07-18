@@ -10,9 +10,9 @@
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
 
-  let { data }: { data: PageData } = $props();
+  const { data }: { data: PageData } = $props();
 
-  let parents = $derived(data.parents);
+  const parents = $derived(data.parents);
 
   const { form, errors, message, reset } = superForm(data.form, {
     validators: zodClient(),

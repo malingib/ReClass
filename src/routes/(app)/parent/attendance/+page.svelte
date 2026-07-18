@@ -7,10 +7,10 @@
   import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-svelte';
   import type { PageData } from './$types';
 
-  let { data }: { data: PageData } = $props();
+  const { data }: { data: PageData } = $props();
 
-  let attendance = $derived(data.attendance);
-  let children = $derived(data.children);
+  const attendance = $derived(data.attendance);
+  const children = $derived(data.children);
 
   function statusIcon(status: string) {
     switch (status) {
@@ -33,7 +33,7 @@
   }
 
   // Group attendance by student
-  let groupedByStudent = $derived(() => {
+  const groupedByStudent = $derived(() => {
     const map: Record<string, any[]> = {};
     for (const a of attendance) {
       const studentId = a.student_id;

@@ -4,15 +4,17 @@
   import { line, area, curveMonotoneX } from 'd3-shape';
   import { max } from 'd3-array';
 
-  let {
+  const {
     data = [],
     height = 200,
     color = '#00c573',
+    unit = '',
     format = (v: number) => v.toLocaleString(),
   }: {
     data: { label: string; value: number }[];
     height?: number;
     color?: string;
+    unit?: string;
     format?: (_v: number) => string;
   } = $props();
 
@@ -26,32 +28,32 @@
     }
   });
 
-  let w = $derived(width);
-  let h = $derived(height);
-  let padX = $derived(36);
-  let padY = $derived(24);
-  let lineData = $derived(data);
+  const w = $derived(width);
+  const h = $derived(height);
+  const padX = $derived(36);
+  const padY = $derived(24);
+  const lineData = $derived(data);
 
-  let xScale = $derived(
+  const xScale = $derived(
     scalePoint()
       .domain(lineData.map(d => d.label))
       .range([padX, w - padX])
   );
 
-  let yScale = $derived(
+  const yScale = $derived(
     scaleLinear()
       .domain([0, max(lineData.map(d => d.value)) || 1])
       .range([h - padY, padY])
   );
 
-  let lineGenerator = $derived(
+  const lineGenerator = $derived(
     line<{ label: string; value: number }>()
       .x(d => xScale(d.label) ?? 0)
       .y(d => yScale(d.value))
       .curve(curveMonotoneX)
   );
 
-  let areaGenerator = $derived(
+  const areaGenerator = $derived(
     area<{ label: string; value: number }>()
       .x(d => xScale(d.label) ?? 0)
       .y0(h - padY)
@@ -59,8 +61,8 @@
       .curve(curveMonotoneX)
   );
 
-  let linePath = $derived(lineGenerator(lineData) ?? '');
-  let areaPath = $derived(areaGenerator(lineData) ?? '');
+  const linePath = $derived(lineGenerator(lineData) ?? '');
+  const areaPath = $derived(areaGenerator(lineData) ?? '');
 </script>
 
 {#if lineData.length === 0}

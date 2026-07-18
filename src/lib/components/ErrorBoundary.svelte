@@ -3,7 +3,7 @@
    * ErrorBoundary — catches runtime errors in its child content
    * and displays a user-friendly fallback with a retry button.
    */
-  let {
+  const {
     children,
     fallbackTitle = 'Something went wrong',
     fallbackMessage = 'An unexpected error occurred while rendering this section.',

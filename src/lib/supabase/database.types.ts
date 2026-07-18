@@ -147,40 +147,6 @@ export interface Database {
           code?: string | null;
         };
       };
-      remedial_groups: {
-        Row: {
-          id: string;
-          tenant_id: string;
-          name: string;
-          subject_id: string | null;
-          teacher_id: string | null;
-          room: string | null;
-          capacity: number | null;
-          term: string | null;
-          created_at: string;
-          deleted_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          tenant_id: string;
-          name: string;
-          subject_id?: string | null;
-          teacher_id?: string | null;
-          room?: string | null;
-          capacity?: number | null;
-          term?: string | null;
-        };
-        Update: {
-          id?: string;
-          tenant_id?: string;
-          name?: string;
-          subject_id?: string | null;
-          teacher_id?: string | null;
-          room?: string | null;
-          capacity?: number | null;
-          term?: string | null;
-        };
-      };
       invoices: {
         Row: {
           id: string;

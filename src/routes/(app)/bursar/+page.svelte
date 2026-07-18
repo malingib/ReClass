@@ -3,9 +3,9 @@
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let stats = $derived(data.stats);
-  let recent = $derived(data.recent);
+  const { data } = $props();
+  const stats = $derived(data.stats);
+  const recent = $derived(data.recent);
 </script>
 
 <DashboardContent title="Bursar workspace" subtitle="Parent M-Pesa reconciliation and waivers">

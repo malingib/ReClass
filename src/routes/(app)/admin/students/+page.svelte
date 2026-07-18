@@ -12,9 +12,9 @@
   import type { PageData } from './$types';
   import { fly } from 'svelte/transition';
 
-  let { data }: { data: PageData } = $props();
+  const { data }: { data: PageData } = $props();
 
-  let students = $derived(data.students);
+  const students = $derived(data.students);
 
   const { form, errors, message, reset } = superForm(data.form, {
     validators: zodClient(),

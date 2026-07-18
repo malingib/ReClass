@@ -4,12 +4,12 @@
     kind: 'attendance' | 'payment' | 'session' | 'enrollment'; badge: string;
   }
 
-  let { activity = [] }: { activity: ActivityRow[] } = $props();
+  const { activity = [] }: { activity: ActivityRow[] } = $props();
 
-  let teacherCount = $derived(activity.filter((a) => a.kind === 'attendance').length);
-  let paymentCount = $derived(activity.filter((a) => a.kind === 'payment').length);
-  let sessionCount = $derived(activity.filter((a) => a.kind === 'session').length);
-  let heading = $derived(
+  const teacherCount = $derived(activity.filter((a) => a.kind === 'attendance').length);
+  const paymentCount = $derived(activity.filter((a) => a.kind === 'payment').length);
+  const sessionCount = $derived(activity.filter((a) => a.kind === 'session').length);
+  const heading = $derived(
     teacherCount
       ? `${teacherCount} teacher attendance marks today`
       : paymentCount

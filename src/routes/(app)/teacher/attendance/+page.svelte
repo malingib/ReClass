@@ -2,8 +2,8 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let attendance = $derived(data.attendance);
+  const { data } = $props();
+  const attendance = $derived(data.attendance);
 </script>
 
 <DashboardContent title="My teacher attendance" subtitle="Confirming which remedial sessions you held">

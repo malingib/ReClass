@@ -19,7 +19,8 @@ export const load: PageServerLoad = async ({ locals }) => {
       countInTable('attendance', { column: 'status', value: 'absent' }),
       countInTable('attendance', { column: 'status', value: 'excused' }),
       db.from('session_occurrences')
-        .select('id, occurs_on, start_time, status, sessions!inner(id, group_id, remedial_groups!inner(name))')
+        .select('id, occurs_on, start_time, status, sessions!inner(id, class, subjects!inner(name))')
+        .eq('tenant_id', locals.tenantId)
         .order('occurs_on', { ascending: false })
         .limit(10)
         .then(r => r.data ?? []),
@@ -43,7 +44,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       occurs_on: s.occurs_on,
       start_time: s.start_time,
       status: s.status,
-      session_name: s.sessions?.remedial_groups?.name ?? '—',
+      session_name: s.sessions?.class ? `${s.sessions.class} — ${s.sessions?.subjects?.name ?? ''}` : (s.sessions?.subjects?.name ?? '—'),
     })),
   };
 };

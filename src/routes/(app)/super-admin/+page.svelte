@@ -3,9 +3,9 @@
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
-  let { data } = $props();
-  let stats = $derived(data.stats);
-  let audit = $derived(data.audit);
+  const { data } = $props();
+  const stats = $derived(data.stats);
+  const audit = $derived(data.audit);
 </script>
 
 <DashboardContent title="Super Admin" subtitle="Platform-wide oversight">

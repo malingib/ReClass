@@ -1,6 +1,7 @@
 import svelte from 'eslint-plugin-svelte';
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import svelteParser from 'svelte-eslint-parser';
 
 export default [
   {
@@ -9,7 +10,7 @@ export default [
   {
     files: ['**/*.svelte'],
     languageOptions: {
-      parser: svelte,
+      parser: svelteParser,
       parserOptions: {
         parser: tsParser,
       },

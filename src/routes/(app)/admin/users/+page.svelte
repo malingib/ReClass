@@ -10,10 +10,10 @@
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
 
-  let { data }: { data: PageData } = $props();
+  const { data }: { data: PageData } = $props();
 
-  let users = $derived(data.users);
-  let availableProfiles = $derived(data.availableProfiles ?? []);
+  const users = $derived(data.users);
+  const availableProfiles = $derived(data.availableProfiles ?? []);
 
   const roleLabels: Record<string, string> = {
     super_admin: 'Super Admin',

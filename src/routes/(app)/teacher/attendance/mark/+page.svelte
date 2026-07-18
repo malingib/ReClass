@@ -9,15 +9,16 @@
   import { goto } from '$app/navigation';
   import type { PageData } from './$types';
 
-  let { data }: { data: PageData } = $props();
+  const { data }: { data: PageData } = $props();
 
-  let sessions = $derived(data.sessions);
-  let teacher = $derived(data.teacher);
-  let groupStudents = $derived<Record<string, any[]>>(data.groupStudents ?? {});
-  let existingAttendance = $derived<Record<string, Record<string, any>>>(data.existingAttendance ?? {});
+  const sessions = $derived(data.sessions);
+  const teacher = $derived(data.teacher);
+  const groupStudents = $derived<Record<string, any[]>>(data.groupStudents ?? {});
+  // existingAttendance no longer sent from load; component manages state locally.
+  const existingAttendance = $derived<Record<string, Record<string, any>>>({});
 
   // Track selected status per student per session
-  let attendanceState = $state<Record<string, Record<string, string>>>({});
+  const attendanceState = $state<Record<string, Record<string, string>>>({});
 
   // Initialize state from existing attendance
   $effect(() => {
@@ -49,7 +50,7 @@
   }
 
   function occurrenceStudents(session: any): any[] {
-    return groupStudents[session.group_id] ?? [];
+    return groupStudents[session.id] ?? [];
   }
 
   let saving = $state<string | null>(null);
@@ -104,7 +105,7 @@
       {@const students = occurrenceStudents(session)}
       <Card>
         <CardHeader
-          title="{session.remedial_groups?.name ?? 'Session'}"
+          title="{session.class ? `${session.class} — ${session.subjects?.name ?? 'Session'}` : 'Session'}"
           subtitle="{session.start_time?.slice(0, 5)} - {session.end_time?.slice(0, 5)} | {students.length} student(s)"
         >
           {#snippet action()}

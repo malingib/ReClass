@@ -5,7 +5,7 @@
   let items = $state<NotificationItem[]>([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
-  let supabase = getSupabase();
+  const supabase = getSupabase();
 
   $effect(() => {
     async function load() {
