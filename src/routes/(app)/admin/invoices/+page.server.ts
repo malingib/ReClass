@@ -4,6 +4,12 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { z } from 'zod/v3';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
+
+async function studentBelongsToTenant(locals: App.Locals, studentId: string, tenantId: string) {
+  const { data } = await locals.srv.from('students').select('id').eq('id', studentId).eq('tenant_id', tenantId).maybeSingle();
+  return !!data;
+}
 
 const invoiceSchema = z.object({
   id: z.string().optional(),
@@ -16,9 +22,10 @@ const invoiceSchema = z.object({
 const deleteSchema = z.object({ id: z.string() });
 
 export const load: PageServerLoad = async ({ locals }) => {
+  const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
   const form = await superValidate(zod(invoiceSchema));
   const sb = locals.srv;
-  const tid = locals.tenantId;
+  const tid = tenantId;
 
   const { data: invoices } = await sb
     .from('invoices')
@@ -38,10 +45,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions = {
   create: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(invoiceSchema));
     if (!form.valid) return fail(400, { form });
+    if (!await studentBelongsToTenant(locals, form.data.student_id, tenantId)) return message(form, 'Student not found', { status: 404 });
     const { error } = await locals.srv.from('invoices').insert({
-      tenant_id: locals.tenantId,
+      tenant_id: tenantId,
       student_id: form.data.student_id,
       amount_due: form.data.amount_due,
       due_date: form.data.due_date || null,
@@ -52,9 +61,11 @@ export const actions = {
   },
 
   update: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(invoiceSchema));
     if (!form.valid) return fail(400, { form });
     if (!form.data.id) return message(form, 'ID required', { status: 400 });
+    if (!await studentBelongsToTenant(locals, form.data.student_id, tenantId)) return message(form, 'Student not found', { status: 404 });
     const { error } = await locals.srv.from('invoices')
       .update({
         student_id: form.data.student_id,
@@ -63,18 +74,19 @@ export const actions = {
         status: form.data.status ?? 'unpaid',
       })
       .eq('id', form.data.id)
-      .eq('tenant_id', locals.tenantId);
+      .eq('tenant_id', tenantId);
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
     return message(form, 'Invoice updated successfully');
   },
 
   delete: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(deleteSchema));
     if (!form.valid) return fail(400, { form });
     const { error } = await locals.srv.from('invoices')
       .delete()
       .eq('id', form.data.id)
-      .eq('tenant_id', locals.tenantId);
+      .eq('tenant_id', tenantId);
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
     return message(form, 'Invoice deleted successfully');
   },

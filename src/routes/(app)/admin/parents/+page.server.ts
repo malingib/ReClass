@@ -4,6 +4,7 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { z } from 'zod/v3';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
 
 const parentSchema = z.object({
   id: z.string().optional(),
@@ -19,6 +20,7 @@ const deleteSchema = z.object({
 });
 
 export const load: PageServerLoad = async ({ locals }) => {
+  const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
   const form = await superValidate(zod(parentSchema));
   const db = locals.srv;
 
@@ -26,7 +28,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const q = db.from('parents')
     .select('id, full_name, phone, email, locale, sms_consent, created_at')
     .order('full_name');
-  if (locals.tenantId) q.eq('tenant_id', locals.tenantId);
+  q.eq('tenant_id', tenantId);
   const { data: parents } = await q;
 
   // Get linked students for all parents
@@ -55,12 +57,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions = {
   create: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(parentSchema));
     if (!form.valid) return fail(400, { form });
-    if (!locals.tenantId) return message(form, 'Tenant not found', { status: 500 });
-
     const { error } = await locals.srv.from('parents').insert({
-      tenant_id: locals.tenantId,
+      tenant_id: tenantId,
       full_name: form.data.full_name,
       phone: form.data.phone,
       email: form.data.email || null,
@@ -72,6 +73,7 @@ export const actions = {
   },
 
   update: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(parentSchema));
     if (!form.valid) return fail(400, { form });
     if (!form.data.id) return message(form, 'ID required', { status: 400 });
@@ -84,15 +86,17 @@ export const actions = {
         locale: form.data.locale || 'en',
         sms_consent: form.data.sms_consent ?? true,
       })
-      .eq('id', form.data.id);
+      .eq('id', form.data.id)
+      .eq('tenant_id', tenantId);
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
     return message(form, 'Parent updated successfully');
   },
 
   delete: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(deleteSchema));
     if (!form.valid) return fail(400, { form });
-    const { error } = await locals.srv.from('parents').delete().eq('id', form.data.id);
+    const { error } = await locals.srv.from('parents').delete().eq('id', form.data.id).eq('tenant_id', tenantId);
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
     return message(form, 'Parent deleted successfully');
   },

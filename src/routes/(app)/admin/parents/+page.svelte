@@ -6,7 +6,7 @@
   import { superForm } from 'sveltekit-superforms';
   import { zodClient } from 'sveltekit-superforms/adapters';
   import { Dialog } from 'bits-ui';
-  import { Plus, Pencil, Trash2 } from 'lucide-svelte';
+  import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
 

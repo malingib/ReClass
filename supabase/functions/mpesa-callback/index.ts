@@ -27,9 +27,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ status: 'already_reconciled' }), { headers: corsHeaders });
 
     const { data: rec } = await supabase.rpc('reconcile_payment', {
-      p_checkout_id: CheckoutRequestID, p_amount: Amount ?? cr.amount,
+      p_checkout_id: CheckoutRequestID, p_invoice_id: cr.invoice_id, p_amount: Amount ?? cr.amount,
       p_phone: PhoneNumber ?? '', p_tenant_id: cr.tenant_id
     });
+    if (rec?.status !== 'completed' && rec?.status !== 'duplicate') {
+      await supabase.from('checkout_requests').update({ status: 'failed', reason: rec?.status ?? 'reconciliation_failed' }).eq('id', cr.id);
+      return new Response(JSON.stringify(rec), { status: 409, headers: corsHeaders });
+    }
     await supabase.from('checkout_requests').update({ status: 'completed' }).eq('id', cr.id);
     // Respect the per-tenant sms_payment_receipt toggle before enqueuing a receipt SMS.
     const { data: receiptOn } = await supabase.rpc('tenant_setting_enabled',

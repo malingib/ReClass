@@ -206,7 +206,7 @@
                 <p class="text-sm font-medium text-ink-800">{cred.label}</p>
                 <p class="text-xs text-ink-400">{cred.provider === 'mpesa' ? 'M-Pesa' : 'SMS'} · {cred.environment}</p>
               </div>
-              <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide {statusBadge(cred.test_status)}">
+              <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide {statusBadge(cred.test_status ?? 'untested')}">
                 {cred.test_status}
               </span>
             </div>

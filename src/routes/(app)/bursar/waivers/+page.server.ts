@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const db = locals.srv;
@@ -59,6 +60,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   create: async ({ locals, request }) => {
+    const { tenantId, user } = requireTenantRole(locals, 'bursar');
     const db = locals.srv;
     const form = await request.formData();
 
@@ -75,7 +77,8 @@ export const actions: Actions = {
       .from('invoices')
       .select('id, amount_due, amount_paid, status')
       .eq('id', invoiceId)
-      .single();
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
 
     if (!invoice) {
       return fail(404, { error: 'Invoice not found.' });
@@ -93,11 +96,11 @@ export const actions: Actions = {
     const { data: waiver, error: waiverError } = await db
       .from('waivers')
       .insert({
-        tenant_id: locals.tenantId,
+        tenant_id: tenantId,
         invoice_id: invoiceId,
         amount,
         reason,
-        granted_by: locals.user?.id,
+        granted_by: user.id,
       })
       .select()
       .single();
@@ -114,12 +117,13 @@ export const actions: Actions = {
     await db
       .from('invoices')
       .update({ amount_paid: newPaid, status: newStatus })
-      .eq('id', invoiceId);
+      .eq('id', invoiceId)
+      .eq('tenant_id', tenantId);
 
     // Write audit log
     await db.from('audit_log').insert({
-      tenant_id: locals.tenantId,
-      actor_id: locals.user?.id,
+      tenant_id: tenantId,
+      actor_id: user.id,
       action: 'waiver_granted',
       entity: 'waivers',
       entity_id: waiver?.id,

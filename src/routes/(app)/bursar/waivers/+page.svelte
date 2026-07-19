@@ -2,7 +2,6 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import Card from '$lib/components/ui/card.svelte';
   import CardHeader from '$lib/components/ui/card-header.svelte';
   import CardContent from '$lib/components/ui/card-content.svelte';
   import { enhance } from '$app/forms';

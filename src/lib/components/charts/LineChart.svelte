@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { scaleLinear, scalePoint } from 'd3-scale';
   import { line, area, curveMonotoneX } from 'd3-shape';
   import { max } from 'd3-array';

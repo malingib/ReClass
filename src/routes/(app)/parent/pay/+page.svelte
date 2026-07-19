@@ -2,6 +2,8 @@
   import { getSupabase } from '$lib/supabase/client';
   import DashboardContent from '$lib/components/DashboardContent.svelte';
 
+  const { data } = $props();
+
   let loading = $state(false);
   let success = $state<string | null>(null);
   let error = $state<string | null>(null);
@@ -13,19 +15,11 @@
     loading = true;
     const form = e.target as HTMLFormElement;
     const data = new FormData(form);
-    const studentId = data.get('student_id') as string;
-    const amount = data.get('amount') as string;
-    const phone = data.get('phone') as string;
-
-    if (!/^254[17]\d{8}$/.test(phone.replace(/\s/g, ''))) {
-      error = 'Enter a valid M-Pesa phone number (e.g. 254712345678)';
-      loading = false;
-      return;
-    }
+    const invoiceId = data.get('invoice_id') as string;
 
     try {
       const { error: fnErr } = await getSupabase().functions.invoke('stk', {
-        body: { invoice_id: studentId, tenant_id: '', amount: Number(amount), phone: phone.replace(/\s/g, '') },
+        body: { invoice_id: invoiceId },
       });
       if (fnErr) throw fnErr;
       success = 'M-Pesa STK Push sent. Check your phone to confirm the paybill prompt.';
@@ -48,16 +42,18 @@
         <div class="rounded-md bg-danger/10 p-3 text-sm text-danger">{error}</div>
       {/if}
       <div>
-        <label for="student-id" class="text-sm font-medium text-ink-700">Child admission number</label>
-        <input id="student-id" name="student_id" required placeholder="e.g. MLG-2024-081" class="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none" />
+        <label for="invoice-id" class="text-sm font-medium text-ink-700">Outstanding invoice</label>
+        <select id="invoice-id" name="invoice_id" required class="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none">
+          <option value="">Select an invoice</option>
+          {#each data.invoices as invoice}
+            <option value={invoice.id}>
+              {invoice.students?.first_name} {invoice.students?.last_name} · KES {(Number(invoice.amount_due) - Number(invoice.amount_paid ?? 0)).toLocaleString()}
+            </option>
+          {/each}
+        </select>
       </div>
-      <div>
-        <label for="amount" class="text-sm font-medium text-ink-700">Amount (KES)</label>
-        <input id="amount" name="amount" type="number" required placeholder="1500" class="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none" />
-      </div>
-      <div>
-        <label for="phone" class="text-sm font-medium text-ink-700">M-Pesa phone</label>
-        <input id="phone" name="phone" type="tel" required placeholder="07XXXXXXXX" class="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none" />
+      <div class="rounded-lg border border-ink-100 bg-ink-50 px-4 py-3 text-sm text-ink-600">
+        M-Pesa prompt: <strong>{data.parent.phone}</strong>. The outstanding invoice balance is calculated by the school ledger.
       </div>
       <button type="submit" disabled={loading} class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50">
         {#if loading}
@@ -70,7 +66,7 @@
     <div class="space-y-3 rounded-xl border border-brand-200 bg-brand-50/60 p-6 shadow-card">
       <h3 class="text-sm font-semibold text-ink-900">How payment works</h3>
       <ol class="space-y-3 text-sm text-ink-600">
-        <li class="flex gap-3"><span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">1</span> Enter your child's admission number, the amount to pay, and your M-Pesa phone.</li>
+        <li class="flex gap-3"><span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">1</span> Select one of your outstanding school invoices.</li>
         <li class="flex gap-3"><span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">2</span> We send an STK push to your phone via the school paybill. Enter your M-Pesa PIN to confirm.</li>
         <li class="flex gap-3"><span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">3</span> The invoice updates automatically once M-Pesa calls back. You receive a Mobiwave SMS receipt.</li>
       </ol>

@@ -26,20 +26,8 @@
       .eq('user_id', data.user.id)
       .single();
 
-    if (roleData) {
-      const profileName = (roleData.profiles as any)?.[0]?.full_name;
-      await getSupabase().auth.updateUser({
-        data: {
-          ...data.user.user_metadata,
-          role: roleData.role,
-          tenant_id: roleData.tenant_id,
-          full_name: profileName ?? data.user.user_metadata?.full_name ?? '',
-        },
-      });
-    }
-
     const targetRole = roleData?.role;
-    goto(isRole(targetRole) ? roleRoutes[targetRole] : '/');
+    goto(targetRole && isRole(targetRole) ? roleRoutes[targetRole] : '/');
   }
 </script>
 

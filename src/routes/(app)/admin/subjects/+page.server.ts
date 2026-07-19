@@ -4,6 +4,7 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { z } from 'zod/v3';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
 
 const subjectSchema = z.object({
   id: z.string().optional(),
@@ -14,9 +15,10 @@ const subjectSchema = z.object({
 const deleteSchema = z.object({ id: z.string() });
 
 export const load: PageServerLoad = async ({ locals }) => {
+  const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
   const form = await superValidate(zod(subjectSchema));
   const sb = locals.srv;
-  const tid = locals.tenantId;
+  const tid = tenantId;
 
   const { data: subjects } = await sb
     .from('subjects')
@@ -29,10 +31,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions = {
   create: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(subjectSchema));
     if (!form.valid) return fail(400, { form });
     const { error } = await locals.srv.from('subjects').insert({
-      tenant_id: locals.tenantId,
+      tenant_id: tenantId,
       name: form.data.name,
       code: form.data.code || null,
     });
@@ -41,6 +44,7 @@ export const actions = {
   },
 
   update: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(subjectSchema));
     if (!form.valid) return fail(400, { form });
     if (!form.data.id) return message(form, 'ID required', { status: 400 });
@@ -50,18 +54,19 @@ export const actions = {
         code: form.data.code || null,
       })
       .eq('id', form.data.id)
-      .eq('tenant_id', locals.tenantId);
+      .eq('tenant_id', tenantId);
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
     return message(form, 'Subject updated successfully');
   },
 
   delete: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(deleteSchema));
     if (!form.valid) return fail(400, { form });
     const { error } = await locals.srv.from('subjects')
       .delete()
       .eq('id', form.data.id)
-      .eq('tenant_id', locals.tenantId);
+      .eq('tenant_id', tenantId);
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
     return message(form, 'Subject deleted successfully');
   },

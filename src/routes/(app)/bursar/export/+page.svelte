@@ -4,7 +4,6 @@
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
-  import { enhance } from '$app/forms';
 
   const { data } = $props();
   const invoices = $derived(data.invoices ?? []);

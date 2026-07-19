@@ -1,7 +1,6 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import { page } from '$app/stores';
 
   const { data } = $props();
   const tenants = $derived(data.tenants);

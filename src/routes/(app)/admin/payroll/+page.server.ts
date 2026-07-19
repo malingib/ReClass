@@ -73,32 +73,34 @@ export const actions: Actions = {
     const errors: string[] = [];
 
     for (const teacher of teachers) {
-      const { data: occurrences, error: countError } = await sb
+      const { count, error: countError } = await sb
         .from('teacher_attendance')
-        .select('id', { count: 'exact', head: true })
+        .select('id, session_occurrences!inner(occurs_on)', { count: 'exact', head: true })
         .eq('tenant_id', tid)
         .eq('teacher_id', teacher.id)
+        .eq('approval_status', 'approved')
+        .is('deleted_at', null)
         .in('status', ['present', 'late'])
-        .gte('marked_at', `${periodStart}T00:00:00`)
-        .lte('marked_at', `${periodEnd}T23:59:59`);
+        .gte('session_occurrences.occurs_on', periodStart)
+        .lte('session_occurrences.occurs_on', periodEnd);
 
       if (countError) {
         errors.push(`Error counting attendance for teacher ${teacher.id}`);
         continue;
       }
 
-      const count = occurrences?.length ?? 0;
+      const occurrencesCount = count ?? 0;
 
-      if (count === 0) continue; // Skip teachers with no attendance
+      if (occurrencesCount === 0) continue; // Skip teachers with no approved attendance
 
       payrollRecords.push({
         tenant_id: tid,
         teacher_id: teacher.id,
         period_start: periodStart,
         period_end: periodEnd,
-        occurrences_count: count,
+        occurrences_count: occurrencesCount,
         rate_per_session: ratePerSession,
-        amount: count * ratePerSession,
+        amount: occurrencesCount * ratePerSession,
         status: 'draft',
       });
     }

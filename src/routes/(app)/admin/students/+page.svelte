@@ -3,12 +3,11 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import { superForm, setMessage, setError } from 'sveltekit-superforms';
+  import { superForm } from 'sveltekit-superforms';
   import { zodClient } from 'sveltekit-superforms/adapters';
   import { Dialog } from 'bits-ui';
-  import { Plus, Pencil, Trash2 } from 'lucide-svelte';
+  import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
-  import { page } from '$app/stores';
   import type { PageData } from './$types';
   import { fly } from 'svelte/transition';
 

@@ -1,14 +1,16 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
+  const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
   const sb = locals.srv;
 
   const { data: credentials } = await sb
     .from('credentials')
     .select('id, label, provider, environment, test_status, is_active, created_at, updated_at')
     .eq('scope', 'tenant')
-    .eq('tenant_id', locals.tenantId)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
   return { credentials: credentials ?? [] };
@@ -16,6 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   save: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const sb = locals.srv;
     const form = await request.formData();
 
@@ -30,7 +33,7 @@ export const actions: Actions = {
     }
 
     const payload = {
-      tenant_id: locals.tenantId,
+      tenant_id: tenantId,
       scope: 'tenant' as const,
       purpose: 'school_send' as const,
       provider: provider === 'mpesa' ? 'mpesa' as const : 'mobiwave_sms' as const,
@@ -46,7 +49,8 @@ export const actions: Actions = {
         .from('credentials')
         .update(payload)
         .eq('id', id)
-        .eq('tenant_id', locals.tenantId);
+        .eq('tenant_id', tenantId)
+        .eq('scope', 'tenant');
 
       if (error) {
         console.error('Credential update error:', error);
@@ -70,6 +74,7 @@ export const actions: Actions = {
   },
 
   delete: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const sb = locals.srv;
     const form = await request.formData();
     const id = form.get('id') as string;
@@ -82,7 +87,8 @@ export const actions: Actions = {
       .from('credentials')
       .delete()
       .eq('id', id)
-      .eq('tenant_id', locals.tenantId);
+      .eq('tenant_id', tenantId)
+      .eq('scope', 'tenant');
 
     if (error) {
       console.error('Credential delete error:', error);
@@ -93,6 +99,7 @@ export const actions: Actions = {
   },
 
   test: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const sb = locals.srv;
     const form = await request.formData();
     const id = form.get('id') as string;
@@ -101,11 +108,22 @@ export const actions: Actions = {
       return fail(400, { error: 'Credential ID is required' });
     }
 
+    const { data: credential } = await sb
+      .from('credentials')
+      .select('id')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .eq('scope', 'tenant')
+      .maybeSingle();
+    if (!credential) return fail(404, { error: 'Credential not found' });
+
     // Mark as testing
     await sb
       .from('credentials')
       .update({ test_status: 'untested' })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .eq('scope', 'tenant');
 
     // Invoke the credentials-test Edge Function
     const { data: result, error: fnError } = await sb.functions.invoke('credentials-test', {
@@ -116,7 +134,9 @@ export const actions: Actions = {
       await sb
         .from('credentials')
         .update({ test_status: 'failed', last_tested_at: new Date().toISOString() })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenantId)
+        .eq('scope', 'tenant');
       return fail(500, { error: `Test failed: ${fnError.message}` });
     }
 
@@ -127,7 +147,9 @@ export const actions: Actions = {
         test_status: ok ? 'ok' : 'failed',
         last_tested_at: new Date().toISOString(),
       })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .eq('scope', 'tenant');
 
     return {
       success: true,

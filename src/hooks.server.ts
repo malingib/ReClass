@@ -29,17 +29,8 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.session = null;
   event.locals.user = null;
   event.locals.role = null;
-  event.locals.tenantId = null;
+  event.locals.tenantId = '';
   event.locals.impersonating = false;
-
-  let session: import('@supabase/supabase-js').Session | null = null;
-  try {
-    const { data: { session: s } } = await sb.auth.getSession();
-    session = s;
-  } catch {
-    // stale session cookie — treat as unauthenticated
-  }
-  event.locals.session = session;
 
   let user: import('@supabase/supabase-js').User | null = null;
   try {
@@ -60,40 +51,27 @@ export const handle: Handle = async ({ event, resolve }) => {
       email: user.email ?? '',
     }), { maxAge: 300, path: '/' });
 
-    function resolveRole(u: typeof user): Role | null {
-      const metaRole = (u?.user_metadata as Record<string, unknown>)?.role;
-      if (typeof metaRole === 'string' && isRole(metaRole)) return metaRole;
-      return null;
-    }
-
-    const cachedRole = resolveRole(user);
-    if (cachedRole) {
-      event.locals.role = cachedRole;
-      const meta = user?.user_metadata as Record<string, unknown> | undefined;
-      if (meta?.tenant_id) {
-        event.locals.tenantId = meta.tenant_id as string;
-      }
-    } else {
-      const { data: roleRow } = await sb.from('user_roles').select('role, tenant_id').eq('user_id', user.id).maybeSingle();
-      if (roleRow) {
-        const r = roleRow.role as Role;
-        if (isRole(r)) {
-          event.locals.role = r;
-          event.locals.tenantId = roleRow.tenant_id as string | null;
-        }
-      }
-    }
+    const { data: roleRows } = await event.locals.srv
+      .from('user_roles')
+      .select('role, tenant_id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1);
+    const roleRow = roleRows?.[0];
+    if (roleRow && isRole(roleRow.role)) {
+      event.locals.role = roleRow.role as Role;
+      event.locals.tenantId = roleRow.tenant_id;
     }
 
     // A tenant-scoped role with no tenant_id is a provisioning failure, not an
     // empty dashboard. Redirect to a clear page instead of silently showing
     // nothing (every .eq('tenant_id', null) returns zero rows). super_admin is
     // cross-tenant by design and is exempt.
-    if (event.locals.user && event.locals.role && event.locals.role !== 'super_admin' && !event.locals.tenantId) {
-    if (pathname !== '/not-provisioned') {
-      redirect(303, '/not-provisioned');
-    }
-    return resolve(event);
+    if (event.locals.role && event.locals.role !== 'super_admin' && !event.locals.tenantId) {
+      if (pathname !== '/not-provisioned') {
+        redirect(303, '/not-provisioned');
+      }
+      return resolve(event);
     }
 
     // Super-admin tenant drill-down: if impersonating via the tenants console,
@@ -103,6 +81,8 @@ export const handle: Handle = async ({ event, resolve }) => {
   if (event.locals.role === 'super_admin' && impersonateCookie && event.locals.tenantId !== impersonateCookie) {
     event.locals.tenantId = impersonateCookie;
     event.locals.impersonating = true;
+  }
+
   }
 
   if (pathname === '/' || pathname === '/login') {

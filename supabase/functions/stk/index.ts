@@ -8,7 +8,46 @@ const supabase = createClient(
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const { invoice_id, tenant_id, amount, phone } = await req.json();
+    const authorization = req.headers.get('Authorization');
+    if (!authorization) return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: corsHeaders });
+
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authorization } } }
+    );
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user) return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: corsHeaders });
+
+    const { invoice_id } = await req.json();
+    if (typeof invoice_id !== 'string') return new Response(JSON.stringify({ error: 'INVALID_INVOICE' }), { status: 400, headers: corsHeaders });
+
+    const { data: parent } = await supabase.from('parents')
+      .select('id, tenant_id, phone')
+      .eq('profile_id', user.id)
+      .maybeSingle();
+    if (!parent) return new Response(JSON.stringify({ error: 'PARENT_NOT_LINKED' }), { status: 403, headers: corsHeaders });
+
+    const { data: invoice } = await supabase.from('invoices')
+      .select('id, tenant_id, student_id, amount_due, amount_paid, status')
+      .eq('id', invoice_id)
+      .eq('tenant_id', parent.tenant_id)
+      .in('status', ['unpaid', 'partial'])
+      .maybeSingle();
+    if (!invoice) return new Response(JSON.stringify({ error: 'INVOICE_NOT_FOUND' }), { status: 404, headers: corsHeaders });
+
+    const { data: link } = await supabase.from('guardians_link')
+      .select('student_id')
+      .eq('parent_id', parent.id)
+      .eq('student_id', invoice.student_id)
+      .maybeSingle();
+    if (!link) return new Response(JSON.stringify({ error: 'INVOICE_NOT_OWNED' }), { status: 403, headers: corsHeaders });
+
+    const tenant_id = parent.tenant_id;
+    const phone = parent.phone.replace(/\s/g, '');
+    const amount = Number(invoice.amount_due) - Number(invoice.amount_paid ?? 0);
+    if (amount <= 0 || !/^254[17]\d{8}$/.test(phone)) {
+      return new Response(JSON.stringify({ error: 'INVALID_PAYMENT_DETAILS' }), { status: 400, headers: corsHeaders });
+    }
     const { data: cred_id } = await supabase.rpc('resolve_credential',
       { p_tenant: tenant_id, p_provider: 'mpesa', p_allow_sandbox: false });
     if (!cred_id) return new Response(JSON.stringify({ error: 'CREDS_NOT_FOUND' }), { status: 400, headers: corsHeaders });

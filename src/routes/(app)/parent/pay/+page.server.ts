@@ -3,14 +3,7 @@ import { getParentOwnership } from '$lib/server/ownership';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId, parent, studentIds } = await getParentOwnership(locals);
-
-  if (studentIds.length === 0) return { parent, students: [], invoices: [] };
-
-  const { data: students } = await locals.srv
-    .from('students')
-    .select('id, admission_no, first_name, last_name, grade, status')
-    .eq('tenant_id', tenantId)
-    .in('id', studentIds);
+  if (studentIds.length === 0) return { parent, invoices: [] };
 
   const { data: invoices } = await locals.srv
     .from('invoices')
@@ -18,8 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     .eq('tenant_id', tenantId)
     .in('student_id', studentIds)
     .in('status', ['unpaid', 'partial'])
-    .order('created_at', { ascending: false })
-    .limit(5);
+    .order('due_date');
 
-  return { parent, students: students ?? [], invoices: invoices ?? [] };
+  return { parent, invoices: invoices ?? [] };
 };

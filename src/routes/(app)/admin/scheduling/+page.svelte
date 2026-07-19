@@ -5,7 +5,7 @@
 
   interface Session {
     id: string; title: string; subject: string; grade: string; teacher: string;
-    day_of_week: number; start_time: string; end_time: string; slot: string | null; active: boolean;
+    day_of_week: number; start_time: string; end_time: string; slot: string | null; room: string | null; active: boolean;
   }
 
   interface Option { id: string; name: string; }
@@ -66,12 +66,13 @@
   let newDay = $state('1');
   let newStart = $state('14:00');
   let newEnd = $state('15:00');
+  let newRoom = $state('');
   const newSlot = $state('');
   const submitting = $state(false);
   const formError = $state('');
 
   function confirmDelete(e: Event) {
-    if (!confirm('Delete this session?')) e.preventDefault();
+    if (!confirm('Archive this recurring session?')) e.preventDefault();
   }
 
   const dayColors: Record<number, string> = { 1: 'bg-brand-50 text-brand-700', 2: 'bg-violet-50 text-violet-700', 3: 'bg-amber-50 text-amber-700', 4: 'bg-rose-50 text-rose-700', 5: 'bg-cyan-50 text-cyan-700', 6: 'bg-emerald-50 text-emerald-700', 7: 'bg-slate-50 text-slate-700' };
@@ -98,37 +99,41 @@
       <input type="hidden" name="slot" value={newSlot} />
       <div class="flex flex-wrap items-end gap-4">
         <div>
-          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Class</label>
-          <input name="class" bind:value={newClass} required placeholder="e.g. Form 2"
+          <label for="session-class" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Class</label>
+          <input id="session-class" name="class" bind:value={newClass} required placeholder="e.g. Form 2"
             class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900" />
         </div>
         <div>
-          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Subject</label>
-          <select name="subject_id" bind:value={newSubject} required class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
+          <label for="session-subject" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Subject</label>
+          <select id="session-subject" name="subject_id" bind:value={newSubject} required class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
             <option value="">Select subject…</option>
             {#each subjects as s}<option value={s.id}>{s.name}</option>{/each}
           </select>
         </div>
         <div>
-          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Teacher</label>
-          <select name="teacher_id" bind:value={newTeacher} required class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
+          <label for="session-teacher" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Teacher</label>
+          <select id="session-teacher" name="teacher_id" bind:value={newTeacher} required class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
             <option value="">Select teacher…</option>
             {#each teachers as t (t.id)}<option value={t.id}>{(t as any).first_name} {(t as any).last_name}</option>{/each}
           </select>
         </div>
         <div>
-          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Day</label>
-          <select name="day_of_week" bind:value={newDay} class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
+          <label for="session-room" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Room</label>
+          <input id="session-room" name="room" bind:value={newRoom} required placeholder="e.g. Lab 2" class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900" />
+        </div>
+        <div>
+          <label for="session-day" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Day</label>
+          <select id="session-day" name="day_of_week" bind:value={newDay} class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
             {#each dayOptions as o}<option value={o.value}>{o.label}</option>{/each}
           </select>
         </div>
         <div>
-          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Start</label>
-          <input type="time" name="start_time" bind:value={newStart} class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900" />
+          <label for="session-start" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Start</label>
+          <input id="session-start" type="time" name="start_time" bind:value={newStart} class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900" />
         </div>
         <div>
-          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">End</label>
-          <input type="time" name="end_time" bind:value={newEnd} class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900" />
+          <label for="session-end" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">End</label>
+          <input id="session-end" type="time" name="end_time" bind:value={newEnd} class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900" />
         </div>
         <button type="submit"
           class="rounded-xl bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700">Save</button>

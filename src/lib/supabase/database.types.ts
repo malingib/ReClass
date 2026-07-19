@@ -408,6 +408,7 @@ export type Database = {
           id: string
           locale: string | null
           phone: string
+          profile_id: string | null
           sms_consent: boolean | null
           tenant_id: string
         }
@@ -419,6 +420,7 @@ export type Database = {
           id?: string
           locale?: string | null
           phone: string
+          profile_id?: string | null
           sms_consent?: boolean | null
           tenant_id: string
         }
@@ -430,10 +432,18 @@ export type Database = {
           id?: string
           locale?: string | null
           phone?: string
+          profile_id?: string | null
           sms_consent?: boolean | null
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "parents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parents_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -686,6 +696,8 @@ export type Database = {
       }
       session_occurrences: {
         Row: {
+          class: string | null
+          created_at: string
           end_time: string
           id: string
           occurs_on: string
@@ -693,9 +705,13 @@ export type Database = {
           session_id: string
           start_time: string
           status: string | null
+          teacher_id: string | null
           tenant_id: string
+          updated_at: string
         }
         Insert: {
+          class?: string | null
+          created_at?: string
           end_time: string
           id?: string
           occurs_on: string
@@ -703,9 +719,13 @@ export type Database = {
           session_id: string
           start_time: string
           status?: string | null
+          teacher_id?: string | null
           tenant_id: string
+          updated_at?: string
         }
         Update: {
+          class?: string | null
+          created_at?: string
           end_time?: string
           id?: string
           occurs_on?: string
@@ -713,7 +733,9 @@ export type Database = {
           session_id?: string
           start_time?: string
           status?: string | null
+          teacher_id?: string | null
           tenant_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -742,6 +764,7 @@ export type Database = {
           end_time: string
           id: string
           recurrence: Json | null
+          room: string | null
           slot: string | null
           start_time: string
           subject_id: string | null
@@ -758,6 +781,7 @@ export type Database = {
           end_time: string
           id?: string
           recurrence?: Json | null
+          room?: string | null
           slot?: string | null
           start_time: string
           subject_id?: string | null
@@ -774,6 +798,7 @@ export type Database = {
           end_time?: string
           id?: string
           recurrence?: Json | null
+          room?: string | null
           slot?: string | null
           start_time?: string
           subject_id?: string | null
@@ -899,34 +924,46 @@ export type Database = {
       }
       teacher_attendance: {
         Row: {
+          approval_status: string
           created_at: string | null
           deleted_at: string | null
           id: string
           marked_at: string | null
           marked_by: string | null
           occurrence_id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: string
           teacher_id: string
           tenant_id: string
         }
         Insert: {
+          approval_status?: string
           created_at?: string | null
           deleted_at?: string | null
           id?: string
           marked_at?: string | null
           marked_by?: string | null
           occurrence_id: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status: string
           teacher_id: string
           tenant_id: string
         }
         Update: {
+          approval_status?: string
           created_at?: string | null
           deleted_at?: string | null
           id?: string
           marked_at?: string | null
           marked_by?: string | null
           occurrence_id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
           teacher_id?: string
           tenant_id?: string
@@ -1176,7 +1213,36 @@ export type Database = {
         Args: {
           p_amount: number
           p_checkout_id: string
+          p_invoice_id: string
           p_phone: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      generate_future_session_occurrences: {
+        Args: { p_through?: string }
+        Returns: number
+      }
+      generate_session_occurrences: {
+        Args: { p_session_id: string; p_through?: string }
+        Returns: number
+      }
+      mark_own_teacher_attendance: {
+        Args: {
+          p_occurrence_id: string
+          p_profile_id: string
+          p_status: string
+          p_teacher_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      review_teacher_attendance: {
+        Args: {
+          p_attendance_id: string
+          p_decision: string
+          p_note?: string | null
+          p_profile_id: string
           p_tenant_id: string
         }
         Returns: Json
