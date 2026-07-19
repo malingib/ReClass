@@ -119,14 +119,3 @@ export function t(key: string, currentLocale?: Locale): string {
   if (!entry) return key;
   return entry[loc] ?? entry.en;
 }
-
-/**
- * Get the full dictionary for a locale (useful for prefilling).
- */
-export function getDictionary(loc: Locale): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const [key, value] of Object.entries(dictionary)) {
-    result[key] = value[loc] ?? value.en;
-  }
-  return result;
-}
