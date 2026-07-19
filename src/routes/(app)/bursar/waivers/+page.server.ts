@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/auth';
+import { logError } from '$lib/server/log';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const db = locals.srv;
@@ -106,7 +107,7 @@ export const actions: Actions = {
       .single();
 
     if (waiverError) {
-      console.error('Waiver create error:', waiverError);
+      logError('waiver_create', waiverError, { invoiceId, amount, reason });
       return fail(500, { error: 'Failed to create waiver. Please try again.' });
     }
 

@@ -58,7 +58,7 @@ export const actions = {
     const form = await request.formData();
     const attendanceId = form.get('attendance_id')?.toString();
     const decision = form.get('decision')?.toString();
-    const note = form.get('note')?.toString().trim() || null;
+    const note = form.get('note')?.toString().trim() || undefined;
     if (!attendanceId || !decision || !['approved', 'rejected'].includes(decision)) {
       return fail(400, { error: 'Attendance and a valid review decision are required' });
     }

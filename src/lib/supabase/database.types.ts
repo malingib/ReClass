@@ -39,6 +39,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance: {
+        Row: {
+          created_at: string | null
+          edit_reason: string | null
+          id: string
+          locked: boolean | null
+          marked_at: string | null
+          marked_by: string | null
+          occurrence_id: string
+          status: string
+          student_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          edit_reason?: string | null
+          id?: string
+          locked?: boolean | null
+          marked_at?: string | null
+          marked_by?: string | null
+          occurrence_id: string
+          status: string
+          student_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          edit_reason?: string | null
+          id?: string
+          locked?: boolean | null
+          marked_at?: string | null
+          marked_by?: string | null
+          occurrence_id?: string
+          status?: string
+          student_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "session_occurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -746,6 +814,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "session_occurrences_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "session_occurrences_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -984,6 +1059,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "teacher_attendance_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "teacher_attendance_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
@@ -1208,17 +1290,6 @@ export type Database = {
     Functions: {
       decrypt_credential: { Args: { p_id: string }; Returns: Json }
       encrypt_credential: { Args: { p_json: Json }; Returns: string }
-      get_admin_dashboard_stats: { Args: never; Returns: Json }
-      reconcile_payment: {
-        Args: {
-          p_amount: number
-          p_checkout_id: string
-          p_invoice_id: string
-          p_phone: string
-          p_tenant_id: string
-        }
-        Returns: Json
-      }
       generate_future_session_occurrences: {
         Args: { p_through?: string }
         Returns: number
@@ -1227,6 +1298,7 @@ export type Database = {
         Args: { p_session_id: string; p_through?: string }
         Returns: number
       }
+      get_admin_dashboard_stats: { Args: never; Returns: Json }
       mark_own_teacher_attendance: {
         Args: {
           p_occurrence_id: string
@@ -1237,16 +1309,26 @@ export type Database = {
         }
         Returns: Json
       }
-      review_teacher_attendance: {
-        Args: {
-          p_attendance_id: string
-          p_decision: string
-          p_note?: string | null
-          p_profile_id: string
-          p_tenant_id: string
-        }
-        Returns: Json
-      }
+      reconcile_payment:
+        | {
+            Args: {
+              p_amount: number
+              p_checkout_id: string
+              p_phone: string
+              p_tenant_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_checkout_id: string
+              p_invoice_id: string
+              p_phone: string
+              p_tenant_id: string
+            }
+            Returns: Json
+          }
       resolve_credential: {
         Args: {
           p_allow_sandbox?: boolean
@@ -1254,6 +1336,16 @@ export type Database = {
           p_tenant: string
         }
         Returns: string
+      }
+      review_teacher_attendance: {
+        Args: {
+          p_attendance_id: string
+          p_decision: string
+          p_note?: string
+          p_profile_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
       }
       set_tenant_context: {
         Args: { p_role: string; p_tenant: string }

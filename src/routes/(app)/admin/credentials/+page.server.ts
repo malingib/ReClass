@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/auth';
+import { logError } from '$lib/server/log';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
@@ -53,7 +54,7 @@ export const actions: Actions = {
         .eq('scope', 'tenant');
 
       if (error) {
-        console.error('Credential update error:', error);
+        logError('credential_update', error, { id });
         return fail(500, { error: 'Failed to update credential. Please try again.' });
       }
     } else {
@@ -62,7 +63,7 @@ export const actions: Actions = {
         .insert(payload);
 
       if (error) {
-        console.error('Credential insert error:', error);
+        logError('credential_insert', error);
         if (error.code === '23505') {
           return fail(409, { error: 'A credential for this provider and environment already exists.' });
         }
@@ -91,7 +92,7 @@ export const actions: Actions = {
       .eq('scope', 'tenant');
 
     if (error) {
-      console.error('Credential delete error:', error);
+      logError('credential_delete', error, { id });
       return fail(500, { error: 'Failed to delete credential.' });
     }
 

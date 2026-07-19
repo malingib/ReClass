@@ -11,8 +11,8 @@
 tenants 1──* users (auth.users via profiles) 1──* user_roles
 tenants 1──* students 1──* guardians_link *──1 parents
 tenants 1──* teachers
-tenants 1──* subjects 1──* remedial_groups *──1 teachers
-remedial_groups 1──* sessions 1──* session_occurrences 1──* attendance *──1 students
+tenants 1──* subjects
+tenants 1──* sessions 1──* session_occurrences 1──* teacher_attendance
 tenants 1──* fee_types 1──* invoices 1──* invoice_lines
 invoices 1──* payments
 invoices 1──* waivers
@@ -155,11 +155,15 @@ CREATE TABLE remedial_groups (
 CREATE TABLE sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES tenants(id),
-  group_id uuid NOT NULL REFERENCES remedial_groups(id),
+  class text,                          -- whole-class identifier (e.g. "Form 2 Math")
+  subject_id uuid REFERENCES subjects(id),
+  teacher_id uuid REFERENCES teachers(id),
+  room text,
+  slot text,                           -- e.g. "morning", "afternoon"
   day_of_week int CHECK (day_of_week BETWEEN 1 AND 7),
   start_time time NOT NULL,
   end_time time NOT NULL,
-  recurrence jsonb,                  -- RRULE-ish or {term, weeks[]}
+  recurrence jsonb,                    -- RRULE-ish or {term, weeks[]}
   active boolean DEFAULT true,
   deleted_at timestamptz
 );
@@ -171,25 +175,29 @@ CREATE TABLE session_occurrences (
   start_time time NOT NULL,
   end_time time NOT NULL,
   room text,
+  class text,                          -- copied from session at generation
+  teacher_id uuid REFERENCES teachers(id),
   status text DEFAULT 'scheduled' CHECK (status IN ('scheduled','cancelled','done')),
   UNIQUE (session_id, occurs_on)
 );
 ```
 
-### attendance
+### teacher_attendance
 ```sql
-CREATE TABLE attendance (
+CREATE TABLE teacher_attendance (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES tenants(id),
   occurrence_id uuid NOT NULL REFERENCES session_occurrences(id),
-  student_id uuid NOT NULL REFERENCES students(id),
-  status text NOT NULL CHECK (status IN ('present','late','absent','excused')),
+  teacher_id uuid NOT NULL REFERENCES teachers(id),
+  status text NOT NULL CHECK (status IN ('present','late')),
   marked_by uuid REFERENCES profiles(id),
   marked_at timestamptz DEFAULT now(),
-  locked boolean DEFAULT false,
-  edit_reason text,                  -- required if changed after lock
-  created_at timestamptz DEFAULT now(),
-  UNIQUE (occurrence_id, student_id)
+  approval_status text DEFAULT 'pending' CHECK (approval_status IN ('pending','approved','rejected')),
+  reviewed_by uuid REFERENCES profiles(id),
+  reviewed_at timestamptz,
+  review_note text,
+  deleted_at timestamptz,
+  UNIQUE (occurrence_id, teacher_id)
 );
 ```
 

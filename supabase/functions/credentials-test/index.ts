@@ -7,8 +7,47 @@ const supabase = createClient(
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
   try {
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ status: 'failed', reason: 'auth_required' }), { status: 401, headers: corsHeaders });
+    }
+
+    const userClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: `Bearer ${authHeader}` } } });
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ status: 'failed', reason: 'invalid_token' }), { status: 401, headers: corsHeaders });
+    }
+
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role, tenant_id')
+      .eq('user_id', user.id);
+    const isAdmin = roles?.some(r => r.role === 'school_admin' || r.role === 'super_admin');
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ status: 'failed', reason: 'forbidden' }), { status: 403, headers: corsHeaders });
+    }
+
     const { credential_id } = await req.json();
+    if (!credential_id) {
+      return new Response(JSON.stringify({ status: 'failed', reason: 'credential_id_required' }), { status: 400, headers: corsHeaders });
+    }
+
+    const adminTenantIds = new Set(roles.filter(r => r.role === 'school_admin').map(r => r.tenant_id));
+    const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
+    if (!isSuperAdmin) {
+      const { data: cred } = await supabase
+        .from('credentials')
+        .select('tenant_id')
+        .eq('id', credential_id)
+        .maybeSingle();
+      if (!cred || !adminTenantIds.has(cred.tenant_id)) {
+        return new Response(JSON.stringify({ status: 'failed', reason: 'forbidden' }), { status: 403, headers: corsHeaders });
+      }
+    }
+
     const { data: s, error } = await supabase.rpc('decrypt_credential', { p_id: credential_id });
     if (error || !s) return new Response(JSON.stringify({ status: 'failed', reason: 'decrypt' }), { status: 400, headers: corsHeaders });
 

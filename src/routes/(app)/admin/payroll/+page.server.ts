@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { logError } from '$lib/server/log';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const sb = locals.srv;
@@ -114,7 +115,7 @@ export const actions: Actions = {
       .insert(payrollRecords);
 
     if (insertError) {
-      console.error('Payroll generate error:', insertError);
+      logError('payroll_generate', insertError, { periodStart, periodEnd });
       return fail(500, { error: 'Failed to generate payroll records. Please try again.' });
     }
 
@@ -144,7 +145,7 @@ export const actions: Actions = {
       .eq('tenant_id', tid);
 
     if (error) {
-      console.error('Payroll approve error:', error);
+      logError('payroll_approve', error, { id });
       return fail(500, { error: 'Failed to approve payroll run.' });
     }
 
@@ -168,7 +169,7 @@ export const actions: Actions = {
       .eq('tenant_id', tid);
 
     if (error) {
-      console.error('Payroll pay error:', error);
+      logError('payroll_pay', error, { id });
       return fail(500, { error: 'Failed to mark payroll as paid.' });
     }
 

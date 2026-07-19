@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { logError } from '$lib/server/log';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const sb = locals.srv;
@@ -84,7 +85,7 @@ export const actions: Actions = {
       .eq('id', locals.tenantId);
 
     if (error) {
-      console.error('Settings save error:', error);
+      logError('settings_save', error);
       return fail(500, { error: 'Failed to save settings. Please try again.' });
     }
 

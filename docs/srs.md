@@ -163,8 +163,8 @@ Grouped by module. Each feature lists purpose, business rules, dependencies, edg
 **A2 Teacher Management**
 - CRUD teacher, assign subjects, link login account, active/inactive.
 
-**A3 Subject & Remedial Group Management**
-- Subject catalog (e.g. Mathematics, English); remedial groups = subject + cohort + teacher + schedule.
+**A3 Subject & Session Management**
+- Subject catalog (e.g. Mathematics, English); sessions defined as whole-class recurring events (subject + teacher + schedule + room). No per-student enrollment — all students in a class attend by default.
 
 **A4 User & Role Management**
 - Roles: super_admin, school_admin, principal, teacher, bursar, parent. RBAC via Supabase Auth + app roles table.
@@ -175,9 +175,9 @@ Grouped by module. Each feature lists purpose, business rules, dependencies, edg
 
 ## Module B — Remedial Classes & Scheduling
 **B1 Timetable / Session Scheduling**
-- Purpose: define recurring remedial sessions (day, start/end, room, teacher, group).
-- Business rules: a room cannot be double-booked in the same slot (soft-warn, not hard-block, with override by admin); a teacher cannot be in two rooms at once (warn).
-- Edge: public holidays (KE calendar) skip sessions; term breaks pause recurrence.
+- Purpose: define recurring whole-class remedial sessions (day, start/end, room, teacher, subject).
+- Business rules: a room cannot be double-booked in the same slot (soft-warn, not hard-block, with override by admin); a teacher cannot be in two rooms at once (warn). Conflict detection checks teacher, class, and room overlaps.
+- Edge: public holidays (KE calendar) skip sessions; term breaks pause recurrence. A trigger expands sessions into occurrences (`generate_session_occurrences`) on insert/update, rolling 8 weeks forward.
 - AC: conflict detection highlights overlaps; admin can override with reason logged.
 
 **B2 Teacher Assignment & Room Allocation**
@@ -186,18 +186,18 @@ Grouped by module. Each feature lists purpose, business rules, dependencies, edg
 **B3 Calendar View**
 - Month/week/agenda; filter by teacher/group/room; click session → roster.
 
-## Module C — Attendance
-**C1 Session Attendance**
-- Mark present/late/absent/excused per student per session.
-- Business rules: **attendance is locked 24h after session end OR after principal approval — whichever first**; edits after lock require a reason + auditor review; marking only by assigned teacher or admin.
-- Edge: teacher marks before session start → blocked (or flagged "early"); student added after marking → appears unmarked.
-- AC: bulk "mark all present" + per-student override; late has timestamp; absent triggers parent SMS (if enabled).
+## Module C — Teacher Delivery Attendance
+**C1 Session Delivery Marking**
+- Mark present/late per session occurrence (teacher self-marks). No per-student tracking — attendance is whole-class delivery.
+- Business rules: **attendance is pending until principal approval**; after approval, editing requires admin override; marking only by the assigned teacher.
+- Edge: teacher marks before session date → blocked; late mark records timestamp; absent not a valid teacher status (teachers either deliver or they don't).
 
-**C2 Attendance Analytics**
-- Per student, group, teacher, term: rate, trend, chronic-absence flag.
+**C2 Delivery Analytics**
+- Per teacher, session, term: coverage rate, trend, approval backlog.
+- Coverage rate = approved deliveries / scheduled occurrences.
 
-**C3 QR / Offline (future/phase 2)**
-- QR check-in; offline queue flushes on reconnect.
+**C3 Approval Workflow**
+- Principal reviews pending deliveries, approves or rejects with note. Rejected deliveries require a reason. Approved deliveries count toward payroll calculation.
 
 ## Module D — Payments & Fees
 **D1 Fee Definition**
@@ -259,9 +259,9 @@ Grouped by module. Each feature lists purpose, business rules, dependencies, edg
 
 # 7. User Stories (selected; full set in repo backlog)
 
-- As a **teacher**, I want to mark all present with one tap then adjust individuals, so that I save time.
-- As a **teacher**, I want attendance to pre-fill from the roster, so that I only change exceptions.
-- As a **parent**, I want an SMS when my child is absent, so that I can follow up immediately.
+- As a **teacher**, I want to mark my delivery (present/late) for my assigned session, so that attendance is recorded and payroll is accurate.
+- As a **teacher**, I want to see only my assigned occurrences, so that I don't confuse schedules.
+- As a **parent**, I want an SMS when my child is absent (future phase), so that I can follow up immediately.
 - As a **parent**, I want to pay fees from the SMS link, so that I don't visit the school.
 - As a **bursar**, I want auto-reconciled M-Pesa, so that I stop spending a day weekly on ledgers.
 - As a **bursar**, I want to apply a waiver with a reason, so that the audit trail is clean.
@@ -277,7 +277,7 @@ Grouped by module. Each feature lists purpose, business rules, dependencies, edg
 
 # 8. Complete Feature List (MoSCoW)
 
-**Must Have:** Student/Teacher/Subject/Group CRUD; RBAC; Tenant settings; Timetable + conflict detection; Session attendance + lock/approve; Attendance analytics; Fee definition + invoicing; M-Pesa STK Push + reconciliation; Ledger + waivers; Outstanding + reminders; Parent portal (view + pay); Teacher portal; Management reports (CSV/PDF); SMS notifications; Audit log; Daily backups; EN/SW; WCAG AA; PWA responsive.
+**Must Have:** Student/Teacher/Subject CRUD; RBAC; Tenant settings; Timetable + conflict detection; Session occurrence generation (trigger-based); Teacher delivery attendance + principal approval; Attendance analytics; Fee definition + invoicing; M-Pesa STK Push + reconciliation; Ledger + waivers; Outstanding + reminders; Parent portal (view + pay); Teacher portal; Bursar reports (aging, revenue, export); SMS notifications; Audit log; Daily backups; EN/SW; WCAG AA; PWA responsive; Payroll generation from approved deliveries.
 
 **Should Have:** Email notifications; Scheduled report emails; Announcements; Notes upload; Offline attendance queue; Public holiday calendar; Payment aging report; Opt-out handling.
 
@@ -296,8 +296,8 @@ Grouped by module. Each feature lists purpose, business rules, dependencies, edg
 4. Parent registration: admin creates parent record + sends invite link (OTP/email); parent sets password.
 5. Failures: wrong password → generic error (no user enumeration); 5 fails → lockout + CAPTCHA + notify admin.
 
-## 9.2 Attendance Flow
-Teacher opens session → roster pre-filled → marks status → save (queued if offline) → on approve/24h lock → status `locked` → absences enqueue parent SMS.
+## 9.2 Teacher Delivery Flow
+Teacher opens app → sees their assigned occurrences → marks present/late → status `pending` → principal reviews → `approved` or `rejected`.
 
 ## 9.3 Payment Flow (M-Pesa)
 1. Bursar/admin or parent clicks "Pay" → `POST /payments/stk` with phone + invoice.
@@ -306,7 +306,7 @@ Teacher opens session → roster pre-filled → marks status → save (queued if
 4. Timeout/no callback → status stays `pending`; admin can manually reconcile with MPESA reference.
 
 ## 9.4 Scheduling Flow
-Admin creates session recurrence → system expands into occurrences → conflict detector warns → calendar renders.
+Admin creates session (class + teacher + room + day/time) → trigger expands into occurrences 8 weeks forward → conflict detector (teacher/class/room overlap) warns → calendar renders.
 
 ## 9.5 Notifications Flow
 Event (absence/payment due/invoice) → notification engine picks channel(s) per tenant config + parent preference + opt-out → render template → dispatch via gateway → log + retry (exp backoff).
@@ -319,12 +319,12 @@ Event (absence/payment due/invoice) → notification engine picks channel(s) per
 ---
 
 # 10. Business Rules
-1. Attendance locked 24h post-session OR on principal approval (first wins); post-lock edits need reason + audit.
+1. Attendance locked after principal approval; rejected deliveries require a reason.
 2. Payment cannot exceed invoice balance; overpayment → credit note (manual).
-3. Teacher sees only assigned groups; parent sees only linked students; cross-tenant data invisible (RLS).
+3. Teacher sees only assigned occurrences; parent sees only linked students; cross-tenant data invisible (app-enforced tenant_id filter).
 4. Cannot delete student with unpaid fees (deactivate only).
-5. Room/teacher double-book → warn + require admin override reason.
-6. M-Pesa reconciliation idempotent by CheckoutRequestID.
+5. Room/teacher/class double-book → warn + require admin override reason (applicable at session creation, not occurrence level).
+6. M-Pesa reconciliation idempotent by CheckoutRequestID, row-level locking on invoice.
 7. Waivers require reason + actor (audited); only bursar/admin.
 8. SMS requires consent; STOP opts out (per phone, per tenant).
 9. Admission_no unique per school.
