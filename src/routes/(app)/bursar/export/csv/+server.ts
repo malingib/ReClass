@@ -1,7 +1,9 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
 
 export const GET: RequestHandler = async ({ locals }) => {
+  requireTenantRole(locals, 'bursar');
   const sb = locals.srv;
 
   const { data: invoices } = await sb

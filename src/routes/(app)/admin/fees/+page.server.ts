@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck — Superforms v3 + Zod v3 type incompatibility (known)
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { z } from 'zod/v3';
@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   return { form, fees: fees ?? [] };
 };
 
-export const actions = {
+export const actions: Actions = {
   create: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(feeSchema));
@@ -63,4 +63,4 @@ export const actions = {
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
     return message(form, 'Fee deleted successfully');
   },
-} satisfies Actions;
+};

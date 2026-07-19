@@ -1,21 +1,21 @@
-// @ts-nocheck
 import type { PageServerLoad } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
+  const { tenantId } = requireTenantRole(locals, 'bursar');
   const db = locals.srv;
 
-  let q = db
+  const { data: invoices } = await db
     .from('invoices')
     .select(`
       id, amount_due, amount_paid, status, due_date, created_at,
       students!inner(first_name, last_name, admission_no, grade)
     `)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(5000);
-  if (locals.tenantId) q = q.eq('tenant_id', locals.tenantId);
-  const { data: invoices } = await q;
 
-  const invoiceData = (invoices ?? []).map((i: any) => ({
+  const invoiceData = (invoices ?? []).map((i) => ({
     ...i,
     student_name: `${i.students?.first_name ?? ''} ${i.students?.last_name ?? ''}`.trim() || '—',
     admission_no: i.students?.admission_no ?? '—',
@@ -24,7 +24,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const statusCounts: Record<string, number> = {};
   for (const inv of invoiceData) {
-    statusCounts[inv.status] = (statusCounts[inv.status] ?? 0) + 1;
+    const key = inv.status ?? 'unknown';
+    statusCounts[key] = (statusCounts[key] ?? 0) + 1;
   }
 
   const totalDue = invoiceData.reduce((s, i) => s + Number(i.amount_due), 0);

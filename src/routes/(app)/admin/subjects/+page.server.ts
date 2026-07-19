@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck — Superforms v3 + Zod v3 type incompatibility (known)
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { z } from 'zod/v3';
@@ -17,19 +17,16 @@ const deleteSchema = z.object({ id: z.string() });
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
   const form = await superValidate(zod(subjectSchema));
-  const sb = locals.srv;
-  const tid = tenantId;
-
-  const { data: subjects } = await sb
+  const { data: subjects } = await locals.srv
     .from('subjects')
     .select('id, name, code')
-    .eq('tenant_id', tid)
+    .eq('tenant_id', tenantId)
     .order('name');
 
   return { form, subjects: subjects ?? [] };
 };
 
-export const actions = {
+export const actions: Actions = {
   create: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await superValidate(request, zod(subjectSchema));
@@ -49,10 +46,7 @@ export const actions = {
     if (!form.valid) return fail(400, { form });
     if (!form.data.id) return message(form, 'ID required', { status: 400 });
     const { error } = await locals.srv.from('subjects')
-      .update({
-        name: form.data.name,
-        code: form.data.code || null,
-      })
+      .update({ name: form.data.name, code: form.data.code || null })
       .eq('id', form.data.id)
       .eq('tenant_id', tenantId);
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
@@ -70,4 +64,4 @@ export const actions = {
     if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
     return message(form, 'Subject deleted successfully');
   },
-} satisfies Actions;
+};

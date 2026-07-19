@@ -123,7 +123,7 @@ supabase/
 - Database migrations must be applied via Supabase SQL Editor (pg port blocked from dev network)
 - `teacher_attendance` and `group_members` tables require manual creation (see `missing_tables.sql`)
 - Edge Functions deployed but not yet wired from frontend
-- 25+ files use `// @ts-nocheck` due to Zod/Superforms v3 type incompatibility
+- 16 files use `// @ts-nocheck` (Superforms v3 + Zod v3 type incompatibility); 4 non-Superforms files fixed
 - No git remote configured
 
 ## License

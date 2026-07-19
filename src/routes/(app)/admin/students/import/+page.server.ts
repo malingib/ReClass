@@ -1,12 +1,15 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+  requireTenantRole(locals, 'school_admin', 'super_admin');
   return {};
 };
 
 export const actions: Actions = {
   import: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const form = await request.formData();
     const file = form.get('file') as File | null;
     const raw = form.get('records') as string | null;
@@ -30,7 +33,7 @@ export const actions: Actions = {
 
     // Attach tenant_id to every record
     for (const record of records) {
-      record.tenant_id = locals.tenantId;
+      record.tenant_id = tenantId;
     }
 
     const { data, error } = await locals.srv.from('students').insert(records).select();
