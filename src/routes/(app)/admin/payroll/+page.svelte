@@ -5,6 +5,7 @@
   import Card from '$lib/components/ui/card.svelte';
   import CardContent from '$lib/components/ui/card-content.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
+  import { t } from '$lib/i18n';
 
   const { data, form } = $props();
   const payroll = $derived(data.payroll);
@@ -28,7 +29,7 @@
   }
 
   async function actionRun(id: string, action: string) {
-    const label = action === 'approve' ? 'Approve' : 'Pay';
+    const label = action === 'approve' ? t('approve') : t('pay');
     if (!confirm(`${label} this payroll run?`)) return;
     const fd = new FormData();
     fd.set('id', id);
@@ -39,7 +40,7 @@
 <DashboardContent title="Payroll" subtitle="Remedial session stipends from teacher attendance">
   {#snippet headerActions()}
     <Button onclick={() => showGenerator = !showGenerator} variant="primary">
-      {showGenerator ? 'Cancel' : 'Generate Payroll'}
+      {showGenerator ? t('cancel') : t('generate') + ' Payroll'}
     </Button>
   {/snippet}
 
@@ -147,7 +148,7 @@
       if (item.status === 'draft') actionRun(item.id, 'approve');
       else if (item.status === 'approved') actionRun(item.id, 'pay');
     }}
-    editLabel={(item: any) => item.status === 'draft' ? 'Approve' : item.status === 'approved' ? 'Pay' : ''}
+    editLabel={(item: any) => item.status === 'draft' ? t('approve') : item.status === 'approved' ? t('pay') : ''}
     emptyMessage="No payroll records. Generate payroll from teacher attendance."
   />
 </DashboardContent>

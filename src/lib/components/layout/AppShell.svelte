@@ -125,7 +125,13 @@
     return href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
   }
 
-  const NAV = $derived(roleNav[role] ?? roleNav.school_admin);
+  const NAV = $derived(
+    (roleNav[role] ?? roleNav.school_admin).map((g) => ({
+      ...g,
+      label: t(g.label),
+      items: g.items.map((it) => ({ ...it, label: t(it.label) })),
+    }))
+  );
   const openGroups = $state<Record<string, boolean>>({});
 
   $effect(() => {

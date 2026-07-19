@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { t } from '$lib/i18n';
 
   interface Column<T> {
     key: string;
@@ -15,7 +16,7 @@
     onEdit,
     onDelete,
     editLabel,
-    deleteLabel = 'Delete',
+    deleteLabel = t('delete'),
     emptyMessage,
     pageSize = 25,
     rowExtra,
@@ -138,7 +139,7 @@
               </th>
             {/each}
             {#if hasRowActions}
-              <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.26em] text-ink-400">Actions</th>
+              <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.26em] text-ink-400">{t('actions')}</th>
             {/if}
             {#if rowExtra}
               <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.26em] text-ink-400">Manage</th>
@@ -157,7 +158,7 @@
                 <td class="px-4 py-3 text-right">
                   <div class="inline-flex items-center gap-3">
                     {#if onEdit}
-                      <button onclick={() => onEdit(item)} class="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700">{typeof editLabel === 'function' ? editLabel(item) : editLabel ?? 'Edit'}</button>
+                      <button onclick={() => onEdit(item)} class="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700">{typeof editLabel === 'function' ? editLabel(item) : editLabel ?? t('edit')}</button>
                     {/if}
                     {#if onDelete}
                       <button onclick={() => onDelete(item)} class="text-xs font-medium text-ink-400 transition-colors hover:text-danger">{deleteLabel}</button>
