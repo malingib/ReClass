@@ -59,6 +59,14 @@ export const actions: Actions = {
       return fail(400, { error: 'School name is required' });
     }
 
+    if (mpesa_shortcode && !/^\d{5,7}$/.test(mpesa_shortcode.trim())) {
+      return fail(400, { error: 'M-Pesa shortcode must be a 5–7 digit number (e.g. 174379).' });
+    }
+
+    if (mpesa_paybill && !/^\d{5,7}$/.test(mpesa_paybill.trim())) {
+      return fail(400, { error: 'M-Pesa paybill must be a 5–7 digit number.' });
+    }
+
     const { error } = await sb
       .from('tenants')
       .update({

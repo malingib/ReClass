@@ -148,4 +148,28 @@ export const actions: Actions = {
 
     return { success: true };
   },
+
+  pay: async ({ locals, request }) => {
+    const sb = locals.srv;
+    const tid = locals.tenantId;
+    const form = await request.formData();
+    const id = form.get('id') as string;
+
+    if (!id) {
+      return fail(400, { error: 'Payroll run ID is required' });
+    }
+
+    const { error } = await sb
+      .from('payroll_runs')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('tenant_id', tid);
+
+    if (error) {
+      console.error('Payroll pay error:', error);
+      return fail(500, { error: 'Failed to mark payroll as paid.' });
+    }
+
+    return { success: true };
+  },
 };

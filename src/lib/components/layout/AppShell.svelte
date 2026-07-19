@@ -85,14 +85,12 @@
       { label: 'Teaching', defaultOpen: true, items: [
         { label: 'My dashboard', href: '/teacher', icon: 'dashboard' },
         { label: 'Remedial timetable', href: '/teacher/timetable', icon: 'calendar' },
-        { label: 'Mark my attendance', href: '/teacher/attendance', icon: 'calendar' },
       ]},
     ],
     parent: [
       { label: 'My child', defaultOpen: true, items: [
         { label: 'Welcome', href: '/parent', icon: 'dashboard' },
         { label: 'Remedial timetable', href: '/parent/timetable', icon: 'calendar' },
-        { label: 'Attendance', href: '/parent/attendance', icon: 'calendar' },
         { label: 'Fee structure', href: '/parent/fees', icon: 'fees' },
         { label: 'Pay via M-Pesa', href: '/parent/pay', icon: 'invoices' },
         { label: 'Payment history', href: '/parent/payments', icon: 'invoices' },
@@ -101,7 +99,6 @@
     principal: [
       { label: 'Oversight', defaultOpen: true, items: [
         { label: 'Remedial overview', href: '/principal', icon: 'dashboard' },
-        { label: 'Approve attendance', href: '/principal/approve', icon: 'bell' },
         { label: 'Program effectiveness', href: '/principal/effectiveness', icon: 'teachers' },
         { label: 'Reports', href: '/principal/reports', icon: 'fees' },
       ]},

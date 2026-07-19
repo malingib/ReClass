@@ -1,7 +1,6 @@
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const since = new Date(Date.now() - 30 * 864e5).toISOString();
   const db = locals.srv;
 
   const { count: students } = await db
@@ -15,18 +14,11 @@ export const load: PageServerLoad = async ({ locals }) => {
     .eq('tenant_id', locals.tenantId)
     .order('day_of_week');
 
-  // teacher_attendance table does not exist in the schema — return empty
-  const total = 0;
-  const present = 0;
-  const rate = 0;
-
   return {
     stats: {
       students: students ?? 0,
-      attendanceRate: rate,
       sessions: timetable?.length ?? 0,
     },
     timetable: timetable ?? [],
-    attendance: [],
   };
 };

@@ -10,6 +10,7 @@
 <DashboardContent title="Reports" subtitle="Exports that feed principal weekly reviews">
   {#snippet headerActions()}
     <div class="flex items-center gap-2">
+      <Button variant="secondary" size="sm" onclick={() => window.print()}>Print / PDF</Button>
       <a href="/admin/reports/teacher-attendance-csv" download>
         <Button variant="secondary" size="sm">Teacher Attendance CSV</Button>
       </a>

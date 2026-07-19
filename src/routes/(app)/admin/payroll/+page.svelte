@@ -10,6 +10,9 @@
   const payroll = $derived(data.payroll);
   const teachers = $derived(data.teachers);
 
+  const totalAmount = $derived(payroll.reduce((s: number, r: any) => s + Number(r.amount), 0));
+  const pendingAmount = $derived(payroll.filter((r: any) => r.status === 'approved').reduce((s: number, r: any) => s + Number(r.amount), 0));
+
   let periodStart = $state('');
   let periodEnd = $state('');
   let showGenerator = $state(false);
@@ -24,15 +27,16 @@
     return map[s] ?? 'bg-ink-100 text-ink-500';
   }
 
-  async function approveRun(id: string) {
-    if (!confirm('Approve this payroll run?')) return;
+  async function actionRun(id: string, action: string) {
+    const label = action === 'approve' ? 'Approve' : 'Pay';
+    if (!confirm(`${label} this payroll run?`)) return;
     const fd = new FormData();
     fd.set('id', id);
-    await fetch('?/approve', { method: 'POST', body: fd });
+    await fetch(`?/${action}`, { method: 'POST', body: fd });
   }
 </script>
 
-<DashboardContent title="Payroll" subtitle="Remedial session stipends auto-generated from teacher attendance">
+<DashboardContent title="Payroll" subtitle="Remedial session stipends from teacher attendance">
   {#snippet headerActions()}
     <Button onclick={() => showGenerator = !showGenerator} variant="primary">
       {showGenerator ? 'Cancel' : 'Generate Payroll'}
@@ -82,6 +86,26 @@
     </Card>
   {/if}
 
+  {#if payroll.length > 0}
+    <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="rounded-xl border border-border bg-white p-4 shadow-card">
+        <p class="text-xs font-medium text-ink-500">Total Payroll</p>
+        <p class="mt-1 text-xl font-semibold text-ink-900">KES {totalAmount.toLocaleString()}</p>
+        <p class="mt-0.5 text-xs text-ink-400">{payroll.length} run{payroll.length !== 1 ? 's' : ''}</p>
+      </div>
+      <div class="rounded-xl border border-border bg-white p-4 shadow-card">
+        <p class="text-xs font-medium text-ink-500">Pending Approval</p>
+        <p class="mt-1 text-xl font-semibold text-ink-900">{payroll.filter((r: any) => r.status === 'draft').length}</p>
+        <p class="mt-0.5 text-xs text-ink-400">Runs awaiting approval</p>
+      </div>
+      <div class="rounded-xl border border-border bg-white p-4 shadow-card">
+        <p class="text-xs font-medium text-ink-500">Approved, Unpaid</p>
+        <p class="mt-1 text-xl font-semibold text-amber-600">KES {pendingAmount.toLocaleString()}</p>
+        <p class="mt-0.5 text-xs text-ink-400">Ready for payment</p>
+      </div>
+    </div>
+  {/if}
+
   <DataTable
     data={payroll}
     columns={[
@@ -119,8 +143,11 @@
         render: (p: any) => p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '—',
       },
     ]}
-    onEdit={(item) => approveRun(item.id)}
-    deleteLabel="Approve"
+    onEdit={(item) => {
+      if (item.status === 'draft') actionRun(item.id, 'approve');
+      else if (item.status === 'approved') actionRun(item.id, 'pay');
+    }}
+    editLabel={(item: any) => item.status === 'draft' ? 'Approve' : item.status === 'approved' ? 'Pay' : ''}
     emptyMessage="No payroll records. Generate payroll from teacher attendance."
   />
 </DashboardContent>

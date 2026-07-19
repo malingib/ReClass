@@ -14,6 +14,7 @@
     loading = false,
     onEdit,
     onDelete,
+    editLabel,
     deleteLabel = 'Delete',
     emptyMessage,
     pageSize = 25,
@@ -24,6 +25,7 @@
     loading?: boolean;
     onEdit?: (_item: any) => void;
     onDelete?: (_item: any) => void;
+    editLabel?: string | ((_item: any) => string);
     deleteLabel?: string;
     emptyMessage?: string;
     pageSize?: number;
@@ -155,7 +157,7 @@
                 <td class="px-4 py-3 text-right">
                   <div class="inline-flex items-center gap-3">
                     {#if onEdit}
-                      <button onclick={() => onEdit(item)} class="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700">Edit</button>
+                      <button onclick={() => onEdit(item)} class="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700">{typeof editLabel === 'function' ? editLabel(item) : editLabel ?? 'Edit'}</button>
                     {/if}
                     {#if onDelete}
                       <button onclick={() => onDelete(item)} class="text-xs font-medium text-ink-400 transition-colors hover:text-danger">{deleteLabel}</button>

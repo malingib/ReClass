@@ -5,6 +5,7 @@
   let items = $state<NotificationItem[]>([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
+  let selected = $state<Set<string>>(new Set());
   const supabase = getSupabase();
 
   $effect(() => {
@@ -16,7 +17,7 @@
           .from('notifications')
           .select('id, body, created_at, channel, template, status, related_type, related_id')
           .order('created_at', { ascending: false })
-          .limit(25);
+          .limit(50);
         if (fetchError) throw fetchError;
         const readIds = getStoredReadNotificationIds();
         items = (data ?? []).map((n: Record<string, unknown>) => normalizeNotification(n, readIds));
@@ -40,17 +41,62 @@
     markNotificationAsRead(id);
     items = items.map((n) => n.id === id ? { ...n, read: true } : n);
   }
+
+  function toggleSelect(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selected = next;
+  }
+
+  function selectAll() {
+    if (selected.size === items.length) selected = new Set();
+    else selected = new Set(items.map((n) => n.id));
+  }
+
+  async function deleteSelected() {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} notification${selected.size !== 1 ? 's' : ''}?`)) return;
+    const { error: delError } = await supabase
+      .from('notifications')
+      .delete()
+      .in('id', [...selected]);
+    if (delError) {
+      console.error('Delete error:', delError);
+      return;
+    }
+    items = items.filter((n) => !selected.has(n.id));
+    selected = new Set();
+  }
+
+  async function deleteOne(id: string) {
+    const { error: delError } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id);
+    if (!delError) items = items.filter((n) => n.id !== id);
+  }
 </script>
 
 <div class="rounded-xl border border-border bg-white shadow-card">
   <div class="flex items-center justify-between border-b border-border px-6 py-5">
     <div>
       <h3 class="text-sm font-semibold text-ink-900">Your inbox</h3>
-      <p class="mt-0.5 text-xs text-ink-500">High-priority alerts surface as toasts while the inbox keeps the full context.</p>
+      <p class="mt-0.5 text-xs text-ink-500">
+        {items.length} notification{items.length !== 1 ? 's' : ''}
+        {items.filter((n) => !n.read).length > 0 ? ` (${items.filter((n) => !n.read).length} unread)` : ''}
+      </p>
     </div>
-    <button onclick={markAllRead} disabled={items.every((n) => n.read)} class="text-sm font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50">
-      Mark all read
-    </button>
+    <div class="flex items-center gap-3">
+      {#if selected.size > 0}
+        <button onclick={deleteSelected} class="text-sm font-medium text-danger hover:text-danger/80">
+          Delete ({selected.size})
+        </button>
+      {/if}
+      <button onclick={markAllRead} disabled={items.every((n) => n.read)} class="text-sm font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50">
+        Mark all read
+      </button>
+    </div>
   </div>
   <div class="px-6 py-5">
     {#if isLoading}
@@ -71,19 +117,34 @@
     {:else}
       <div class="space-y-3">
         {#each items as item}
-          <button
-            onclick={() => markOneRead(item.id)}
-            class="flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors {!item.read ? 'border-brand-200 bg-brand-50/70 hover:bg-brand-50' : 'border-border bg-white hover:bg-ink-50'}"
-          >
-            <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full {getNotificationToneClass(item)}"></span>
-            <span class="min-w-0 flex-1">
-              <span class="block text-sm font-medium {!item.read ? 'text-ink-900' : 'text-ink-700'}">{item.title}</span>
-              {#if item.body}
-                <span class="mt-1 block text-sm text-ink-500">{item.body}</span>
-              {/if}
-              <span class="mt-2 block text-xs text-ink-400">{formatNotificationDate(item.created_at)}</span>
-            </span>
-          </button>
+          <div class="flex items-start gap-3 rounded-lg border px-4 py-3 transition-colors {!item.read ? 'border-brand-200 bg-brand-50/70' : 'border-border bg-white'}">
+            <input
+              type="checkbox"
+              checked={selected.has(item.id)}
+              onchange={() => toggleSelect(item.id)}
+              class="mt-1 h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+            />
+            <button
+              onclick={() => markOneRead(item.id)}
+              class="flex min-w-0 flex-1 items-start gap-3 text-left"
+            >
+              <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full {getNotificationToneClass(item)}"></span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-medium {!item.read ? 'text-ink-900' : 'text-ink-700'}">{item.title}</span>
+                {#if item.body}
+                  <span class="mt-1 block text-sm text-ink-500">{item.body}</span>
+                {/if}
+                <span class="mt-2 block text-xs text-ink-400">{formatNotificationDate(item.created_at)}</span>
+              </span>
+            </button>
+            <button
+              onclick={() => deleteOne(item.id)}
+              class="shrink-0 text-xs font-medium text-ink-400 hover:text-danger"
+              title="Delete"
+            >
+              ✕
+            </button>
+          </div>
         {/each}
       </div>
     {/if}

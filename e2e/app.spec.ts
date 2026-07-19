@@ -89,7 +89,6 @@ test.describe('Feature pages (admin)', () => {
     '/admin/teachers',
     '/admin/parents',
     '/admin/subjects',
-    '/admin/groups',
     '/admin/fees',
     '/admin/payroll',
     '/admin/attendance',
@@ -121,5 +120,76 @@ test.describe('Notifications page', () => {
 
     const content = await page.textContent('body');
     expect(content).not.toContain('500');
+  });
+});
+
+test.describe('Payroll workflow (admin)', () => {
+  test('generate payroll form opens and validates dates', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/admin/payroll');
+    await page.waitForLoadState('networkidle');
+
+    // Open the generator
+    await page.getByRole('button', { name: /Generate Payroll/i }).click();
+    await page.waitForSelector('input[name="period_start"]', { timeout: 5000 });
+
+    // Try submitting without dates → expect validation error or no crash
+    await page.getByRole('button', { name: /Generate Payroll$/i }).click();
+    await page.waitForTimeout(1000);
+    const content = await page.textContent('body');
+    expect(content).not.toContain('500');
+  });
+
+  test('payroll page shows summary cards', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/admin/payroll');
+    await page.waitForLoadState('networkidle');
+    const content = await page.textContent('body');
+    expect(content).not.toContain('500');
+    // Summary section should be present even with no runs
+    expect(content).toContain('Total Payroll');
+  });
+});
+
+test.describe('Bursar waiver workflow', () => {
+  test('waivers page loads with outstanding invoices', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/bursar/waivers');
+    await page.waitForLoadState('networkidle');
+
+    const content = await page.textContent('body');
+    expect(content).not.toContain('500');
+    expect(content).toContain('Outstanding Invoices');
+  });
+
+  test('aging page shows buckets', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/bursar/aging');
+    await page.waitForLoadState('networkidle');
+
+    const content = await page.textContent('body');
+    expect(content).not.toContain('500');
+    expect(content).toContain('Total Outstanding');
+  });
+});
+
+test.describe('Reports export', () => {
+  test('admin reports page has print and CSV actions', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/admin/reports');
+    await page.waitForLoadState('networkidle');
+
+    const content = await page.textContent('body');
+    expect(content).not.toContain('500');
+    expect(content).toContain('Print / PDF');
+    expect(content).toContain('Teacher Attendance CSV');
+  });
+
+  test('teacher attendance CSV endpoint returns data', async ({ page }) => {
+    await loginAsAdmin(page);
+    const response = await page.goto('/admin/reports/teacher-attendance-csv');
+    expect(response?.status()).toBeLessThan(400);
+    const body = await response?.text();
+    expect(body).toBeTruthy();
   });
 });

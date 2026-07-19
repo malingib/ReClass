@@ -4,45 +4,25 @@
   import Card from '$lib/components/ui/card.svelte';
   import CardHeader from '$lib/components/ui/card-header.svelte';
   import CardContent from '$lib/components/ui/card-content.svelte';
+  import Button from '$lib/components/ui/button.svelte';
 
   const { data } = $props();
   const stats = $derived(data.stats);
   const recentSessions = $derived(data.recentSessions);
 </script>
 
-<DashboardContent title="Reports" subtitle="Student attendance and academic reports">
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <KpiCard label="Student Attendance" value={`${stats.attendanceRate}%`} sub={`${stats.totalAttendance} total records`} />
-    <KpiCard label="Present" value={stats.presentCount} sub="Marked present" />
-    <KpiCard label="Late Arrivals" value={stats.lateCount} sub="Arrived late" />
-    <KpiCard label="Absences" value={stats.absentCount} sub="Marked absent" />
-  </div>
-
-  <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-    <div class="rounded-xl border border-border bg-white p-5 shadow-card">
-      <p class="text-sm font-medium text-ink-500">Excused</p>
-      <p class="mt-2 text-2xl font-semibold text-ink-900">{stats.excusedCount}</p>
-    </div>
-    <div class="rounded-xl border border-border bg-white p-5 shadow-card">
-      <p class="text-sm font-medium text-ink-500">Total Students</p>
-      <p class="mt-2 text-2xl font-semibold text-ink-900">{stats.totalStudents}</p>
-    </div>
-    <div class="rounded-xl border border-border bg-white p-5 shadow-card">
-      <p class="text-sm font-medium text-ink-500">Records per Student</p>
-      <p class="mt-2 text-2xl font-semibold text-ink-900">
-        {stats.totalStudents ? (stats.totalAttendance / stats.totalStudents).toFixed(1) : '0'}
-      </p>
-    </div>
+<DashboardContent title="Reports" subtitle="Teacher attendance and remedial session reports">
+  {#snippet headerActions()}
+    <Button variant="secondary" size="sm" onclick={() => window.print()}>Print / PDF</Button>
+  {/snippet}
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <KpiCard label="Teacher attendance" value={`${stats.attendanceRate}%`} sub={`${stats.totalAttendance} total marks`} />
+    <KpiCard label="Total Students" value={stats.totalStudents} sub="Enrolled in remedial" />
+    <KpiCard label="Session occurrences" value={recentSessions.length} sub="Recent records" />
   </div>
 
   <Card>
-    <CardHeader title="Recent Session Occurrences" subtitle="Last 10 sessions">
-      {#snippet action()}
-        <a href="/principal/approve" class="text-xs font-semibold text-brand-700 hover:text-brand-800">
-          Approve attendance
-        </a>
-      {/snippet}
-    </CardHeader>
+    <CardHeader title="Recent Session Occurrences" subtitle="Last 10 sessions" />
     <CardContent class="!p-0">
       {#if recentSessions.length === 0}
         <div class="px-6 py-8 text-center text-sm text-ink-500">No sessions found yet.</div>

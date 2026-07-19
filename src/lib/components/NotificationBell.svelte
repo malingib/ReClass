@@ -96,13 +96,21 @@
           <p class="text-sm font-semibold text-ink-900">Notifications</p>
           <p class="text-xs text-ink-500">Inbox-style updates</p>
         </div>
-        <button
-          onclick={markAllAsRead}
-          disabled={items.every((n) => n.read)}
-          class="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Mark all read
-        </button>
+        <div class="flex items-center gap-3">
+          <a
+            href="/notifications"
+            class="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700"
+          >
+            View all
+          </a>
+          <button
+            onclick={markAllAsRead}
+            disabled={items.every((n) => n.read)}
+            class="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Mark all read
+          </button>
+        </div>
       </div>
 
       {#if isLoading}

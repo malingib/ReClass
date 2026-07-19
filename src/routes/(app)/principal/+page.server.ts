@@ -4,31 +4,38 @@ export const load: PageServerLoad = async ({ locals }) => {
   const since = new Date(Date.now() - 90 * 864e5).toISOString();
   const db = locals.srv;
 
-  const { count: students } = await db
-    .from('students')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', locals.tenantId);
+  const [studentsRes, teachersRes, sessionsRes, attendanceRes] = await Promise.all([
+    db.from('students')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', locals.tenantId),
+    db.from('teachers')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', locals.tenantId),
+    db.from('sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', locals.tenantId),
+    db.from('teacher_attendance')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', locals.tenantId)
+      .gte('marked_at', since),
+  ]);
 
-  const { count: teachers } = await db
-    .from('teachers')
+  const attendanceTotal = attendanceRes.count ?? 0;
+  const { count: presentCount } = await db
+    .from('teacher_attendance')
     .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', locals.tenantId);
+    .eq('tenant_id', locals.tenantId)
+    .gte('marked_at', since)
+    .in('status', ['present', 'late']);
 
-  // teacher_attendance table does not exist in the schema — return empty
-  const total = 0;
-  const rate = 0;
-
-  const { count: sessions } = await db
-    .from('sessions')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', locals.tenantId);
+  const attendanceRate = attendanceTotal ? Math.round(((presentCount ?? 0) / attendanceTotal) * 100) : 0;
 
   return {
     stats: {
-      students: students ?? 0,
-      teachers: teachers ?? 0,
-      attendanceRate: rate,
-      sessions: sessions ?? 0,
+      students: studentsRes.count ?? 0,
+      teachers: teachersRes.count ?? 0,
+      attendanceRate,
+      sessions: sessionsRes.count ?? 0,
     },
   };
 };
