@@ -280,7 +280,7 @@
 
     {#if currentModule}
       <div class="border-b border-border px-3 py-2">
-        <a href="/admin"
+        <a href="/admin/modules"
           class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
         >
           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
