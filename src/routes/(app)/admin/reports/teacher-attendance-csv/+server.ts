@@ -1,11 +1,18 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { requireTenantRole } from '$lib/server/auth';
+import { checkRateLimit, rateLimitedHeaders } from '$lib/server/rate-limit';
+import { csvResponse } from '$lib/server/csv';
+import { EXPORT_MAX_ROWS } from '$lib/config';
 
 export const GET: RequestHandler = async ({ locals }) => {
-  const sb = locals.srv;
-  const tid = locals.tenantId;
+  requireTenantRole(locals, 'school_admin', 'super_admin');
+  const rl = await checkRateLimit(locals.srv, `csv:${locals.tenantId}`, 'global');
+  if (!rl.allowed) {
+    return new Response('Too many requests', { status: 429, headers: rateLimitedHeaders(rl) });
+  }
 
-  const { data: attendance } = await sb
+  const { data: attendance } = await locals.srv
     .from('teacher_attendance')
     .select(`
       id, status, marked_at,
@@ -15,16 +22,14 @@ export const GET: RequestHandler = async ({ locals }) => {
         sessions!inner(day_of_week, slot)
       )
     `)
-    .eq('tenant_id', tid)
+    .eq('tenant_id', locals.tenantId)
     .order('marked_at', { ascending: false })
-    .limit(10000);
+    .limit(EXPORT_MAX_ROWS);
 
-  if (!attendance) {
-    error(500, 'Failed to fetch attendance data');
-  }
+  if (!attendance) error(500, 'Failed to fetch attendance data');
 
   const headers = ['Teacher', 'Session', 'Slot', 'Date', 'Start', 'End', 'Status', 'Marked At'];
-  const rows = attendance.map((r: any) => [
+  const rows = attendance.map((r) => [
     `${r.teachers?.first_name ?? ''} ${r.teachers?.last_name ?? ''}`,
     '',
     r.session_occurrences?.sessions?.slot ?? '',
@@ -35,15 +40,5 @@ export const GET: RequestHandler = async ({ locals }) => {
     r.marked_at ? new Date(r.marked_at).toISOString() : '',
   ]);
 
-  const csv = [
-    headers.join(','),
-    ...rows.map((r) => r.map((v: string) => `"${v.replace(/"/g, '""')}"`).join(',')),
-  ].join('\n');
-
-  return new Response(csv, {
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="teacher-attendance-${new Date().toISOString().slice(0, 10)}.csv"`,
-    },
-  });
+  return csvResponse(headers, rows, `teacher-attendance-${new Date().toISOString().slice(0, 10)}.csv`);
 };

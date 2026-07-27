@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { getSupabase } from '$lib/supabase/client';
   import { goto } from '$app/navigation';
-  function signOut() {
+  async function signOut() {
+    await getSupabase().auth.signOut();
     goto('/login');
   }
 </script>

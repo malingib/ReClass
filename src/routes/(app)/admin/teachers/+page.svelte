@@ -1,50 +1,88 @@
 <script lang="ts">
-  // @ts-nocheck
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import { superForm } from 'sveltekit-superforms';
-  import { zodClient } from 'sveltekit-superforms/adapters';
   import { Dialog } from 'bits-ui';
   import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
+  import type { ActionResult } from '@sveltejs/kit';
+  import { dispatchToast } from '$lib/notifications';
+
+  interface Teacher {
+    id: string;
+    first_name: string;
+    last_name: string;
+    employee_no: string | null;
+    subjects: string[] | null;
+  }
+
+  interface ActionData extends Record<string, unknown> {
+    message?: string;
+    errors?: Record<string, string[]>;
+  }
 
   const { data }: { data: PageData } = $props();
 
   const teachers = $derived(data.teachers);
 
-  const { form, errors, enhance: superEnhance, message, reset } = superForm(data.form, {
-    validators: zodClient(),
-  });
-
-  const teacherForm = form;
+  let formData = $state<Record<string, unknown>>({});
+  let errors = $state<Record<string, string[]>>({});
+  let msg = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+  let submitting = $state(false);
 
   let showCreate = $state(false);
-  let editingTeacher = $state<any | null>(null);
-  let deletingTeacher = $state<any | null>(null);
+  let editingTeacher = $state<Teacher | null>(null);
+  let deletingTeacher = $state<Teacher | null>(null);
+
+  function handleSubmit() {
+    submitting = true;
+    errors = {};
+    msg = null;
+    return async ({ result, update }: { result: ActionResult<ActionData, ActionData>; update: (_opts?: { reset?: boolean }) => void }) => {
+      try {
+        if (result.type === 'failure' && result.data) {
+          if (result.data.errors) errors = result.data.errors;
+          if (result.data.message) msg = { type: 'error', text: result.data.message };
+          dispatchToast('Error', result.data.message ?? 'Please fix the highlighted fields.');
+        }
+        if (result.type === 'error') {
+          msg = { type: 'error', text: 'A network error occurred. Please check your connection and try again.' };
+          dispatchToast('Network Error', 'Please check your connection.');
+        }
+        if (result.type === 'success') {
+          msg = { type: 'success', text: result.data?.message ?? 'Saved' };
+          dispatchToast('Saved', result.data?.message ?? 'Changes saved successfully.');
+          formData = {};
+          editingTeacher = null;
+          showCreate = false;
+        }
+        update();
+      } finally {
+        submitting = false;
+      }
+    };
+  }
 
   function openCreate() {
-    reset();
+    formData = {};
     editingTeacher = null;
     showCreate = true;
   }
 
-  function openEdit(t: any) {
+  function openEdit(t: Teacher) {
     editingTeacher = t;
-    reset({
+    formData = {
       id: t.id,
       first_name: t.first_name,
       last_name: t.last_name,
-      email: t.email ?? '',
-      phone: t.phone ?? '',
+      employee_no: t.employee_no ?? '',
       subjects: t.subjects ? t.subjects.join(', ') : '',
-      status: t.status,
-    });
+    };
     showCreate = true;
   }
 
-  function openDelete(t: any) {
+  function openDelete(t: Teacher) {
     deletingTeacher = t;
   }
 </script>
@@ -60,9 +98,8 @@
     data={teachers}
     columns={[
       { key: 'first_name', label: 'Name', render: (t: any) => `${t.first_name} ${t.last_name}`, sortable: true },
-      { key: 'email', label: 'Email', sortable: true },
+      { key: 'employee_no', label: 'Employee No', sortable: true },
       { key: 'subjects', label: 'Subjects', render: (t: any) => t.subjects?.join(', ') ?? '—' },
-      { key: 'status', label: 'Status', sortable: true },
     ]}
     emptyMessage="No teachers found"
     onEdit={openEdit}
@@ -82,7 +119,7 @@
         </Dialog.Close>
       </div>
 
-      <form method="POST" action={editingTeacher ? '?/update' : '?/create'} use:superEnhance class="px-6 py-5 space-y-4">
+      <form method="POST" action={editingTeacher ? '?/update' : '?/create'} use:enhance={handleSubmit} class="px-6 py-5 space-y-4">
         {#if editingTeacher}
           <input type="hidden" name="id" value={editingTeacher.id} />
         {/if}
@@ -90,53 +127,37 @@
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <label for="first_name" class="text-xs font-medium text-ink-700">First Name</label>
-            <input id="first_name" name="first_name" type="text" bind:value={teacherForm.first_name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Jane" />
-            {#if errors.first_name}<p class="text-xs text-danger">{errors.first_name}</p>{/if}
+            <input id="first_name" name="first_name" type="text" bind:value={formData.first_name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Jane" />
+            {#if errors.first_name}<p class="text-xs text-danger">{errors.first_name?.[0]}</p>{/if}
           </div>
           <div class="space-y-1.5">
             <label for="last_name" class="text-xs font-medium text-ink-700">Last Name</label>
-            <input id="last_name" name="last_name" type="text" bind:value={teacherForm.last_name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Smith" />
-            {#if errors.last_name}<p class="text-xs text-danger">{errors.last_name}</p>{/if}
+            <input id="last_name" name="last_name" type="text" bind:value={formData.last_name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Smith" />
+            {#if errors.last_name}<p class="text-xs text-danger">{errors.last_name?.[0]}</p>{/if}
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-1.5">
-            <label for="email" class="text-xs font-medium text-ink-700">Email</label>
-            <input id="email" name="email" type="email" bind:value={teacherForm.email} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="jane@school.com" />
-            {#if errors.email}<p class="text-xs text-danger">{errors.email}</p>{/if}
-          </div>
-          <div class="space-y-1.5">
-            <label for="phone" class="text-xs font-medium text-ink-700">Phone</label>
-            <input id="phone" name="phone" type="text" bind:value={teacherForm.phone} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="+2547XX" />
-            {#if errors.phone}<p class="text-xs text-danger">{errors.phone}</p>{/if}
-          </div>
+        <div class="space-y-1.5">
+          <label for="employee_no" class="text-xs font-medium text-ink-700">Employee No</label>
+          <input id="employee_no" name="employee_no" type="text" bind:value={formData.employee_no} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="TCH-001" />
+          {#if errors.employee_no}<p class="text-xs text-danger">{errors.employee_no?.[0]}</p>{/if}
         </div>
 
         <div class="space-y-1.5">
           <label for="subjects" class="text-xs font-medium text-ink-700">Subjects (comma separated)</label>
-          <input id="subjects" name="subjects" type="text" bind:value={teacherForm.subjects} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Math, English" />
-          {#if errors.subjects}<p class="text-xs text-danger">{errors.subjects}</p>{/if}
+          <input id="subjects" name="subjects" type="text" bind:value={formData.subjects} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Math, English" />
+          {#if errors.subjects}<p class="text-xs text-danger">{errors.subjects?.[0]}</p>{/if}
         </div>
 
-        <div class="space-y-1.5">
-          <label for="status" class="text-xs font-medium text-ink-700">Status</label>
-          <select id="status" name="status" bind:value={teacherForm.status} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20">
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          {#if errors.status}<p class="text-xs text-danger">{errors.status}</p>{/if}
-        </div>
-
-        {#if message}
-          <div class="rounded-lg px-4 py-2 text-sm {message.success ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{message.text}</div>
+        {#if msg}
+          <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{msg.text}</div>
         {/if}
 
         <div class="flex justify-end gap-3 pt-2">
           <Dialog.Close>
             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
           </Dialog.Close>
-          <Button type="submit" variant="primary" size="md">{editingTeacher ? 'Update' : 'Create'}</Button>
+          <Button type="submit" variant="primary" size="md" {submitting} disabled={submitting}>{editingTeacher ? 'Update' : 'Create'}</Button>
         </div>
       </form>
     </Dialog.Content>

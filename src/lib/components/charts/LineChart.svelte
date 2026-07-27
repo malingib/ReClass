@@ -7,7 +7,7 @@
     data = [],
     height = 200,
     color = '#00c573',
-    unit = '',
+    unit: _unit = '',
     format = (v: number) => v.toLocaleString(),
   }: {
     data: { label: string; value: number }[];

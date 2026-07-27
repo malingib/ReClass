@@ -2,28 +2,38 @@
   import { getSupabase } from '$lib/supabase/client';
   import { formatNotificationDate, getNotificationToneClass, getStoredReadNotificationIds, markAllNotificationsRead, markNotificationAsRead, normalizeNotification, type NotificationItem } from '$lib/notifications';
 
+  const { data }: { data: { tenantId: string } } = $props();
+
   let items = $state<NotificationItem[]>([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
   let selected = $state<Set<string>>(new Set());
   const supabase = getSupabase();
+  const tenantId = $derived(data.tenantId);
+
+  async function ensureContext() {
+    if (tenantId) await (supabase.rpc as any)('set_tenant_context', { p_tenant_id: tenantId });
+  }
 
   $effect(() => {
     async function load() {
       isLoading = true;
       error = null;
       try {
-        const { data, error: fetchError } = await supabase
+        await ensureContext();
+        let q = supabase
           .from('notifications')
           .select('id, body, created_at, channel, template, status, related_type, related_id')
           .order('created_at', { ascending: false })
           .limit(50);
+        if (tenantId) q = q.eq('tenant_id', tenantId);
+
+        const { data: rows, error: fetchError } = await q;
         if (fetchError) throw fetchError;
         const readIds = getStoredReadNotificationIds();
-        items = (data ?? []).map((n: Record<string, unknown>) => normalizeNotification(n, readIds));
-      } catch (err) {
+        items = (rows ?? []).map((n: Record<string, unknown>) => normalizeNotification(n, readIds));
+      } catch {
         error = 'We could not load your notifications.';
-        console.error(err);
       } finally {
         isLoading = false;
       }
@@ -49,11 +59,6 @@
     selected = next;
   }
 
-  function selectAll() {
-    if (selected.size === items.length) selected = new Set();
-    else selected = new Set(items.map((n) => n.id));
-  }
-
   async function deleteSelected() {
     if (selected.size === 0) return;
     if (!confirm(`Delete ${selected.size} notification${selected.size !== 1 ? 's' : ''}?`)) return;
@@ -62,7 +67,7 @@
       .delete()
       .in('id', [...selected]);
     if (delError) {
-      console.error('Delete error:', delError);
+      error = 'Failed to delete notifications. Please try again.';
       return;
     }
     items = items.filter((n) => !selected.has(n.id));
@@ -101,7 +106,7 @@
   <div class="px-6 py-5">
     {#if isLoading}
       <div class="space-y-3">
-        {#each [0, 1, 2] as i}
+        {#each [0, 1, 2] as _i}
           <div class="h-14 animate-pulse rounded-lg bg-ink-100"></div>
         {/each}
       </div>

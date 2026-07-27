@@ -1,16 +1,16 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { getSupabase } from '$lib/supabase/client';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
   import NotificationToaster from '$lib/components/NotificationToaster.svelte';
   import { theme, type Theme } from '$lib/stores/theme';
   import { locale, type Locale } from '$lib/stores/locale';
   import { t } from '$lib/i18n';
+  import { suiteModules, moduleIcons } from '$lib/modules';
 
   const {
     title,
-    subtitle = '',
+    subtitle: _subtitle = '',
     headerActions,
     rightRail,
     role = 'school_admin',
@@ -56,7 +56,6 @@
     school_admin: [
       { label: 'Front office', defaultOpen: true, items: [
         { label: 'Dashboard', href: '/admin', icon: 'dashboard' },
-        { label: 'Notifications', href: '/notifications', icon: 'bell' },
         { label: 'Students', href: '/admin/students', icon: 'students' },
         { label: 'Parents', href: '/admin/parents', icon: 'parents' },
         { label: 'Remedial teachers', href: '/admin/teachers', icon: 'teachers' },
@@ -68,15 +67,26 @@
       ]},
       { label: 'M-Pesa payments', defaultOpen: true, items: [
         { label: 'Fee definitions', href: '/admin/fees', icon: 'fees' },
-        { label: 'Invoices', href: '/admin/invoices', icon: 'invoices' },
-        { label: 'Teacher stipends', href: '/admin/payroll', icon: 'teachers' },
-        { label: 'Reconciliation', href: '/admin/reconciliation', icon: 'invoices' },
+        { label: 'Teacher Invoices', href: '/admin/teacher-invoices', icon: 'invoices' },
+        { label: 'Parent Payments', href: '/admin/parent-payments', icon: 'invoices' },
+      ]},
+      { label: 'SIS', defaultOpen: true, items: [
+        { label: 'Dashboard', href: '/admin/sis', icon: 'dashboard' },
+        { label: 'Classes', href: '/admin/sis/classes', icon: 'subjects' },
+        { label: 'Admissions', href: '/admin/sis/admissions', icon: 'students' },
+      ]},
+      { label: 'Communications', defaultOpen: true, items: [
+        { label: 'Dashboard', href: '/admin/communications', icon: 'dashboard' },
+        { label: 'Announcements', href: '/admin/communications/announcements', icon: 'bell' },
+        { label: 'Templates', href: '/admin/communications/templates', icon: 'invoices' },
+        { label: 'Message Log', href: '/admin/notifications', icon: 'bell' },
       ]},
       { label: 'Integrations', defaultOpen: false, items: [
         { label: 'Mobiwave & Daraja', href: '/admin/credentials', icon: 'bell' },
         { label: 'School settings', href: '/admin/settings', icon: 'dashboard' },
       ]},
       { label: 'Reporting', defaultOpen: false, items: [
+        { label: 'SMS Log', href: '/admin/notifications', icon: 'bell' },
         { label: 'Users', href: '/admin/users', icon: 'students' },
         { label: 'Reports', href: '/admin/reports', icon: 'fees' },
       ]},
@@ -94,6 +104,7 @@
         { label: 'Fee structure', href: '/parent/fees', icon: 'fees' },
         { label: 'Pay via M-Pesa', href: '/parent/pay', icon: 'invoices' },
         { label: 'Payment history', href: '/parent/payments', icon: 'invoices' },
+        { label: 'Academic Reports', href: '/parent/academic', icon: 'subjects' },
       ]},
     ],
     principal: [
@@ -106,10 +117,8 @@
     bursar: [
       { label: 'M-Pesa', defaultOpen: true, items: [
         { label: 'Workspace', href: '/bursar', icon: 'dashboard' },
-        { label: 'Revenue', href: '/bursar/revenue', icon: 'fees' },
         { label: 'Aging', href: '/bursar/aging', icon: 'invoices' },
         { label: 'Waivers', href: '/bursar/waivers', icon: 'bell' },
-        { label: 'Exports', href: '/bursar/export', icon: 'subjects' },
       ]},
     ],
     super_admin: [
@@ -121,9 +130,53 @@
     ],
   };
 
+  const navGroupModule: Record<string, string> = {
+    'Front office': 'reclass',
+    'Remedial program': 'reclass',
+    'M-Pesa payments': 'reclass',
+    'Integrations': 'reclass',
+    'SIS': 'sis',
+    'Communications': 'communications',
+    'Reporting': 'reports',
+    'Teaching': 'reclass',
+    'My child': 'reclass',
+    'Oversight': 'reclass',
+    'Platform': 'reclass',
+  };
+
+  const accentGradients: Record<string, string> = {
+    emerald: 'from-emerald-500 to-emerald-600',
+    blue: 'from-blue-500 to-blue-600',
+    amber: 'from-amber-500 to-amber-600',
+    rose: 'from-rose-500 to-rose-600',
+    indigo: 'from-indigo-500 to-indigo-600',
+    cyan: 'from-cyan-500 to-cyan-600',
+    orange: 'from-orange-500 to-orange-600',
+    slate: 'from-slate-500 to-slate-600',
+  };
+
   function isActive(pathname: string, href: string) {
     return href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
   }
+
+  const activeModule = $derived.by(() => {
+    const p = $page.url.pathname;
+    if (p === '/admin') return '';
+    if (p.startsWith('/admin/reclass')) return 'reclass';
+    if (p.startsWith('/admin/payroll')) return 'payroll';
+    if (p.startsWith('/admin/reports')) return 'reports';
+    if (p.startsWith('/admin/finance')) return 'finance';
+    if (p.startsWith('/admin/sis')) return 'sis';
+    if (p.startsWith('/admin/communications')) return 'communications';
+    if (p.startsWith('/admin/students') || p.startsWith('/admin/teachers') || p.startsWith('/admin/parents')
+      || p.startsWith('/admin/subjects') || p.startsWith('/admin/scheduling') || p.startsWith('/admin/attendance')
+      || p.startsWith('/admin/fees') || p.startsWith('/admin/teacher-invoices') || p.startsWith('/admin/parent-payments')
+      || p.startsWith('/admin/credentials') || p.startsWith('/admin/settings') || p.startsWith('/admin/notifications')
+      || p.startsWith('/admin/users')) return 'reclass';
+    return '';
+  });
+
+  const currentModule = $derived(suiteModules.find(m => m.id === activeModule));
 
   const NAV = $derived(
     (roleNav[role] ?? roleNav.school_admin).map((g) => ({
@@ -132,10 +185,15 @@
       items: g.items.map((it) => ({ ...it, label: t(it.label) })),
     }))
   );
+
+  const filteredNAV = $derived(
+    activeModule ? NAV.filter(g => navGroupModule[g.label] === activeModule) : NAV
+  );
+
   const openGroups = $state<Record<string, boolean>>({});
 
   $effect(() => {
-    const initial = Object.fromEntries(NAV.map(g => [g.label, g.defaultOpen ?? false]));
+    const initial = Object.fromEntries(filteredNAV.map(g => [g.label, g.defaultOpen ?? false]));
     Object.keys(initial).forEach(k => {
       if (!(k in openGroups)) openGroups[k] = initial[k as keyof typeof initial];
     });
@@ -147,8 +205,7 @@
   const userName = $derived(user?.name ?? 'ReClass Admin');
   const userEmail = $derived(user?.email ?? 'admin@reclass.app');
 
-  // All nav items flattened for the bottom nav
-  const allItems = $derived(NAV.flatMap((group) => group.items));
+  const allItems = $derived(filteredNAV.flatMap((group) => group.items));
   const navItemsVisible = $derived(allItems.length <= 4 ? allItems : allItems.slice(0, 3));
   const navItemsMore = $derived(allItems.length <= 4 ? [] : allItems.slice(3));
 
@@ -176,12 +233,7 @@
   });
 
   async function handleLogout() {
-    try {
-      await getSupabase().auth.signOut();
-      goto('/login');
-    } catch {
-      goto('/login');
-    }
+    goto('/api/logout');
   }
 
   function cycleTheme() {
@@ -203,15 +255,42 @@
   <!-- Sidebar -->
   <aside class="hidden w-64 shrink-0 flex-col border-r border-border bg-white text-ink-700 md:flex">
     <div class="flex h-[4.5rem] items-center gap-3 border-b border-border px-5">
-      <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-base font-bold text-white shadow-sm">R</div>
-      <div class="leading-tight">
-        <p class="text-sm font-semibold text-ink-900">ReClass</p>
-        <p class="text-[11px] text-ink-500">Remedial Suite</p>
-      </div>
+      {#if currentModule}
+        <a href="/admin" class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br {accentGradients[currentModule.accent]} text-sm font-bold text-white shadow-sm">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="{moduleIcons[currentModule.icon]}" />
+            </svg>
+          </div>
+          <div class="leading-tight">
+            <p class="text-sm font-semibold text-ink-900">{currentModule.name}</p>
+            <p class="text-[11px] text-ink-500">Remedial Suite</p>
+          </div>
+        </a>
+      {:else}
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white shadow-sm">R</div>
+          <div class="leading-tight">
+            <p class="text-sm font-semibold text-ink-900">ReClass</p>
+            <p class="text-[11px] text-ink-500">Remedial Suite</p>
+          </div>
+        </div>
+      {/if}
     </div>
 
+    {#if currentModule}
+      <div class="border-b border-border px-3 py-2">
+        <a href="/admin"
+          class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
+        >
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+          All modules
+        </a>
+      </div>
+    {/if}
+
     <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-      {#each NAV as group}
+      {#each filteredNAV as group}
         <div>
           <button
             onclick={() => openGroups[group.label] = !openGroups[group.label]}
@@ -265,7 +344,7 @@
           {@html I(icons.dashboard)}
         </div>
         <div class="min-w-0">
-          <p class="truncate text-sm font-semibold tracking-tight text-ink-900">ReClass</p>
+          <p class="truncate text-sm font-semibold tracking-tight text-ink-900">{currentModule?.name ?? 'ReClass'}</p>
           <p class="truncate text-xs text-ink-400">{title}</p>
         </div>
       </div>
@@ -275,7 +354,6 @@
           {@render headerActions()}
         {/if}
 
-        <!-- Theme toggle -->
         <button
           onclick={cycleTheme}
           class="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
@@ -285,7 +363,6 @@
           {@html I($theme === 'dark' ? icons.sun : icons.moon)}
         </button>
 
-        <!-- Locale toggle -->
         <button
           onclick={cycleLocale}
           class="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
@@ -299,7 +376,7 @@
           <span class="h-2 w-2 rounded-full bg-success"></span>
           {new Date().toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}
         </div>
-        <NotificationBell />
+        <NotificationBell tenantId={$page.data.tenantId} />
         <div data-profile-menu class="relative">
           <button
             onclick={() => profileOpen = !profileOpen}
@@ -381,9 +458,7 @@
     {/if}
   </nav>
 
-  <!-- More drawer for overflow nav items -->
   {#if moreDrawerOpen && navItemsMore.length > 0}
-    <!-- Backdrop -->
     <div
       class="fixed inset-0 z-40 bg-black/30 md:hidden"
       role="button"
@@ -392,7 +467,6 @@
       onkeydown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') moreDrawerOpen = false; }}
       aria-label="Close navigation drawer"
     ></div>
-    <!-- Drawer -->
     <div class="fixed inset-x-0 bottom-0 z-50 rounded-t-xl border border-border bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-elevated md:hidden">
       <div class="flex items-center justify-between border-b border-border pb-3">
         <p class="text-sm font-semibold text-ink-900">Navigation</p>

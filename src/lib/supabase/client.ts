@@ -10,8 +10,3 @@ export function getSupabase() {
   }
   return client;
 }
-
-/** Wraps a Zod schema for sveltekit-superforms, bypassing a type-compat issue with Zod v3/v4 dual-install. */
-export function sz<T>(schema: T): T {
-  return schema;
-}

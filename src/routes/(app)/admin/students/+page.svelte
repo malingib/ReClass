@@ -1,50 +1,91 @@
 <script lang="ts">
-  // @ts-nocheck
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import { superForm } from 'sveltekit-superforms';
-  import { zodClient } from 'sveltekit-superforms/adapters';
   import { Dialog } from 'bits-ui';
   import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
-  import { fly } from 'svelte/transition';
+  import type { ActionResult } from '@sveltejs/kit';
+  import { dispatchToast } from '$lib/notifications';
+
+  interface Student {
+    id: string;
+    first_name: string;
+    last_name: string;
+    admission_no: string;
+    grade: string | null;
+    status: string;
+  }
+
+  interface ActionData extends Record<string, unknown> {
+    message?: string;
+    errors?: Record<string, string[]>;
+  }
 
   const { data }: { data: PageData } = $props();
 
   const students = $derived(data.students);
+  const pagination = $derived(data.pagination);
 
-  const { form, errors, message, reset } = superForm(data.form, {
-    validators: zodClient(),
-  });
-
-  const studentForm = form;
+  let formData = $state<Record<string, unknown>>({});
+  let errors = $state<Record<string, string[]>>({});
+  let msg = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+  let submitting = $state(false);
 
   let showCreate = $state(false);
-  let editingStudent = $state<any | null>(null);
-  let deletingStudent = $state<any | null>(null);
+  let editingStudent = $state<Student | null>(null);
+  let deletingStudent = $state<Student | null>(null);
+
+  function handleSubmit() {
+    submitting = true;
+    errors = {};
+    msg = null;
+    return async ({ result, update }: { result: ActionResult<ActionData, ActionData>; update: (_opts?: { reset?: boolean }) => void }) => {
+      try {
+        if (result.type === 'failure' && result.data) {
+          if (result.data.errors) errors = result.data.errors;
+          if (result.data.message) msg = { type: 'error', text: result.data.message };
+          dispatchToast('Error', result.data.message ?? 'Please fix the highlighted fields.');
+        }
+        if (result.type === 'error') {
+          msg = { type: 'error', text: 'A network error occurred. Please check your connection and try again.' };
+          dispatchToast('Network Error', 'Please check your connection.');
+        }
+        if (result.type === 'success') {
+          msg = { type: 'success', text: result.data?.message ?? 'Saved' };
+          dispatchToast('Saved', result.data?.message ?? 'Changes saved successfully.');
+          formData = {};
+          editingStudent = null;
+          showCreate = false;
+        }
+        update();
+      } finally {
+        submitting = false;
+      }
+    };
+  }
 
   function openCreate() {
-    reset();
+    formData = {};
     editingStudent = null;
     showCreate = true;
   }
 
-  function openEdit(student: any) {
+  function openEdit(student: Student) {
     editingStudent = student;
-    reset({
+    formData = {
       id: student.id,
       first_name: student.first_name,
       last_name: student.last_name,
       admission_no: student.admission_no,
       grade: student.grade ?? '',
       status: student.status,
-    });
+    };
     showCreate = true;
   }
 
-  function openDelete(student: any) {
+  function openDelete(student: Student) {
     deletingStudent = student;
   }
 
@@ -77,6 +118,14 @@
     emptyMessage="No students found"
     onEdit={openEdit}
     onDelete={openDelete}
+    server={{
+      total: pagination.total,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      search: pagination.search,
+      sortKey: pagination.sortKey,
+      sortDir: pagination.sortDir,
+    }}
   />
 </DashboardContent>
 
@@ -102,6 +151,7 @@
         method="POST"
         action={editingStudent ? '?/update' : '?/create'}
         class="px-6 py-5 space-y-4"
+        use:enhance={handleSubmit}
       >
         {#if editingStudent}
           <input type="hidden" name="id" value={editingStudent.id} />
@@ -114,12 +164,12 @@
               id="first_name"
               name="first_name"
               type="text"
-              value={studentForm.first_name}
+              value={formData.first_name}
               class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
               placeholder="John"
             />
-            {#if errors.first_name}
-              <p class="text-xs text-danger">{errors.first_name}</p>
+            {#if errors.first_name?.[0]}
+              <p class="text-xs text-danger">{errors.first_name?.[0]}</p>
             {/if}
           </div>
           <div class="space-y-1.5">
@@ -128,12 +178,12 @@
               id="last_name"
               name="last_name"
               type="text"
-              value={studentForm.last_name}
+              value={formData.last_name}
               class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
               placeholder="Doe"
             />
-            {#if errors.last_name}
-              <p class="text-xs text-danger">{errors.last_name}</p>
+            {#if errors.last_name?.[0]}
+              <p class="text-xs text-danger">{errors.last_name?.[0]}</p>
             {/if}
           </div>
         </div>
@@ -144,12 +194,12 @@
             id="admission_no"
             name="admission_no"
             type="text"
-            value={studentForm.admission_no}
+            value={formData.admission_no}
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
             placeholder="ADM-001"
           />
-          {#if errors.admission_no}
-            <p class="text-xs text-danger">{errors.admission_no}</p>
+          {#if errors.admission_no?.[0]}
+            <p class="text-xs text-danger">{errors.admission_no?.[0]}</p>
           {/if}
         </div>
 
@@ -159,12 +209,12 @@
             id="grade"
             name="grade"
             type="text"
-            value={studentForm.grade}
+            value={formData.grade}
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
             placeholder="Form 1"
           />
-          {#if errors.grade}
-            <p class="text-xs text-danger">{errors.grade}</p>
+          {#if errors.grade?.[0]}
+            <p class="text-xs text-danger">{errors.grade?.[0]}</p>
           {/if}
         </div>
 
@@ -173,20 +223,20 @@
           <select
             id="status"
             name="status"
-            value={studentForm.status}
+            value={formData.status}
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
           >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
-          {#if errors.status}
-            <p class="text-xs text-danger">{errors.status}</p>
+          {#if errors.status?.[0]}
+            <p class="text-xs text-danger">{errors.status?.[0]}</p>
           {/if}
         </div>
 
-        {#if message}
-          <div class="rounded-lg px-4 py-2 text-sm {message.success ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">
-            {message.text}
+        {#if msg}
+          <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">
+            {msg.text}
           </div>
         {/if}
 
@@ -194,7 +244,7 @@
           <Dialog.Close>
             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
           </Dialog.Close>
-          <Button type="submit" variant="primary" size="md">
+          <Button type="submit" variant="primary" size="md" {submitting} disabled={submitting}>
             {editingStudent ? 'Update' : 'Create'}
           </Button>
         </div>

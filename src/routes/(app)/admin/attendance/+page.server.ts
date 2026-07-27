@@ -1,18 +1,18 @@
 import type { PageServerLoad } from './$types';
+import { getAttendanceByTenant } from '$lib/server/attendance';
+import { PAGE_LIST_LARGE } from '$lib/config';
 
-export const load: PageServerLoad = async ({ locals }) => {
-  const { data: attendance } = await locals.srv
-    .from('teacher_attendance')
-    .select('id, status, marked_at, teacher_id, occurrence_id, teachers(first_name, last_name)')
-    .eq('tenant_id', locals.tenantId)
-    .order('marked_at', { ascending: false })
-    .limit(100);
+export const load: PageServerLoad = async ({ locals, url }) => {
+  const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1'));
+
+  const result = await getAttendanceByTenant(locals.srv, locals.tenantId, { page, pageSize: PAGE_LIST_LARGE });
 
   return {
-    attendance: (attendance ?? []).map((row: any) => ({
+    attendance: result.data.map((row: { teachers?: { first_name?: string; last_name?: string } | null; marked_at?: string | null; [k: string]: unknown }) => ({
       ...row,
       teacher_name: row.teachers ? `${row.teachers.first_name} ${row.teachers.last_name}` : 'Unknown',
       date: row.marked_at,
     })),
+    pagination: { page, pageSize: PAGE_LIST_LARGE, total: result.total },
   };
 };

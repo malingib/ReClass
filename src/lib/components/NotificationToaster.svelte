@@ -1,16 +1,23 @@
 <script lang="ts">
   import type { NotificationItem } from '$lib/notifications';
+  import { onDestroy } from 'svelte';
 
   let toasts: NotificationItem[] = $state([]);
+  const timers: ReturnType<typeof setTimeout>[] = [];
 
   function handleToast(event: Event) {
     const detail = (event as CustomEvent<NotificationItem>).detail;
     const id = `toast-${detail.id}-${Date.now()}`;
     toasts = [...toasts, { ...detail, id }];
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       toasts = toasts.filter(t => t.id !== id);
     }, 6000);
+    timers.push(timer);
   }
+
+  onDestroy(() => {
+    timers.forEach(clearTimeout);
+  });
 
   $effect(() => {
     const handler = (e: Event) => handleToast(e);

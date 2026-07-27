@@ -1,0 +1,16 @@
+node_modules
+.git
+.gitignore
+*.md
+.env
+.env.*
+.vite
+build
+dist
+.svelte-kit
+docs
+supabase
+e2e
+tests
+playwright.config.ts
+vitest.config.ts

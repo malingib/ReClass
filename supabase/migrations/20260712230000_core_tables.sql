@@ -218,8 +218,12 @@ CREATE TABLE IF NOT EXISTS public.checkout_requests (
 );
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_students_tenant ON public.students(tenant_id) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_attendance_occ ON public.attendance(occurrence_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_student ON public.attendance(student_id);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'attendance') THEN
+    CREATE INDEX IF NOT EXISTS idx_attendance_occ ON public.attendance(occurrence_id);
+    CREATE INDEX IF NOT EXISTS idx_attendance_student ON public.attendance(student_id);
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_invoices_student ON public.invoices(student_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_payments_checkout ON public.payments(mpesa_checkout_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_status ON public.notifications(status) WHERE status='queued';

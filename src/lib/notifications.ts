@@ -93,3 +93,14 @@ export function dispatchNotificationToast(notification: NotificationItem) {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent<NotificationItem>('reclass:notification-toast', { detail: notification }));
 }
+
+/** Simple toast for form feedback (no persistence, no priority). */
+export function dispatchToast(title: string, body?: string) {
+  dispatchNotificationToast({
+    id: `toast-${Date.now()}`,
+    title,
+    body,
+    created_at: new Date().toISOString(),
+    read: true,
+  });
+}

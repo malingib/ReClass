@@ -57,7 +57,7 @@
   { "invoice_id":"uuid", "phone":"2547XXXXXXXX", "amount": 2500 }
   ```
   Rules: amount ≤ invoice balance (else 422 `OVERPAYMENT`); triggers Daraja STK Push; stores `pending` payment with `mpesa_checkout_id`; returns `{ checkout_id, status:"pending" }`.
-- `POST /payments/callback` (Daraja webhook) — verifies `x-mpesa-signature` HMAC; idempotent by `CheckoutRequestID`; on success → payment `paid`, invoice reconciled, notify parent (SMS) + bursar (realtime); on timeout/fail → `failed`/`pending`.
+- `POST /payments/callback` (Daraja webhook) — no HMAC (Daraja STK callbacks not signed), security via CheckoutRequestID uniqueness + state machine + FOR UPDATE lock; idempotent by `CheckoutRequestID`; on success → payment `paid`, invoice reconciled, notify parent (SMS) + bursar (realtime); on timeout/fail → `failed`/`pending`.
 - `GET /invoices?status=unpaid` — outstanding; `POST /invoices/:id/reminder` → enqueue SMS.
 - `POST /invoices/:id/waiver` (bursar/admin) — `{ amount, reason }`; updates invoice.
 - `GET /ledger/:student_id` — full payment+waiver history.

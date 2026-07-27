@@ -1,49 +1,92 @@
 <script lang="ts">
-  // @ts-nocheck
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import { superForm } from 'sveltekit-superforms';
-  import { zodClient } from 'sveltekit-superforms/adapters';
   import { Dialog } from 'bits-ui';
   import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
+  import type { ActionResult } from '@sveltejs/kit';
+  import { dispatchToast } from '$lib/notifications';
+
+  interface Parent {
+    id: string;
+    full_name: string;
+    phone: string;
+    email: string | null;
+    locale: string | null;
+    sms_consent: boolean;
+    created_at: string;
+    students?: Array<{ id: string; first_name: string; last_name: string; admission_no: string; grade: string | null }>;
+  }
+
+  interface ActionData extends Record<string, unknown> {
+    message?: string;
+    errors?: Record<string, string[]>;
+  }
 
   const { data }: { data: PageData } = $props();
 
   const parents = $derived(data.parents);
 
-  const { form, errors, message, reset } = superForm(data.form, {
-    validators: zodClient(),
-  });
-
-  const parentForm = form;
+  let formData = $state<Record<string, unknown>>({});
+  let errors = $state<Record<string, string[]>>({});
+  let msg = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+  let submitting = $state(false);
 
   let showCreate = $state(false);
-  let editingParent = $state<any | null>(null);
-  let deletingParent = $state<any | null>(null);
+  let editingParent = $state<Parent | null>(null);
+  let deletingParent = $state<Parent | null>(null);
+
+  function handleSubmit() {
+    submitting = true;
+    errors = {};
+    msg = null;
+    return async ({ result, update }: { result: ActionResult<ActionData, ActionData>; update: (_opts?: { reset?: boolean }) => void }) => {
+      try {
+        if (result.type === 'failure' && result.data) {
+          if (result.data.errors) errors = result.data.errors;
+          if (result.data.message) msg = { type: 'error', text: result.data.message };
+          dispatchToast('Error', result.data.message ?? 'Please fix the highlighted fields.');
+        }
+        if (result.type === 'error') {
+          msg = { type: 'error', text: 'A network error occurred. Please check your connection and try again.' };
+          dispatchToast('Network Error', 'Please check your connection.');
+        }
+        if (result.type === 'success') {
+          msg = { type: 'success', text: result.data?.message ?? 'Saved' };
+          dispatchToast('Saved', result.data?.message ?? 'Changes saved successfully.');
+          formData = {};
+          editingParent = null;
+          showCreate = false;
+        }
+        update();
+      } finally {
+        submitting = false;
+      }
+    };
+  }
 
   function openCreate() {
-    reset();
+    formData = {};
     editingParent = null;
     showCreate = true;
   }
 
-  function openEdit(parent: any) {
+  function openEdit(parent: Parent) {
     editingParent = parent;
-    reset({
+    formData = {
       id: parent.id,
       full_name: parent.full_name,
       phone: parent.phone,
       email: parent.email ?? '',
       locale: parent.locale ?? 'en',
       sms_consent: parent.sms_consent ?? true,
-    });
+    };
     showCreate = true;
   }
 
-  function openDelete(parent: any) {
+  function openDelete(parent: Parent) {
     deletingParent = parent;
   }
 
@@ -80,6 +123,14 @@
     emptyMessage="No parents found"
     onEdit={openEdit}
     onDelete={openDelete}
+    server={{
+      total: data.pagination.total,
+      page: data.pagination.page,
+      pageSize: data.pagination.pageSize,
+      search: data.pagination.search,
+      sortKey: data.pagination.sortKey,
+      sortDir: data.pagination.sortDir,
+    }}
   />
 </DashboardContent>
 
@@ -104,6 +155,7 @@
       <form
         method="POST"
         action={editingParent ? '?/update' : '?/create'}
+        use:enhance={handleSubmit}
         class="px-6 py-5 space-y-4"
       >
         {#if editingParent}
@@ -116,12 +168,12 @@
             id="full_name"
             name="full_name"
             type="text"
-            value={parentForm.full_name}
+            value={formData.full_name}
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
             placeholder="John Kamau"
           />
           {#if errors.full_name}
-            <p class="text-xs text-danger">{errors.full_name}</p>
+            <p class="text-xs text-danger">{errors.full_name?.[0]}</p>
           {/if}
         </div>
 
@@ -131,12 +183,12 @@
             id="phone"
             name="phone"
             type="text"
-            value={parentForm.phone}
+            value={formData.phone}
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
             placeholder="+254712345678"
           />
           {#if errors.phone}
-            <p class="text-xs text-danger">{errors.phone}</p>
+            <p class="text-xs text-danger">{errors.phone?.[0]}</p>
           {/if}
         </div>
 
@@ -146,7 +198,7 @@
             id="email"
             name="email"
             type="email"
-            value={parentForm.email}
+            value={formData.email}
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
             placeholder="parent@email.com"
           />
@@ -157,7 +209,7 @@
           <select
             id="locale"
             name="locale"
-            value={parentForm.locale}
+            value={formData.locale}
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
           >
             <option value="en">English</option>
@@ -170,15 +222,15 @@
             id="sms_consent"
             name="sms_consent"
             type="checkbox"
-            checked={parentForm.sms_consent ?? true}
+            checked={(formData.sms_consent as boolean) ?? true}
             class="h-4 w-4 rounded border-border text-brand-600 focus:ring-brand-500"
           />
           <label for="sms_consent" class="text-xs font-medium text-ink-700">SMS Consent</label>
         </div>
 
-        {#if message}
-          <div class="rounded-lg px-4 py-2 text-sm {message.success ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">
-            {message.text}
+        {#if msg}
+          <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">
+            {msg.text}
           </div>
         {/if}
 
@@ -186,7 +238,7 @@
           <Dialog.Close>
             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
           </Dialog.Close>
-          <Button type="submit" variant="primary" size="md">
+          <Button type="submit" variant="primary" size="md" {submitting} disabled={submitting}>
             {editingParent ? 'Update' : 'Create'}
           </Button>
         </div>

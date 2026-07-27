@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getParentOwnership } from '$lib/server/ownership';
+import { PAGE_OVERVIEW } from '$lib/config';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId, parent, studentIds } = await getParentOwnership(locals);
@@ -19,7 +20,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     .in('student_id', studentIds)
     .in('status', ['unpaid', 'partial'])
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(PAGE_OVERVIEW);
 
   return { parent, students: students ?? [], invoices: invoices ?? [] };
 };

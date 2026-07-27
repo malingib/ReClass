@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS public.payment_reconciliations (
   week_start date NOT NULL,
   status text NOT NULL DEFAULT 'matched' CHECK (status IN ('matched','misallocated','resolved')),
   originally_for text,
+  original_invoice_id uuid REFERENCES invoices(id),
+  excess_amount numeric(10,2) DEFAULT 0,
   reassigned_to_invoice uuid REFERENCES invoices(id),
   note text,
   resolved_by uuid REFERENCES profiles(id),

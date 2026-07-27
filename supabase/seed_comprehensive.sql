@@ -3,11 +3,6 @@
 -- Run: psql "$SUPABASE_DB_URL" -f supabase/seed_comprehensive.sql
 -- Or via Supabase Dashboard SQL Editor (logged in as service_role)
 
--- 0. Migration: add missing columns to sessions for scheduling page
-ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS title text;
-ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS subject text;
-ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS grade text;
-
 -- 1. Tenant (Malingi High School)
 INSERT INTO public.tenants (id, name, slug, brand_primary, currency, timezone, sms_sender_id, academic_year, payroll_rate_per_session)
 VALUES ('11111111-1111-1111-1111-111111111111', 'Malingi High School', 'malingi-high', '#039855', 'KES', 'Africa/Nairobi', 'RECLASS', '2026', 300)
@@ -99,153 +94,121 @@ INSERT INTO public.fee_types (id, tenant_id, name, amount, due_date, term) VALUE
   ('b0000001-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'Term 2 Remedial', 5500, '2027-01-15', 'Term 2')
 ON CONFLICT (id) DO NOTHING;
 
--- 8. Remedial groups (8 groups across subjects)
-INSERT INTO public.remedial_groups (id, tenant_id, name, subject_id, teacher_id, room, capacity, term) VALUES
-  ('f0000001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Math Booster - Form 4',
+-- 8. Remedial sessions (whole-class model)
+INSERT INTO public.sessions (id, tenant_id, class, subject_id, teacher_id, room, slot, day_of_week, start_time, end_time, active) VALUES
+  ('f0000001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Form 4 Math',
    (SELECT id FROM public.subjects WHERE code = 'MATH' AND tenant_id = '11111111-1111-1111-1111-111111111111'),
-   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-001'), 'Rm 12', 30, 'Term 1'),
-  ('f0000001-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'English Lit - Form 3/4',
+   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-001'), 'Rm 12', 'morning', 1, '07:30', '08:30', true),
+  ('f0000001-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Form 3/4 English',
    (SELECT id FROM public.subjects WHERE code = 'ENG' AND tenant_id = '11111111-1111-1111-1111-111111111111'),
-   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-002'), 'Rm 8', 35, 'Term 1'),
-  ('f0000001-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 'Kiswahili Sarufi - Form 3/4',
+   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-002'), 'Rm 8', 'morning', 1, '08:45', '09:45', true),
+  ('f0000001-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 'Form 3/4 Kiswahili',
    (SELECT id FROM public.subjects WHERE code = 'KISW' AND tenant_id = '11111111-1111-1111-1111-111111111111'),
-   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-003'), 'Rm 5', 30, 'Term 1'),
-  ('f0000001-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'Science Lab - Form 4',
+   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-003'), 'Rm 5', 'morning', 1, '10:00', '11:00', true),
+  ('f0000001-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'Form 4 Science',
    (SELECT id FROM public.subjects WHERE code = 'SCI' AND tenant_id = '11111111-1111-1111-1111-111111111111'),
-   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-007'), 'Lab 1', 25, 'Term 1'),
-  ('f0000001-0000-0000-0000-000000000005', '11111111-1111-1111-1111-111111111111', 'Geography Mapwork - Form 3/4',
+   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-007'), 'Lab 1', 'morning', 2, '07:30', '08:30', true),
+  ('f0000001-0000-0000-0000-000000000005', '11111111-1111-1111-1111-111111111111', 'Form 3/4 Geography',
    (SELECT id FROM public.subjects WHERE code = 'GEO' AND tenant_id = '11111111-1111-1111-1111-111111111111'),
-   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-004'), 'Rm 10', 30, 'Term 1'),
-  ('f0000001-0000-0000-0000-000000000006', '11111111-1111-1111-1111-111111111111', 'History - Form 2/3',
+   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-004'), 'Rm 10', 'morning', 2, '08:45', '09:45', true),
+  ('f0000001-0000-0000-0000-000000000006', '11111111-1111-1111-1111-111111111111', 'Form 2/3 History',
    (SELECT id FROM public.subjects WHERE code = 'HIST' AND tenant_id = '11111111-1111-1111-1111-111111111111'),
-   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-008'), 'Rm 3', 35, 'Term 1'),
-  ('f0000001-0000-0000-0000-000000000007', '11111111-1111-1111-1111-111111111111', 'Business - Form 3/4',
+   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-008'), 'Rm 3', 'morning', 3, '07:30', '08:30', true),
+  ('f0000001-0000-0000-0000-000000000007', '11111111-1111-1111-1111-111111111111', 'Form 3/4 Business',
    (SELECT id FROM public.subjects WHERE code = 'BSTD' AND tenant_id = '11111111-1111-1111-1111-111111111111'),
-   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-009'), 'Rm 7', 25, 'Term 1'),
-  ('f0000001-0000-0000-0000-000000000008', '11111111-1111-1111-1111-111111111111', 'Math Foundation - Form 1/2',
+   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-009'), 'Rm 7', 'morning', 3, '08:45', '09:45', true),
+  ('f0000001-0000-0000-0000-000000000008', '11111111-1111-1111-1111-111111111111', 'Form 1/2 Math Foundation',
    (SELECT id FROM public.subjects WHERE code = 'MATH' AND tenant_id = '11111111-1111-1111-1111-111111111111'),
-   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-005'), 'Rm 12', 30, 'Term 1')
+   (SELECT id FROM public.teachers WHERE employee_no = 'TCH-005'), 'Rm 12', 'morning', 4, '07:30', '08:30', true)
 ON CONFLICT (id) DO NOTHING;
 
--- 9. Enroll students in groups (group_members)
-INSERT INTO public.group_members (tenant_id, student_id, group_id)
-SELECT '11111111-1111-1111-1111-111111111111', s.id, g.id
-FROM public.students s
-JOIN public.remedial_groups g ON g.tenant_id = '11111111-1111-1111-1111-111111111111'
-WHERE s.tenant_id = '11111111-1111-1111-1111-111111111111'
-  AND (
-    (s.grade = 'Form 4' AND g.name LIKE '%Form 4%')
-    OR (s.grade LIKE 'Form 3%' AND g.name LIKE '%Form 3/4%')
-    OR (s.grade LIKE 'Form 2%' AND g.name LIKE '%Form 2/3%' OR g.name LIKE '%Form 1/2%')
-    OR (s.grade LIKE 'Form 1%' AND g.name LIKE '%Form 1/2%')
-  )
-ON CONFLICT DO NOTHING;
+-- (Group members table removed — sessions are whole-class)
 
--- 10. Recurring sessions (weekly schedule) + occurrences
--- Generate sessions for the current week's schedule
+-- 9. Session occurrences (past 2 weeks + future 8 weeks)
 DO $$
 DECLARE
-  grp RECORD;
-  base_date DATE := date_trunc('week', CURRENT_DATE)::DATE;
-  day_names TEXT[] := ARRAY['Mon','Tue','Wed','Thu','Fri'];
-  day_offsets INT[] := ARRAY[0,1,2,3,4];
-  slot_pairs TEXT[][] := ARRAY[ARRAY['07:30','08:30'], ARRAY['08:45','09:45'], ARRAY['10:00','11:00'], ARRAY['11:15','12:15']];
-  idx INT;
-  session_id uuid;
-  occ_date DATE;
-  subj_name TEXT;
-  grp_name TEXT;
-  grp_grade TEXT;
+  session RECORD;
+  d DATE;
+  occurrence_start TIME;
+  occurrence_end TIME;
+  day_int INT;
+  past_occ DATE;
+  future_occ DATE;
 BEGIN
-  idx := 1;
-  FOR grp IN SELECT * FROM public.remedial_groups WHERE tenant_id = '11111111-1111-1111-1111-111111111111' LOOP
-    -- Get subject name
-    SELECT name INTO subj_name FROM public.subjects WHERE id = grp.subject_id;
-    -- Determine grade from group name
-    IF grp.name LIKE '%Form 4%' THEN grp_grade := 'Form 4';
-    ELSIF grp.name LIKE '%Form 3/4%' THEN grp_grade := 'Form 3-4';
-    ELSIF grp.name LIKE '%Form 2/3%' THEN grp_grade := 'Form 2-3';
-    ELSIF grp.name LIKE '%Form 1/2%' THEN grp_grade := 'Form 1-2';
-    ELSE grp_grade := 'Form 3-4';
-    END IF;
-
-    -- 2 sessions per group per week (Mon & Wed or Tue & Thu)
-    session_id := gen_random_uuid();
-    INSERT INTO public.sessions (id, tenant_id, group_id, title, subject, grade, day_of_week, start_time, end_time, slot)
-    VALUES (
-      session_id,
-      '11111111-1111-1111-1111-111111111111',
-      grp.id,
-      LEFT(grp.name, 50),
-      subj_name,
-      grp_grade,
-      CASE WHEN idx % 2 = 1 THEN 1 ELSE 2 END, -- Mon or Tue
-      (slot_pairs[(idx % 4) + 1][1])::time,
-      (slot_pairs[(idx % 4) + 1][2])::time,
-      CASE WHEN (idx % 4) < 2 THEN 'morning' ELSE 'evening' END
-    );
-
-    -- Create occurrences for this week and next week
-    FOR occ_day IN 0..1 LOOP
-      occ_date := base_date + ((CASE WHEN idx % 2 = 1 THEN 0 ELSE 1 END) + occ_day * 7);
-      IF occ_date >= CURRENT_DATE - interval '2 days' THEN
-        INSERT INTO public.session_occurrences (tenant_id, session_id, occurs_on, start_time, end_time, room, status)
+  -- For each session, create occurrences on their day_of_week
+  -- Past 2 weeks: status = 'done'
+  -- Future 8 weeks: status = 'scheduled' (duplicates with trigger are skipped via ON CONFLICT)
+  FOR session IN
+    SELECT * FROM public.sessions
+    WHERE tenant_id = '11111111-1111-1111-1111-111111111111'
+      AND active = true
+  LOOP
+    -- Past occurrences (up to 14 days back)
+    past_occ := date_trunc('week', CURRENT_DATE)::DATE;
+    WHILE past_occ >= CURRENT_DATE - interval '14 days' LOOP
+      IF EXTRACT(DOW FROM past_occ) = session.day_of_week THEN
+        INSERT INTO public.session_occurrences (tenant_id, session_id, occurs_on, start_time, end_time, room, class, teacher_id, status)
         VALUES (
           '11111111-1111-1111-1111-111111111111',
-          session_id,
-          occ_date,
-          (slot_pairs[(idx % 4) + 1][1])::time,
-          (slot_pairs[(idx % 4) + 1][2])::time,
-          grp.room,
-          CASE WHEN occ_date < CURRENT_DATE THEN 'done' ELSE 'scheduled' END
-        );
+          session.id,
+          past_occ,
+          session.start_time,
+          session.end_time,
+          session.room,
+          session.class,
+          session.teacher_id,
+          CASE WHEN past_occ < CURRENT_DATE THEN 'done' ELSE 'scheduled' END
+        )
+        ON CONFLICT (session_id, occurs_on) DO UPDATE SET status = EXCLUDED.status;
       END IF;
+      past_occ := past_occ - 1;
     END LOOP;
 
-    idx := idx + 1;
+    -- Future occurrences (up to 8 weeks ahead)
+    future_occ := GREATEST(CURRENT_DATE, date_trunc('week', CURRENT_DATE)::DATE);
+    WHILE future_occ <= CURRENT_DATE + interval '56 days' LOOP
+      IF EXTRACT(DOW FROM future_occ) = session.day_of_week THEN
+        INSERT INTO public.session_occurrences (tenant_id, session_id, occurs_on, start_time, end_time, room, class, teacher_id, status)
+        VALUES (
+          '11111111-1111-1111-1111-111111111111',
+          session.id,
+          future_occ,
+          session.start_time,
+          session.end_time,
+          session.room,
+          session.class,
+          session.teacher_id,
+          'scheduled'
+        )
+        ON CONFLICT (session_id, occurs_on) DO NOTHING;
+      END IF;
+      future_occ := future_occ + 1;
+    END LOOP;
   END LOOP;
 END $$;
 
--- 11. Teacher attendance for past sessions (last 14 days)
-INSERT INTO public.teacher_attendance (tenant_id, occurrence_id, teacher_id, status, marked_at)
+-- 10. Teacher attendance for past sessions (last 14 days)
+INSERT INTO public.teacher_attendance (tenant_id, occurrence_id, teacher_id, status, marked_at, approval_status)
 SELECT
   '11111111-1111-1111-1111-111111111111',
   so.id,
-  g.teacher_id,
+  so.teacher_id,
   CASE floor(random() * 10)
-    WHEN 0 THEN 'absent' WHEN 1 THEN 'late'
+    WHEN 0 THEN 'late'
     ELSE 'present'
   END,
-  so.start_at + interval '1 hour'
+  (so.occurs_on + so.start_time)::timestamp,
+  CASE WHEN so.occurs_on < CURRENT_DATE - interval '2 days' THEN 'approved' ELSE 'pending' END
 FROM public.session_occurrences so
-JOIN public.sessions s ON s.id = so.session_id
-JOIN public.remedial_groups g ON g.id = s.group_id
 WHERE so.occurs_on < CURRENT_DATE
   AND so.occurs_on >= CURRENT_DATE - interval '14 days'
   AND so.tenant_id = '11111111-1111-1111-1111-111111111111'
+  AND so.status = 'done'
 ON CONFLICT (occurrence_id, teacher_id) DO NOTHING;
 
--- 12. Student attendance for past sessions
-INSERT INTO public.attendance (tenant_id, occurrence_id, student_id, status, marked_at)
-SELECT
-  '11111111-1111-1111-1111-111111111111',
-  so.id,
-  gm.student_id,
-  CASE floor(random() * 8)
-    WHEN 0 THEN 'absent' WHEN 1 THEN 'late' WHEN 2 THEN 'excused'
-    ELSE 'present'
-  END,
-  so.start_at + interval '2 hours'
-FROM public.session_occurrences so
-JOIN public.group_members gm ON gm.group_id = (
-  SELECT s.group_id FROM public.sessions s WHERE s.id = so.session_id LIMIT 1
-)
-WHERE so.occurs_on < CURRENT_DATE
-  AND so.occurs_on >= CURRENT_DATE - interval '14 days'
-  AND so.tenant_id = '11111111-1111-1111-1111-111111111111'
-ON CONFLICT (occurrence_id, student_id) DO NOTHING;
+-- (Student attendance table removed — whole-class model)
 
--- 13. Invoices for students
+-- 11. Invoices for students
 INSERT INTO public.invoices (tenant_id, student_id, fee_type_id, amount_due, amount_paid, status, due_date)
 SELECT
   '11111111-1111-1111-1111-111111111111',
@@ -270,7 +233,7 @@ WHERE s.tenant_id = '11111111-1111-1111-1111-111111111111'
   AND ft.term = 'Term 1'
 ON CONFLICT DO NOTHING;
 
--- 14. Some payments linked to paid invoices
+-- 12. Some payments linked to paid invoices
 INSERT INTO public.payments (tenant_id, invoice_id, amount, method, phone, status)
 SELECT
   '11111111-1111-1111-1111-111111111111',
@@ -285,7 +248,7 @@ WHERE i.status IN ('paid', 'partial')
   AND NOT EXISTS (SELECT 1 FROM public.payments p WHERE p.invoice_id = i.id)
 ON CONFLICT DO NOTHING;
 
--- 15. Payroll run for last week
+-- 13. Payroll run for last week
 INSERT INTO public.payroll_runs (tenant_id, period_start, period_end, teacher_id, occurrences_count, rate_per_session, amount, status)
 SELECT
   '11111111-1111-1111-1111-111111111111',
@@ -305,7 +268,7 @@ WHERE t.tenant_id = '11111111-1111-1111-1111-111111111111'
 GROUP BY t.id
 ON CONFLICT DO NOTHING;
 
--- 16. Some notifications
+-- 14. Some notifications
 INSERT INTO public.notifications (tenant_id, channel, recipient, body, status)
 SELECT
   '11111111-1111-1111-1111-111111111111',
@@ -313,7 +276,7 @@ SELECT
   p.id::text,
   CASE floor(random() * 4)::int
     WHEN 0 THEN 'M-Pesa payment of KES 5,000 received for Brian Kipkoech'
-    WHEN 1 THEN 'Teacher John Kamau marked present for Math Booster session'
+    WHEN 1 THEN 'Teacher John Kamau marked present for Form 4 Math session'
     WHEN 2 THEN 'New student William Rono enrolled in Form 4'
     ELSE 'Payroll for week starting ' || (date_trunc('week', CURRENT_DATE)::DATE - 7)::text || ' approved'
   END,

@@ -1,5 +1,4 @@
 <script lang="ts">
-  // @ts-nocheck
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import Button from '$lib/components/ui/button.svelte';
   import { enhance } from '$app/forms';
@@ -7,8 +6,8 @@
   import CardContent from '$lib/components/ui/card-content.svelte';
 
   const { data, form } = $props();
-  const tenant = $derived(data.tenant);
-  const settings = $derived(tenant.settings ?? {});
+  const tenant = $derived(data.tenant!);
+  const settings = $derived<Record<string, any>>((data.tenant?.settings ?? {}) as Record<string, any>);
 
   let activeTab = $state<'school' | 'academic' | 'financial' | 'sms'>('school');
   let saving = $state(false);
@@ -33,7 +32,10 @@
     </div>
   {/if}
 
-  <form method="POST" action="?/save" use:enhance={() => { saving = true; }}>
+  <form method="POST" action="?/save" use:enhance={() => {
+    saving = true;
+    return async () => { saving = false; };
+  }}>
     <div class="mb-6 flex gap-1 rounded-xl border border-border bg-ink-50/70 p-1">
       {#each tabs as tab}
         <button

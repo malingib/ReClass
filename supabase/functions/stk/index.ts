@@ -1,31 +1,23 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
-
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
+import { getServiceClient } from '../_shared/supabase.ts';
+import { verifyAuth } from '../_shared/auth.ts';
+import { json, badRequest, unauthorized, forbidden, notFound, handleOptions, internalError } from '../_shared/response.ts';
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return handleOptions(req);
+
   try {
-    const authorization = req.headers.get('Authorization');
-    if (!authorization) return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: corsHeaders });
+    const user = await verifyAuth(req.headers.get('Authorization'));
+    if (!user) return unauthorized(req);
 
-    const userClient = createClient(
-      Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authorization } } }
-    );
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: corsHeaders });
-
+    const supabase = getServiceClient();
     const { invoice_id } = await req.json();
-    if (typeof invoice_id !== 'string') return new Response(JSON.stringify({ error: 'INVALID_INVOICE' }), { status: 400, headers: corsHeaders });
+    if (typeof invoice_id !== 'string') return badRequest('INVALID_INVOICE', req);
 
     const { data: parent } = await supabase.from('parents')
       .select('id, tenant_id, phone')
       .eq('profile_id', user.id)
       .maybeSingle();
-    if (!parent) return new Response(JSON.stringify({ error: 'PARENT_NOT_LINKED' }), { status: 403, headers: corsHeaders });
+    if (!parent) return forbidden(req);
 
     const { data: invoice } = await supabase.from('invoices')
       .select('id, tenant_id, student_id, amount_due, amount_paid, status')
@@ -33,24 +25,34 @@ Deno.serve(async (req) => {
       .eq('tenant_id', parent.tenant_id)
       .in('status', ['unpaid', 'partial'])
       .maybeSingle();
-    if (!invoice) return new Response(JSON.stringify({ error: 'INVOICE_NOT_FOUND' }), { status: 404, headers: corsHeaders });
+    if (!invoice) return notFound('INVOICE_NOT_FOUND', req);
 
     const { data: link } = await supabase.from('guardians_link')
       .select('student_id')
       .eq('parent_id', parent.id)
       .eq('student_id', invoice.student_id)
       .maybeSingle();
-    if (!link) return new Response(JSON.stringify({ error: 'INVOICE_NOT_OWNED' }), { status: 403, headers: corsHeaders });
+    if (!link) return forbidden(req);
+
+    const { count: pendingCount } = await supabase
+      .from('checkout_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('invoice_id', invoice_id)
+      .eq('status', 'pending');
+    if (pendingCount && pendingCount > 0) {
+      return json({ error: 'DUPLICATE_REQUEST', message: 'A payment request for this invoice is already being processed.' }, 429, req);
+    }
 
     const tenant_id = parent.tenant_id;
-    const phone = parent.phone.replace(/\s/g, '');
+    const phone = parent.phone.replace(/[\s\-\(\)\.\+]/g, '');
     const amount = Number(invoice.amount_due) - Number(invoice.amount_paid ?? 0);
     if (amount <= 0 || !/^254[17]\d{8}$/.test(phone)) {
-      return new Response(JSON.stringify({ error: 'INVALID_PAYMENT_DETAILS' }), { status: 400, headers: corsHeaders });
+      return badRequest('INVALID_PAYMENT_DETAILS', req);
     }
+
     const { data: cred_id } = await supabase.rpc('resolve_credential',
       { p_tenant: tenant_id, p_provider: 'mpesa', p_allow_sandbox: false });
-    if (!cred_id) return new Response(JSON.stringify({ error: 'CREDS_NOT_FOUND' }), { status: 400, headers: corsHeaders });
+    if (!cred_id) return badRequest('CREDS_NOT_FOUND', req);
 
     const { data: secrets } = await supabase.rpc('decrypt_credential', { p_id: cred_id });
     const base = secrets.environment === 'sandbox'
@@ -61,8 +63,16 @@ Deno.serve(async (req) => {
       { headers: { Authorization: `Basic ${auth}` } }).then(r => r.json());
 
     const ts = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
-    const pwd = Buffer.from(`${secrets.passkey}${secrets.shortcode}${ts}`).toString('base64');
+    const pwd = btoa(`${secrets.passkey}${secrets.shortcode}${ts}`);
     const callback = `${Deno.env.get('PUBLIC_URL')}/functions/v1/mpesa-callback`;
+
+    // Pre-insert checkout request BEFORE STK push so a crash after
+    // provider acceptance still has local tracking for reconciliation.
+    const checkoutId = crypto.randomUUID();
+    await supabase.from('checkout_requests').insert({
+      tenant_id, invoice_id, checkout_id: checkoutId,
+      amount, phone, status: 'pending',
+    });
 
     const stk = await fetch(`${base}/mpesa/stkpush/v1/processrequest`, {
       method: 'POST',
@@ -76,14 +86,18 @@ Deno.serve(async (req) => {
       }),
     }).then(r => r.json());
 
-    if (stk.ResponseCode === '0') {
-      await supabase.from('checkout_requests').insert({
-        tenant_id, invoice_id, checkout_id: stk.CheckoutRequestID,
-        amount, phone, status: 'pending'
-      });
+    if (stk.ResponseCode !== '0') {
+      await supabase.from('checkout_requests')
+        .update({ status: 'failed', reason: stk.ResponseDescription ?? 'STK rejected' })
+        .eq('checkout_id', checkoutId);
+    } else {
+      await supabase.from('checkout_requests')
+        .update({ checkout_id: stk.CheckoutRequestID })
+        .eq('checkout_id', checkoutId);
     }
-    return new Response(JSON.stringify(stk), { headers: corsHeaders });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: corsHeaders });
+
+    return json(stk, 200, req);
+  } catch {
+    return internalError(req);
   }
 });

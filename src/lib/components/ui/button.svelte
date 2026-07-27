@@ -7,7 +7,7 @@
     disabled?: boolean;
     loading?: boolean;
     type?: 'button' | 'submit' | 'reset';
-    onclick?: (e: MouseEvent) => void;
+    onclick?: (_e: MouseEvent) => void;
     class?: string;
     children?: import('svelte').Snippet;
     [key: string]: unknown;

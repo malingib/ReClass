@@ -1,13 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { suiteModules } from '$lib/modules';
-  import type { SuiteModule } from '$lib/modules';
-
-  const moduleIcons: Record<string, string> = {
-    remedials: '📘', students: '👤', academics: '📚',
-    attendance: '✅', finance: '💰', people: '👥',
-    communications: '📢', reports: '📊',
-  };
+  import { suiteModules, moduleIcons } from '$lib/modules';
 
   const accentGradients: Record<string, string> = {
     emerald: 'from-emerald-500 to-emerald-600',
@@ -27,7 +20,7 @@
   <title>eShule — School Management Platform</title>
 </svelte:head>
 
-<div class="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,_rgba(0,197,115,0.18),_transparent_24%),linear-gradient(135deg,_#f4f7fb_0%,_#f8fbff_100%)]">
+<div class="flex min-h-screen flex-col bg-gradient-to-br from-stone-50 via-white to-stone-100/80">
   <header class="flex items-center justify-between px-6 py-4 sm:px-10">
     <div class="flex items-center gap-3">
       <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-sm font-bold text-white shadow-[0_4px_12px_rgba(0,197,115,0.28)]">e</div>
@@ -45,15 +38,17 @@
       <p class="mx-auto mt-3 max-w-lg text-sm text-ink-400">eShule is a modular school management platform. Select a module to get started, or sign in to access your dashboard.</p>
     </div>
 
-    <div class="mt-12 grid w-full max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="mt-12 grid w-full max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each suiteModules as m (m.id)}
         {#if m.status === 'available'}
           <a href="/login"
             class="group relative overflow-hidden rounded-2xl border border-ink-200/60 bg-white/80 p-6 shadow-[0_4px_20px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-1 hover:border-ink-300 hover:shadow-[0_12px_40px_rgba(15,23,42,0.1)]"
           >
             <div class="flex items-start justify-between">
-              <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br {accentGradients[m.accent]} text-xl text-white shadow-md">
-                {moduleIcons[m.icon] ?? '📦'}
+              <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br {accentGradients[m.accent]} text-white shadow-md">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="{moduleIcons[m.icon]}" />
+                </svg>
               </div>
               <svg class="h-5 w-5 text-ink-300 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-ink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -66,7 +61,9 @@
           <div class="relative overflow-hidden rounded-2xl border border-ink-200/40 bg-white/50 p-6 opacity-50">
             <div class="flex items-start justify-between">
               <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br {accentGradients[m.accent]} text-xl text-white shadow-md opacity-60">
-                {moduleIcons[m.icon] ?? '📦'}
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="{moduleIcons[m.icon]}" />
+                </svg>
               </div>
             </div>
             <h3 class="mt-4 text-base font-semibold text-ink-500">{m.name}</h3>

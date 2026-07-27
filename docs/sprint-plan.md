@@ -149,7 +149,7 @@
 |------|-------|------------|
 | Credential leak (tenant Daraja/Mobiwave secrets) | **Critical** | Vault encryption, never returned to browser, SECURITY DEFINER functions |
 | Cross-tenant data access | **Critical** | RLS enforced on every table, CI leak tests mandatory |
-| M-Pesa callback spoofing | **High** | HMAC verification, CheckoutRequestID idempotency, IP allowlisting |
+| M-Pesa callback spoofing | **High** | CheckoutRequestID uniqueness + state machine (pending→completed) + FOR UPDATE invoice lock |
 | Student PII exposure (minors) | **High** | Data minimization, consent management, soft-delete with anonymization |
 | SMS opt-out compliance | Medium | STOP keyword handling, opt-out stored per phone, removal from all campaigns |
 
@@ -443,7 +443,7 @@ Definition of Done: <checklist>
 - Effort: 16h
 - Dependencies: T-100
 - Files: `supabase/functions/mpesa-callback/index.ts`
-- DoD: HMAC signature verification; idempotent by CheckoutRequestID; payment status updated; invoice amount_paid trigger fires; parent SMS notification enqueued; bursar notified via Realtime
+- DoD: idempotent by CheckoutRequestID; payment status updated; invoice amount_paid trigger fires; parent SMS notification enqueued; bursar notified via Realtime
 
 **T-200** | Credential Service (encrypt, store, resolve)
 - Owner: Backend
@@ -678,7 +678,7 @@ M0 (Planning) ─── M1 (Auth/Tenant) ─── M2 (Core Data) ─── M3 (
 | S5-02 | Credential CRUD API + encryption (Vault KEK, AES-256-GCM) | 12 | Backend | S2-01 |
 | S5-03 | Credential test Edge Function (verify Daraja OAuth + /balance) | 8 | Backend | S5-02 |
 | S5-04 | STK Push Edge Function (Daraja OAuth → build request → send → store pending) | 16 | Backend | S5-02 |
-| S5-05 | M-Pesa callback handler (verify HMAC, reconcile, idempotent) | 16 | Backend | S5-04 |
+| S5-05 | M-Pesa callback handler (reconcile, idempotent, notify) | 16 | Backend | S5-04 |
 | S5-06 | Payment ledger page (per-student history) | 6 | Frontend | S5-04 |
 | S5-07 | Waiver button + form (amount, reason, audited) | 4 | Frontend+Backend | S2-04 |
 | S5-08 | Invoice balance trigger (automatically update amount_paid on payment insert) | 4 | Backend | S1-02 |
@@ -697,7 +697,7 @@ M0 (Planning) ─── M1 (Auth/Tenant) ─── M2 (Core Data) ─── M3 (
 
 **Risks:**
 - ⚠️ Daraja sandbox is unreliable. Callbacks may not arrive. Have a manual reconcile fallback.
-- ⚠️ HMAC verification: Safaricom's signing is poorly documented. Fall back to CheckoutRequestID match + amount check if HMAC is flaky.
+- ⚠️ Daraja STK callbacks are NOT signed (no HMAC). Security relies on CheckoutRequestID uniqueness + state machine (pending→completed) + FOR UPDATE invoice lock.
 - ⚠️ Credential encryption misconfiguration could leak secrets.
 - ⚠️ STK Push timeout (60-120s) must not block the UI. Use polling or Realtime subscription.
 
@@ -1635,7 +1635,7 @@ Each milestone execution follows this template:
 | S2 | CRUD quality | CSV import encoding; RLS on 10+ tables | S2-13 (PWA) can slip to S3 |
 | S3 | Recurrence logic | RRULE edge cases; calendar performance | S3-07 (holidays) can be done in S4 |
 | S4 | Offline-first attendance | IndexedDB sync conflicts; lock cron timing | S4-09 (chronic absence) can slip |
-| **S5** | **M-Pesa correctness** | **Idempotency; callback HMAC; timeout handling** | **Nothing — this sprint is the critical path** |
+| **S5** | **M-Pesa correctness** | **Idempotency; CheckoutRequestID uniqueness; timeout handling** | **Nothing — this sprint is the critical path** |
 | S6 | Portal polish + SMS reliability | i18n coverage; SMS cost tracking | S6-18 (super admin usage) can slip |
 | S7 | UAT responsiveness | Bug fix prioritisation; training materials | S7-13 (load test) can be post-launch |
 | S8 | Go-live discipline | DNS propagation; M-Pesa cred verification | S8-10 (rollback validation) is non-negotiable |

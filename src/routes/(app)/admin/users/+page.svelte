@@ -1,14 +1,25 @@
 <script lang="ts">
-  // @ts-nocheck
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import { superForm } from 'sveltekit-superforms';
-  import { zodClient } from 'sveltekit-superforms/adapters';
   import { Dialog } from 'bits-ui';
   import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
+  import type { ActionResult } from '@sveltejs/kit';
+  import { dispatchToast } from '$lib/notifications';
+
+  interface User {
+    id: string;
+    user_id: string;
+    role: string;
+    profiles?: { id: string; full_name: string } | null;
+  }
+
+  interface ActionData extends Record<string, unknown> {
+    message?: string;
+    errors?: Record<string, string[]>;
+  }
 
   const { data }: { data: PageData } = $props();
 
@@ -24,33 +35,61 @@
     parent: 'Parent',
   };
 
-  const { form, errors, message, reset } = superForm(data.form, {
-    validators: zodClient(),
-  });
-
-  const userForm = form;
+  let formData = $state<Record<string, unknown>>({});
+  let errors = $state<Record<string, string[]>>({});
+  let msg = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+  let submitting = $state(false);
 
   let showCreate = $state(false);
-  let editingUser = $state<any | null>(null);
-  let deletingUser = $state<any | null>(null);
+  let editingUser = $state<User | null>(null);
+  let deletingUser = $state<User | null>(null);
+
+  function handleSubmit() {
+    submitting = true;
+    errors = {};
+    msg = null;
+    return async ({ result, update }: { result: ActionResult<ActionData, ActionData>; update: (_opts?: { reset?: boolean }) => void }) => {
+      try {
+        if (result.type === 'failure' && result.data) {
+          if (result.data.errors) errors = result.data.errors;
+          if (result.data.message) msg = { type: 'error', text: result.data.message };
+          dispatchToast('Error', result.data.message ?? 'Please fix the highlighted fields.');
+        }
+        if (result.type === 'error') {
+          msg = { type: 'error', text: 'A network error occurred. Please check your connection and try again.' };
+          dispatchToast('Network Error', 'Please check your connection.');
+        }
+        if (result.type === 'success') {
+          msg = { type: 'success', text: result.data?.message ?? 'Saved' };
+          dispatchToast('Saved', result.data?.message ?? 'Changes saved successfully.');
+          formData = {};
+          editingUser = null;
+          showCreate = false;
+        }
+        update();
+      } finally {
+        submitting = false;
+      }
+    };
+  }
 
   function openCreate() {
-    reset();
+    formData = {};
     editingUser = null;
     showCreate = true;
   }
 
-  function openEdit(user: any) {
+  function openEdit(user: User) {
     editingUser = user;
-    reset({
+    formData = {
       id: user.id,
       user_id: user.user_id,
       role: user.role,
-    });
+    };
     showCreate = true;
   }
 
-  function openDelete(user: any) {
+  function openDelete(user: User) {
     deletingUser = user;
   }
 
@@ -106,6 +145,7 @@
         method="POST"
         action={editingUser ? '?/update' : '?/create'}
         class="px-6 py-5 space-y-4"
+        use:enhance={handleSubmit}
       >
         {#if editingUser}
           <input type="hidden" name="id" value={editingUser.id} />
@@ -118,7 +158,7 @@
               id="user_id"
               name="user_id"
               type="text"
-              value={userForm.user_id}
+              value={formData.user_id}
               readonly
               class="w-full rounded-lg border border-border bg-ink-50 px-3 py-2 text-sm text-ink-500 cursor-not-allowed"
             />
@@ -126,17 +166,17 @@
             <select
               id="user_id"
               name="user_id"
-              value={userForm.user_id}
+              value={formData.user_id}
               class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
             >
               <option value="">Select a user…</option>
               {#each availableProfiles as profile}
-                <option value={profile.id}>{profile.full_name} ({profile.email ?? 'no email'})</option>
+                <option value={profile.id}>{profile.full_name}</option>
               {/each}
             </select>
           {/if}
-          {#if errors.user_id}
-            <p class="text-xs text-danger">{errors.user_id}</p>
+          {#if errors.user_id?.[0]}
+            <p class="text-xs text-danger">{errors.user_id?.[0]}</p>
           {/if}
         </div>
 
@@ -145,7 +185,7 @@
           <select
             id="role"
             name="role"
-            value={userForm.role}
+            value={formData.role}
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
           >
             <option value="">Select role…</option>
@@ -155,14 +195,14 @@
             <option value="bursar">Bursar</option>
             <option value="parent">Parent</option>
           </select>
-          {#if errors.role}
-            <p class="text-xs text-danger">{errors.role}</p>
+          {#if errors.role?.[0]}
+            <p class="text-xs text-danger">{errors.role?.[0]}</p>
           {/if}
         </div>
 
-        {#if message}
-          <div class="rounded-lg px-4 py-2 text-sm {message.success ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">
-            {message.text}
+        {#if msg}
+          <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">
+            {msg.text}
           </div>
         {/if}
 
@@ -170,7 +210,7 @@
           <Dialog.Close>
             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
           </Dialog.Close>
-          <Button type="submit" variant="primary" size="md">
+          <Button type="submit" variant="primary" size="md" {submitting} disabled={submitting}>
             {editingUser ? 'Update' : 'Assign'}
           </Button>
         </div>
@@ -192,7 +232,7 @@
         </div>
         <h3 class="text-base font-semibold text-ink-900">Remove User Role</h3>
         <p class="mt-2 text-sm text-ink-500">
-          Are you sure you want to remove the role <strong>{roleLabels[deletingUser?.role] ?? deletingUser?.role}</strong> from this user?
+          Are you sure you want to remove the role <strong>{deletingUser ? (roleLabels[deletingUser.role] ?? deletingUser.role) : ''}</strong> from this user?
         </p>
       </div>
 

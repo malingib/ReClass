@@ -1,48 +1,88 @@
 <script lang="ts">
-  // @ts-nocheck
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import { superForm } from 'sveltekit-superforms';
-  import { zodClient } from 'sveltekit-superforms/adapters';
   import { Dialog } from 'bits-ui';
   import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
+  import type { ActionResult } from '@sveltejs/kit';
+  import { dispatchToast } from '$lib/notifications';
+
+  interface Fee {
+    id: string;
+    name: string;
+    amount: number;
+    due_date: string | null;
+    term: string | null;
+  }
+
+  interface ActionData extends Record<string, unknown> {
+    message?: string;
+    errors?: Record<string, string[]>;
+  }
 
   const { data }: { data: PageData } = $props();
 
   const fees = $derived(data.fees);
 
-  const { form, errors, enhance: superEnhance, message, reset } = superForm(data.form, {
-    validators: zodClient(),
-  });
-
-  const feeForm = form;
+  let formData = $state<Record<string, unknown>>({});
+  let errors = $state<Record<string, string[]>>({});
+  let msg = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+  let submitting = $state(false);
 
   let showCreate = $state(false);
-  let editingFee = $state<any | null>(null);
-  let deletingFee = $state<any | null>(null);
+  let editingFee = $state<Fee | null>(null);
+  let deletingFee = $state<Fee | null>(null);
+
+  function handleSubmit() {
+    submitting = true;
+    errors = {};
+    msg = null;
+    return async ({ result, update }: { result: ActionResult<ActionData, ActionData>; update: (_opts?: { reset?: boolean }) => void }) => {
+      try {
+        if (result.type === 'failure' && result.data) {
+          if (result.data.errors) errors = result.data.errors;
+          if (result.data.message) msg = { type: 'error', text: result.data.message };
+          dispatchToast('Error', result.data.message ?? 'Please fix the highlighted fields.');
+        }
+        if (result.type === 'error') {
+          msg = { type: 'error', text: 'A network error occurred. Please check your connection and try again.' };
+          dispatchToast('Network Error', 'Please check your connection.');
+        }
+        if (result.type === 'success') {
+          msg = { type: 'success', text: result.data?.message ?? 'Saved' };
+          dispatchToast('Saved', result.data?.message ?? 'Changes saved successfully.');
+          formData = {};
+          editingFee = null;
+          showCreate = false;
+        }
+        update();
+      } finally {
+        submitting = false;
+      }
+    };
+  }
 
   function openCreate() {
-    reset();
+    formData = {};
     editingFee = null;
     showCreate = true;
   }
 
-  function openEdit(f: any) {
+  function openEdit(f: Fee) {
     editingFee = f;
-    reset({
+    formData = {
       id: f.id,
       name: f.name,
       amount: f.amount,
       due_date: f.due_date ?? '',
       term: f.term ?? '',
-    });
+    };
     showCreate = true;
   }
 
-  function openDelete(f: any) {
+  function openDelete(f: Fee) {
     deletingFee = f;
   }
 </script>
@@ -80,45 +120,45 @@
         </Dialog.Close>
       </div>
 
-      <form method="POST" action={editingFee ? '?/update' : '?/create'} use:superEnhance class="px-6 py-5 space-y-4">
+      <form method="POST" action={editingFee ? '?/update' : '?/create'} use:enhance={handleSubmit} class="px-6 py-5 space-y-4">
         {#if editingFee}
           <input type="hidden" name="id" value={editingFee.id} />
         {/if}
 
         <div class="space-y-1.5">
           <label for="name" class="text-xs font-medium text-ink-700">Fee Name</label>
-          <input id="name" name="name" type="text" bind:value={feeForm.name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Term 1 Remedial Fee" />
-          {#if errors.name}<p class="text-xs text-danger">{errors.name}</p>{/if}
+          <input id="name" name="name" type="text" bind:value={formData.name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Term 1 Remedial Fee" />
+          {#if errors.name?.[0]}<p class="text-xs text-danger">{errors.name?.[0]}</p>{/if}
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <label for="amount" class="text-xs font-medium text-ink-700">Amount (KES)</label>
-            <input id="amount" name="amount" type="number" step="0.01" bind:value={feeForm.amount} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="5000" />
-            {#if errors.amount}<p class="text-xs text-danger">{errors.amount}</p>{/if}
+            <input id="amount" name="amount" type="number" step="0.01" bind:value={formData.amount} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="5000" />
+            {#if errors.amount?.[0]}<p class="text-xs text-danger">{errors.amount?.[0]}</p>{/if}
           </div>
           <div class="space-y-1.5">
             <label for="due_date" class="text-xs font-medium text-ink-700">Due Date</label>
-            <input id="due_date" name="due_date" type="date" bind:value={feeForm.due_date} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" />
-            {#if errors.due_date}<p class="text-xs text-danger">{errors.due_date}</p>{/if}
+            <input id="due_date" name="due_date" type="date" bind:value={formData.due_date} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" />
+            {#if errors.due_date?.[0]}<p class="text-xs text-danger">{errors.due_date?.[0]}</p>{/if}
           </div>
         </div>
 
         <div class="space-y-1.5">
           <label for="term" class="text-xs font-medium text-ink-700">Term</label>
-          <input id="term" name="term" type="text" bind:value={feeForm.term} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Term 1, 2026" />
-          {#if errors.term}<p class="text-xs text-danger">{errors.term}</p>{/if}
+          <input id="term" name="term" type="text" bind:value={formData.term} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Term 1, 2026" />
+          {#if errors.term?.[0]}<p class="text-xs text-danger">{errors.term?.[0]}</p>{/if}
         </div>
 
-        {#if message}
-          <div class="rounded-lg px-4 py-2 text-sm {message.success ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{message.text}</div>
+        {#if msg}
+          <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{msg.text}</div>
         {/if}
 
         <div class="flex justify-end gap-3 pt-2">
           <Dialog.Close>
             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
           </Dialog.Close>
-          <Button type="submit" variant="primary" size="md">{editingFee ? 'Update' : 'Create'}</Button>
+          <Button type="submit" variant="primary" size="md" {submitting} disabled={submitting}>{editingFee ? 'Update' : 'Create'}</Button>
         </div>
       </form>
     </Dialog.Content>

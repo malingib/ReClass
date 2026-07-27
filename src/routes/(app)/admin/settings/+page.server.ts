@@ -35,15 +35,15 @@ export const actions: Actions = {
     const sb = locals.srv;
     const form = await request.formData();
 
-    const name = form.get('name') as string;
-    const logo_url = form.get('logo_url') as string;
-    const brand_primary = form.get('brand_primary') as string;
-    const academic_year = form.get('academic_year') as string;
-    const mpesa_shortcode = form.get('mpesa_shortcode') as string;
-    const mpesa_paybill = form.get('mpesa_paybill') as string;
-    const timezone = form.get('timezone') as string;
-    const currency = form.get('currency') as string;
-    const payroll_rate_per_session = parseFloat(form.get('payroll_rate_per_session') as string) || 0;
+    const name = String(form.get('name') ?? '');
+    const logo_url = String(form.get('logo_url') ?? '');
+    const brand_primary = String(form.get('brand_primary') ?? '');
+    const academic_year = String(form.get('academic_year') ?? '');
+    const mpesa_shortcode = String(form.get('mpesa_shortcode') ?? '');
+    const mpesa_paybill = String(form.get('mpesa_paybill') ?? '');
+    const timezone = String(form.get('timezone') ?? '');
+    const currency = String(form.get('currency') ?? '');
+    const payroll_rate_per_session = parseFloat(String(form.get('payroll_rate_per_session') ?? '0')) || 0;
 
     // Settings JSONB — SMS toggles and other preferences
     const sms_attendance = form.get('sms_attendance') === 'on';

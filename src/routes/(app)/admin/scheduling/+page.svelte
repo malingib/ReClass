@@ -1,7 +1,8 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
+  import type { PageData } from './$types';
 
-  const { data } = $props();
+  const { data }: { data: PageData } = $props();
 
   interface Session {
     id: string; title: string; subject: string; grade: string; teacher: string;
@@ -10,9 +11,9 @@
 
   interface Option { id: string; name: string; }
 
-  const subjects: Option[] = $derived((data as any).subjects ?? []);
-  const teachers: Option[] = $derived((data as any).teachers ?? []);
-  const sessions: Session[] = $derived((data as any).schedules ?? []);
+  const subjects: Option[] = $derived(data.subjects ?? []);
+  const teachers: Option[] = $derived(data.teachers ?? []);
+  const sessions: Session[] = $derived(data.schedules ?? []);
 
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const dayOptions = dayLabels.map((l, i) => ({ value: i + 1, label: l }));
@@ -68,14 +69,11 @@
   let newEnd = $state('15:00');
   let newRoom = $state('');
   const newSlot = $state('');
-  const submitting = $state(false);
-  const formError = $state('');
 
   function confirmDelete(e: Event) {
     if (!confirm('Archive this recurring session?')) e.preventDefault();
   }
 
-  const dayColors: Record<number, string> = { 1: 'bg-brand-50 text-brand-700', 2: 'bg-violet-50 text-violet-700', 3: 'bg-amber-50 text-amber-700', 4: 'bg-rose-50 text-rose-700', 5: 'bg-cyan-50 text-cyan-700', 6: 'bg-emerald-50 text-emerald-700', 7: 'bg-slate-50 text-slate-700' };
 </script>
 
 <DashboardContent title="Remedial scheduling" subtitle="Set times for remedial classes — calendar view with session badges">
@@ -114,7 +112,7 @@
           <label for="session-teacher" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-ink-500">Teacher</label>
           <select id="session-teacher" name="teacher_id" bind:value={newTeacher} required class="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900">
             <option value="">Select teacher…</option>
-            {#each teachers as t (t.id)}<option value={t.id}>{(t as any).first_name} {(t as any).last_name}</option>{/each}
+            {#each teachers as t (t.id)}<option value={t.id}>{t.name}</option>{/each}
           </select>
         </div>
         <div>

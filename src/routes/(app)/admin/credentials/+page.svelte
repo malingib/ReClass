@@ -97,15 +97,18 @@
     <Card>
       <CardContent>
         <h3 class="mb-4 text-sm font-semibold text-ink-800">{editId ? 'Edit Credential' : 'Add Credential'}</h3>
-        <form method="POST" action="?/save" use:enhance={() => { saving = true; }}>
+        <form method="POST" action="?/save" use:enhance={() => {
+          saving = true;
+          return async () => { saving = false; };
+        }}>
           {#if editId}
             <input type="hidden" name="id" value={editId} />
           {/if}
           <div class="space-y-4">
             <div>
-              <label class="mb-1.5 block text-sm font-medium text-ink-700">Provider</label>
+              <label for="cred-provider" class="mb-1.5 block text-sm font-medium text-ink-700">Provider</label>
               <select
-                name="provider"
+                id="cred-provider" name="provider"
                 bind:value={formProvider}
                 class="w-full rounded-lg border border-ink-200 px-4 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               >
@@ -114,9 +117,9 @@
               </select>
             </div>
             <div>
-              <label class="mb-1.5 block text-sm font-medium text-ink-700">Environment</label>
+              <label for="cred-env" class="mb-1.5 block text-sm font-medium text-ink-700">Environment</label>
               <select
-                name="environment"
+                id="cred-env" name="environment"
                 bind:value={formEnv}
                 class="w-full rounded-lg border border-ink-200 px-4 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               >
@@ -125,19 +128,19 @@
               </select>
             </div>
             <div>
-              <label class="mb-1.5 block text-sm font-medium text-ink-700">Label</label>
+              <label for="cred-label" class="mb-1.5 block text-sm font-medium text-ink-700">Label</label>
               <input
-                name="label" type="text" bind:value={formLabel}
+                id="cred-label" name="label" type="text" bind:value={formLabel}
                 class="w-full rounded-lg border border-ink-200 px-4 py-2.5 text-sm text-ink-900 placeholder-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 placeholder="e.g. Production Daraja"
               />
             </div>
             <div>
-              <label class="mb-1.5 block text-sm font-medium text-ink-700">
+              <label for="cred-blob" class="mb-1.5 block text-sm font-medium text-ink-700">
                 {formProvider === 'mpesa' ? 'JSON Blob (consumer_key, consumer_secret, passkey, shortcode)' : 'API Token'}
               </label>
               <textarea
-                name="encrypted_blob"
+                id="cred-blob" name="encrypted_blob"
                 bind:value={formBlob}
                 rows={4}
                 class="w-full rounded-lg border border-ink-200 px-4 py-2.5 text-sm text-ink-900 font-mono placeholder-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"

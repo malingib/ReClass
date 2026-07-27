@@ -12,6 +12,7 @@ declare global {
       tenantId: string;
       impersonating: boolean;
       srv: SupabaseClient<Database>;
+      requestId: string;
     }
     interface PageData {
       session?: Session | null;

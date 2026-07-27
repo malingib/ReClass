@@ -2,8 +2,6 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import CardHeader from '$lib/components/ui/card-header.svelte';
-  import CardContent from '$lib/components/ui/card-content.svelte';
   import { enhance } from '$app/forms';
 
   const { data, form } = $props();
@@ -83,7 +81,7 @@
 
 {#if creating && selectedInvoice}
   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" onclick={closeForm} onkeydown={(e) => e.key === 'Escape' && closeForm()}>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" tabindex="-1" onclick={closeForm} onkeydown={(e) => e.key === 'Escape' && closeForm()}>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div class="w-full max-w-md rounded-2xl border border-border bg-white shadow-xl" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
       <form method="POST" action="?/create" use:enhance>

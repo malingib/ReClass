@@ -1,88 +1,83 @@
-// @ts-nocheck
-import { superValidate, message } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
 import { z } from 'zod/v3';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/auth';
+import { parseForm } from '$lib/client/validation';
 
 const userSchema = z.object({
   id: z.string().optional(),
-  user_id: z.string().min(1, 'User is required'),
+  user_id: z.string().min(1, 'User is required').max(100),
   role: z.enum(['school_admin', 'principal', 'teacher', 'bursar', 'parent']),
 });
 
-const deleteSchema = z.object({
-  id: z.string(),
-});
+const deleteSchema = z.object({ id: z.string() });
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-  const form = await superValidate(zod(userSchema));
   const db = locals.srv;
 
-  // Get all user_roles with profile info
-  let q = db
+  const { data: users } = await db
     .from('user_roles')
-    .select('id, user_id, role, profiles!inner(id, full_name, email)')
+    .select('id, user_id, role, profiles!inner(id, full_name)')
+    .eq('tenant_id', tenantId)
     .order('role');
-  q = q.eq('tenant_id', tenantId);
-  const { data: users } = await q;
 
-  // Get available profiles (users without a role yet, for the create form)
-  let profileQ = db
+  const { data: allProfiles } = await db
     .from('profiles')
-    .select('id, full_name, email');
-  profileQ = profileQ.eq('tenant_id', tenantId);
-  const { data: allProfiles } = await profileQ;
+    .select('id, full_name')
+    .eq('tenant_id', tenantId);
 
-  // Filter profiles that already have a role
   const userIdsWithRoles = new Set((users ?? []).map(u => u.user_id));
   const availableProfiles = (allProfiles ?? []).filter(p => !userIdsWithRoles.has(p.id));
 
   return {
-    form,
     users: users ?? [],
-    availableProfiles: availableProfiles,
+    availableProfiles,
   };
 };
 
 export const actions = {
   create: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const form = await superValidate(request, zod(userSchema));
-    if (!form.valid) return fail(400, { form });
-    const { data: profile } = await locals.srv.from('profiles').select('id').eq('id', form.data.user_id).eq('tenant_id', tenantId).maybeSingle();
-    if (!profile) return message(form, 'User not found in this school', { status: 404 });
+    const fd = await request.formData();
+    const v = parseForm(userSchema, fd);
+    if (!v.success) return fail(400, { errors: v.errors });
+    const { data: profile } = await locals.srv.from('profiles').select('id').eq('id', v.data.user_id).eq('tenant_id', tenantId).maybeSingle();
+    if (!profile) return fail(404, { message: 'User not found in this school' });
     const { error } = await locals.srv.from('user_roles').insert({
       tenant_id: tenantId,
-      user_id: form.data.user_id,
-      role: form.data.role,
+      user_id: v.data.user_id,
+      role: v.data.role,
     });
-    if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
-    return message(form, 'User role assigned successfully');
+    if (error) {
+      if (error.code === '23505') return fail(409, { message: 'This user already has this role assigned.' });
+      return fail(500, { message: `Failed: ${error.message}` });
+    }
+    return { success: true, message: 'User role assigned successfully' };
   },
 
   update: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const form = await superValidate(request, zod(userSchema));
-    if (!form.valid) return fail(400, { form });
-    if (!form.data.id) return message(form, 'ID required', { status: 400 });
+    const fd = await request.formData();
+    const v = parseForm(userSchema, fd);
+    if (!v.success) return fail(400, { errors: v.errors });
+    if (!v.data.id) return fail(400, { message: 'ID required' });
 
     const { error } = await locals.srv.from('user_roles')
-      .update({ role: form.data.role })
-      .eq('id', form.data.id)
+      .update({ role: v.data.role })
+      .eq('id', v.data.id)
       .eq('tenant_id', tenantId);
-    if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
-    return message(form, 'User role updated successfully');
+    if (error) return fail(500, { message: `Failed: ${error.message}` });
+    return { success: true, message: 'User role updated successfully' };
   },
 
   delete: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const form = await superValidate(request, zod(deleteSchema));
-    if (!form.valid) return fail(400, { form });
-    const { error } = await locals.srv.from('user_roles').delete().eq('id', form.data.id).eq('tenant_id', tenantId);
-    if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
-    return message(form, 'User role removed successfully');
+    const fd = await request.formData();
+    const v = parseForm(deleteSchema, fd);
+    if (!v.success) return fail(400, { errors: v.errors });
+    const { error } = await locals.srv.from('user_roles').delete().eq('id', v.data.id).eq('tenant_id', tenantId);
+    if (error) return fail(500, { message: `Failed: ${error.message}` });
+    return { success: true, message: 'User role removed successfully' };
   },
 } satisfies Actions;

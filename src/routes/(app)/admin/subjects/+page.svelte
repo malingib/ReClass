@@ -1,48 +1,84 @@
 <script lang="ts">
-  // @ts-nocheck
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import Button from '$lib/components/ui/button.svelte';
-  import { superForm } from 'sveltekit-superforms';
-  import { zodClient } from 'sveltekit-superforms/adapters';
   import { Dialog } from 'bits-ui';
   import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
+  import type { ActionResult } from '@sveltejs/kit';
+  import { dispatchToast } from '$lib/notifications';
+
+  interface Subject {
+    id: string;
+    name: string;
+    code: string | null;
+  }
+
+  interface ActionData extends Record<string, unknown> {
+    message?: string;
+    errors?: Record<string, string[]>;
+  }
 
   const { data }: { data: PageData } = $props();
 
   const subjects = $derived(data.subjects);
 
-  const { form, errors, enhance: superEnhance, message, reset } = superForm(data.form, {
-    validators: zodClient(),
-  });
-
-  const subjectForm = form;
+  let formData = $state<Record<string, unknown>>({});
+  let errors = $state<Record<string, string[]>>({});
+  let msg = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+  let submitting = $state(false);
 
   let showCreate = $state(false);
-  let editingSubject = $state<any | null>(null);
-  let deletingSubject = $state<any | null>(null);
+  let editingSubject = $state<Subject | null>(null);
+  let deletingSubject = $state<Subject | null>(null);
+
+  function handleSubmit() {
+    submitting = true;
+    errors = {};
+    msg = null;
+    return async ({ result, update }: { result: ActionResult<ActionData, ActionData>; update: (_opts?: { reset?: boolean }) => void }) => {
+      try {
+        if (result.type === 'failure' && result.data) {
+          if (result.data.errors) errors = result.data.errors;
+          if (result.data.message) msg = { type: 'error', text: result.data.message };
+          dispatchToast('Error', result.data.message ?? 'Please fix the highlighted fields.');
+        }
+        if (result.type === 'error') {
+          msg = { type: 'error', text: 'A network error occurred. Please check your connection and try again.' };
+          dispatchToast('Network Error', 'Please check your connection.');
+        }
+        if (result.type === 'success') {
+          msg = { type: 'success', text: result.data?.message ?? 'Saved' };
+          dispatchToast('Saved', result.data?.message ?? 'Changes saved successfully.');
+          formData = {};
+          editingSubject = null;
+          showCreate = false;
+        }
+        update();
+      } finally {
+        submitting = false;
+      }
+    };
+  }
 
   function openCreate() {
-    reset();
+    formData = {};
     editingSubject = null;
     showCreate = true;
   }
 
-  function openEdit(s: any) {
+  function openEdit(s: Subject) {
     editingSubject = s;
-    reset({
+    formData = {
       id: s.id,
       name: s.name,
       code: s.code ?? '',
-      description: s.description ?? '',
-      status: s.status,
-    });
+    };
     showCreate = true;
   }
 
-  function openDelete(s: any) {
+  function openDelete(s: Subject) {
     deletingSubject = s;
   }
 </script>
@@ -59,8 +95,6 @@
     columns={[
       { key: 'name', label: 'Name', sortable: true },
       { key: 'code', label: 'Code' },
-      { key: 'description', label: 'Description' },
-      { key: 'status', label: 'Status', sortable: true },
     ]}
     emptyMessage="No subjects found"
     onEdit={openEdit}
@@ -80,47 +114,32 @@
         </Dialog.Close>
       </div>
 
-      <form method="POST" action={editingSubject ? '?/update' : '?/create'} use:superEnhance class="px-6 py-5 space-y-4">
+      <form method="POST" action={editingSubject ? '?/update' : '?/create'} use:enhance={handleSubmit} class="px-6 py-5 space-y-4">
         {#if editingSubject}
           <input type="hidden" name="id" value={editingSubject.id} />
         {/if}
 
         <div class="space-y-1.5">
           <label for="name" class="text-xs font-medium text-ink-700">Name</label>
-          <input id="name" name="name" type="text" bind:value={subjectForm.name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Mathematics" />
-          {#if errors.name}<p class="text-xs text-danger">{errors.name}</p>{/if}
+          <input id="name" name="name" type="text" bind:value={formData.name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Mathematics" />
+          {#if errors.name?.[0]}<p class="text-xs text-danger">{errors.name?.[0]}</p>{/if}
         </div>
 
         <div class="space-y-1.5">
           <label for="code" class="text-xs font-medium text-ink-700">Code</label>
-          <input id="code" name="code" type="text" bind:value={subjectForm.code} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="MATH" />
-          {#if errors.code}<p class="text-xs text-danger">{errors.code}</p>{/if}
+          <input id="code" name="code" type="text" bind:value={formData.code} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="MATH" />
+          {#if errors.code?.[0]}<p class="text-xs text-danger">{errors.code?.[0]}</p>{/if}
         </div>
 
-        <div class="space-y-1.5">
-          <label for="description" class="text-xs font-medium text-ink-700">Description</label>
-          <textarea id="description" name="description" bind:value={subjectForm.description} rows={2} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Brief description..."></textarea>
-          {#if errors.description}<p class="text-xs text-danger">{errors.description}</p>{/if}
-        </div>
-
-        <div class="space-y-1.5">
-          <label for="status" class="text-xs font-medium text-ink-700">Status</label>
-          <select id="status" name="status" bind:value={subjectForm.status} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20">
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          {#if errors.status}<p class="text-xs text-danger">{errors.status}</p>{/if}
-        </div>
-
-        {#if message}
-          <div class="rounded-lg px-4 py-2 text-sm {message.success ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{message.text}</div>
+        {#if msg}
+          <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{msg.text}</div>
         {/if}
 
         <div class="flex justify-end gap-3 pt-2">
           <Dialog.Close>
             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
           </Dialog.Close>
-          <Button type="submit" variant="primary" size="md">{editingSubject ? 'Update' : 'Create'}</Button>
+          <Button type="submit" variant="primary" size="md" {submitting} disabled={submitting}>{editingSubject ? 'Update' : 'Create'}</Button>
         </div>
       </form>
     </Dialog.Content>

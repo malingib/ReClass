@@ -396,7 +396,7 @@ Threat model, OWASP Top 10 mapped, auth (Supabase + MFA + lockout), RLS authoriz
 
 ## 19. Integrations
 - **Mobiwave SMS Platform** (`https://sms.mobiwave.co.ke/api/v3`) — the ONLY SMS gateway (Bearer token). Endpoints: `/sms/send` (single/multi), `/sms/campaign` (contact-list bulk), `/contacts` (group sync), `/balance`, `/me`. Full spec in `integrations.md`. WhatsApp is intentionally NOT in scope.
-- **Safaricom Daraja (M-Pesa STK Push)** — payments. Per-tenant paybill/shortcode + consumer key/secret/passkey. Callback HMAC-verified.
+- **Safaricom Daraja (M-Pesa STK Push)** — payments. Per-tenant paybill/shortcode + consumer key/secret/passkey. Security: CheckoutRequestID uniqueness, state machine (pending→completed), FOR UPDATE invoice lock.
 - **Email/SMTP or Mailgun** — transactional (invites, reports).
 - **Supabase** — core BaaS (Auth/DB/Storage/Realtime).
 - **Google Calendar / M365** (optional export, future).

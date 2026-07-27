@@ -18,7 +18,7 @@
 | A05 | Misconfig | Secure headers (CSP, HSTS, X-Frame-Options); no verbose errors |
 | A06 | Vulnerable Components | `npm audit` in CI; pinned deps; Dependabot |
 | A07 | Auth Failures | Supabase Auth + MFA + lockout (5 fails) + CAPTCHA |
-| A08 | Integrity Failures | Signed webhooks (M-Pesa HMAC); CI signing; SRI on assets |
+| A08 | Integrity Failures | CI signing; SRI on assets |
 | A09 | Logging Failures | Centralized logs; audit_log append-only; alerting |
 | A10 | SSRF | Edge Functions egress allowlist; no user-supplied URLs fetched |
 
@@ -42,7 +42,7 @@
 - **SQLi:** ORM/PostgREST parameterized; Zod validates all inputs before query.
 
 ## 7. M-Pesa Callback Security
-- Verify `x-mpesa-signature` HMAC-SHA256 vs shared key on every callback. Reject unsigned. Idempotent by `CheckoutRequestID`.
+- Daraja STK callback has no HMAC — security relies on CheckoutRequestID uniqueness + state machine (pending→completed) + FOR UPDATE invoice row lock. Idempotent by `CheckoutRequestID`.
 
 ## 8. Rate Limiting & Monitoring
 - Per tenant/user/phone limits (see api.md). Failed auth, 403s, 429s monitored; anomaly alerts.

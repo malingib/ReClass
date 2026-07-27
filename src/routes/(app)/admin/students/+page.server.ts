@@ -1,74 +1,99 @@
-// @ts-nocheck
-import { superValidate, message } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
 import { z } from 'zod/v3';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/auth';
+import { parseForm } from '$lib/client/validation';
+import { getStudentsByTenant } from '$lib/server/students';
+import { PAGE_LIST_MEDIUM } from '$lib/config';
 
 const studentSchema = z.object({
   id: z.string().optional(),
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
-  admission_no: z.string().min(1, 'Admission no is required'),
-  grade: z.string().optional(),
+  first_name: z.string().min(1, 'First name is required').max(100),
+  last_name: z.string().min(1, 'Last name is required').max(100),
+  admission_no: z.string().min(1, 'Admission no is required').max(50),
+  grade: z.string().max(50).optional(),
   status: z.enum(['active', 'inactive']),
 });
 
-const deleteSchema = z.object({
-  id: z.string(),
-});
+const deleteSchema = z.object({ id: z.string() });
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-  const form = await superValidate(zod(studentSchema));
-  const db = locals.srv;
-  const q = db.from('students')
-    .select('id, admission_no, first_name, last_name, grade, status, created_at')
-    .order('created_at', { ascending: false });
-  q.eq('tenant_id', tenantId);
-  const { data: students } = await q;
+  const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1'));
+  const search = url.searchParams.get('search') ?? '';
+  const sortKey = url.searchParams.get('sort');
+  const sortDir = url.searchParams.get('dir') === 'desc' ? 'desc' : 'asc';
 
-  return { form, students: students ?? [] };
+  const result = await getStudentsByTenant(locals.srv, tenantId, {
+    page,
+    pageSize: PAGE_LIST_MEDIUM,
+    search,
+    sortKey,
+    sortDir,
+  });
+
+  return {
+    students: result.data,
+    pagination: {
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      search,
+      sortKey,
+      sortDir: sortDir as 'asc' | 'desc',
+    },
+  };
 };
 
 export const actions = {
   create: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const form = await superValidate(request, zod(studentSchema));
-    if (!form.valid) return fail(400, { form });
+    const fd = await request.formData();
+    const v = parseForm(studentSchema, fd);
+    if (!v.success) return fail(400, { errors: v.errors });
     const { error } = await locals.srv.from('students').insert({
       tenant_id: tenantId,
-      first_name: form.data.first_name,
-      last_name: form.data.last_name,
-      admission_no: form.data.admission_no,
-      grade: form.data.grade || null,
-      status: form.data.status ?? 'active',
+      first_name: v.data.first_name,
+      last_name: v.data.last_name,
+      admission_no: v.data.admission_no,
+      grade: v.data.grade || null,
+      status: v.data.status ?? 'active',
     });
-    if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
-    return message(form, 'Student created successfully');
+    if (error) {
+      if (error.code === '23505') return fail(409, { message: 'A student with this admission number already exists.' });
+      return fail(500, { message: `Failed: ${error.message}` });
+    }
+    return { success: true, message: 'Student created successfully' };
   },
 
   update: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const form = await superValidate(request, zod(studentSchema));
-    if (!form.valid) return fail(400, { form });
-    if (!form.data.id) return message(form, 'ID required', { status: 400 });
+    const fd = await request.formData();
+    const v = parseForm(studentSchema, fd);
+    if (!v.success) return fail(400, { errors: v.errors });
+    if (!v.data.id) return fail(400, { message: 'ID required' });
 
     const { error } = await locals.srv.from('students')
-      .update({ first_name: form.data.first_name, last_name: form.data.last_name, admission_no: form.data.admission_no, grade: form.data.grade || null, status: form.data.status ?? 'active' })
-      .eq('id', form.data.id)
+      .update({
+        first_name: v.data.first_name,
+        last_name: v.data.last_name,
+        admission_no: v.data.admission_no,
+        grade: v.data.grade || null,
+        status: v.data.status ?? 'active',
+      })
+      .eq('id', v.data.id)
       .eq('tenant_id', tenantId);
-    if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
-    return message(form, 'Student updated successfully');
+    if (error) return fail(500, { message: `Failed: ${error.message}` });
+    return { success: true, message: 'Student updated successfully' };
   },
 
   delete: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const form = await superValidate(request, zod(deleteSchema));
-    if (!form.valid) return fail(400, { form });
-    const { error } = await locals.srv.from('students').delete().eq('id', form.data.id).eq('tenant_id', tenantId);
-    if (error) return message(form, `Failed: ${error.message}`, { status: 500 });
-    return message(form, 'Student deleted successfully');
+    const fd = await request.formData();
+    const v = parseForm(deleteSchema, fd);
+    if (!v.success) return fail(400, { errors: v.errors });
+    const { error } = await locals.srv.from('students').delete().eq('id', v.data.id).eq('tenant_id', tenantId);
+    if (error) return fail(500, { message: `Failed: ${error.message}` });
+    return { success: true, message: 'Student deleted successfully' };
   },
 } satisfies Actions;

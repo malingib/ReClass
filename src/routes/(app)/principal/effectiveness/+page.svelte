@@ -1,10 +1,14 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
-  import LineChart from '$lib/components/charts/LineChart.svelte';
 
   const { data } = $props();
   const trend = $derived(data.trend ?? []);
   const summary = $derived(data.summary ?? []);
+
+  let LineChart = $state<any>(null);
+  $effect(() => {
+    import('$lib/components/charts/LineChart.svelte').then(m => { LineChart = m.default; });
+  });
 </script>
 
 <DashboardContent title="Program Effectiveness" subtitle="Teacher attendance rate trends and remediation impact">

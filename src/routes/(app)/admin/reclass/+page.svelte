@@ -3,7 +3,6 @@
   import CardHeader from '$lib/components/ui/card-header.svelte';
   import CardContent from '$lib/components/ui/card-content.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import LineChart from '$lib/components/charts/LineChart.svelte';
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import RecentActivity from '$lib/components/dashboard/RecentActivity.svelte';
 
@@ -14,13 +13,18 @@
   const trend = $derived(data.trend);
   const trendIsAllZero = $derived(trend.length > 0 && trend.every(d => d.value === 0));
   const activity = $derived(data.activity);
+
+  let LineChart = $state<any>(null);
+  $effect(() => {
+    import('$lib/components/charts/LineChart.svelte').then(m => { LineChart = m.default; });
+  });
 </script>
 
 {#snippet manageStudentsAction()}
   <a href="/admin/students" class="text-sm font-medium text-brand-600 hover:text-brand-700">Manage students &rarr;</a>
 {/snippet}
 {#snippet reconcileAction()}
-  <a href="/admin/reconciliation" class="text-sm font-medium text-brand-600 hover:text-brand-700">Reconcile now &rarr;</a>
+  <a href="/admin/parent-payments" class="text-sm font-medium text-brand-600 hover:text-brand-700">View payments &rarr;</a>
 {/snippet}
 {#snippet openCalendarAction()}
   <a href="/admin/scheduling" class="text-sm font-medium text-brand-600 hover:text-brand-700">Open calendar &rarr;</a>
@@ -94,7 +98,11 @@
             {/each}
           </div>
           {#if trend.length > 0 && !trendIsAllZero}
-            <LineChart data={trend} unit="sessions" />
+            {#if LineChart}
+              <LineChart data={trend} unit="sessions" />
+            {:else}
+              <div class="h-[220px] w-full animate-pulse rounded-xl bg-ink-100"></div>
+            {/if}
           {:else}
             <div class="flex flex-col items-center justify-center py-12 text-ink-300">
               <svg class="mb-3 h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">

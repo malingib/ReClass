@@ -35,7 +35,7 @@ supabase/functions/   # Edge Functions: stk, mpesa-callback, scheduler, notifica
 
 ## Edge Functions
 ```
-supabase functions deploy stk --no-verify-jwt   # callback needs public, verify HMAC instead
+supabase functions deploy stk --no-verify-jwt   # callback needs public access
 supabase functions deploy mpesa-callback
 ```
 Local test: `supabase functions serve`.

@@ -10,7 +10,7 @@
   <DataTable data={fees} columns={[
     { key: 'name', label: 'Fee', sortable: true },
     { key: 'amount', label: 'Amount', render: (f: any) => `KES ${Number(f.amount).toLocaleString()}` },
-    { key: 'frequency', label: 'Cadence' },
-    { key: 'status', label: 'Status' },
+    { key: 'due_date', label: 'Due', render: (f: any) => f.due_date ? new Date(f.due_date).toLocaleDateString() : '—' },
+    { key: 'term', label: 'Term' },
   ]} emptyMessage="No fee records" />
 </DashboardContent>

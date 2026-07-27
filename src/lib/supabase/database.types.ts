@@ -311,18 +311,21 @@ export type Database = {
           parent_id: string
           relationship: string | null
           student_id: string
+          tenant_id: string | null
         }
         Insert: {
           is_primary?: boolean | null
           parent_id: string
           relationship?: string | null
           student_id: string
+          tenant_id?: string | null
         }
         Update: {
           is_primary?: boolean | null
           parent_id?: string
           relationship?: string | null
           student_id?: string
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -337,6 +340,51 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardians_link_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      impersonation_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          impersonator_id: string
+          ip_address: string | null
+          revoked_at: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          impersonator_id: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          impersonator_id?: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -968,24 +1016,30 @@ export type Database = {
       subjects: {
         Row: {
           code: string | null
+          created_at: string | null
           deleted_at: string | null
           id: string
           name: string
           tenant_id: string
+          updated_at: string | null
         }
         Insert: {
           code?: string | null
+          created_at?: string | null
           deleted_at?: string | null
           id?: string
           name: string
           tenant_id: string
+          updated_at?: string | null
         }
         Update: {
           code?: string | null
+          created_at?: string | null
           deleted_at?: string | null
           id?: string
           name?: string
           tenant_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1283,11 +1337,314 @@ export type Database = {
           },
         ]
       }
+      exam_results: {
+        Row: {
+          id: string
+          tenant_id: string
+          exam_id: string
+          student_id: string
+          subject_id: string
+          score: number
+          grade: string | null
+          remarks: string | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          exam_id: string
+          student_id: string
+          subject_id: string
+          score: number
+          grade?: string | null
+          remarks?: string | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          exam_id?: string
+          student_id?: string
+          subject_id?: string
+          score?: number
+          grade?: string | null
+          remarks?: string | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_results_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exams: {
+        Row: {
+          id: string
+          tenant_id: string
+          name: string
+          term: string | null
+          exam_date: string | null
+          max_score: number
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          name: string
+          term?: string | null
+          exam_date?: string | null
+          max_score: number
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          name?: string
+          term?: string | null
+          exam_date?: string | null
+          max_score?: number
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          id: string
+          tenant_id: string
+          conversation_id: string
+          sender_id: string
+          sender_role: string
+          recipient_id: string
+          body: string
+          read_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          conversation_id: string
+          sender_id: string
+          sender_role: string
+          recipient_id: string
+          body: string
+          read_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          conversation_id?: string
+          sender_id?: string
+          sender_role?: string
+          recipient_id?: string
+          body?: string
+          read_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_invoices: {
+        Row: {
+          id: string
+          tenant_id: string
+          teacher_id: string
+          amount_due: number
+          amount_paid: number
+          status: string
+          period_start: string | null
+          period_end: string | null
+          occurrences_count: number | null
+          rate_per_session: number | null
+          due_date: string | null
+          paid_at: string | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          teacher_id: string
+          amount_due: number
+          amount_paid?: number
+          status?: string
+          period_start?: string | null
+          period_end?: string | null
+          occurrences_count?: number | null
+          rate_per_session?: number | null
+          due_date?: string | null
+          paid_at?: string | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          teacher_id?: string
+          amount_due?: number
+          amount_paid?: number
+          status?: string
+          period_start?: string | null
+          period_end?: string | null
+          occurrences_count?: number | null
+          rate_per_session?: number | null
+          due_date?: string | null
+          paid_at?: string | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_invoices_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sis_classes: {
+        Row: { id: string; tenant_id: string; name: string; stream: string | null; code: string; academic_year: string | null; homeroom_teacher_id: string | null; status: string; created_at: string | null; updated_at: string | null }
+        Insert: { id?: string; tenant_id: string; name: string; stream?: string | null; code: string; academic_year?: string | null; homeroom_teacher_id?: string | null; status?: string; created_at?: string | null; updated_at?: string | null }
+        Update: { id?: string; tenant_id?: string; name?: string; stream?: string | null; code?: string; academic_year?: string | null; homeroom_teacher_id?: string | null; status?: string; created_at?: string | null; updated_at?: string | null }
+        Relationships: [
+          { foreignKeyName: "sis_classes_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
+          { foreignKeyName: "sis_classes_homeroom_teacher_id_fkey"; columns: ["homeroom_teacher_id"]; isOneToOne: false; referencedRelation: "teachers"; referencedColumns: ["id"] },
+        ]
+      }
+      sis_admissions: {
+        Row: { id: string; tenant_id: string; student_id: string | null; admission_number: string; admission_date: string; grade_applied: string | null; status: string; previous_school: string | null; notes: string | null; created_by: string | null; created_at: string | null; updated_at: string | null }
+        Insert: { id?: string; tenant_id: string; student_id?: string | null; admission_number: string; admission_date?: string; grade_applied?: string | null; status?: string; previous_school?: string | null; notes?: string | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
+        Update: { id?: string; tenant_id?: string; student_id?: string | null; admission_number?: string; admission_date?: string; grade_applied?: string | null; status?: string; previous_school?: string | null; notes?: string | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
+        Relationships: [
+          { foreignKeyName: "sis_admissions_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
+          { foreignKeyName: "sis_admissions_student_id_fkey"; columns: ["student_id"]; isOneToOne: false; referencedRelation: "students"; referencedColumns: ["id"] },
+          { foreignKeyName: "sis_admissions_created_by_fkey"; columns: ["created_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+        ]
+      }
+      sis_enrollments: {
+        Row: { id: string; tenant_id: string; student_id: string; class_id: string; academic_year: string; status: string; enrolled_at: string; exited_at: string | null; created_at: string | null; updated_at: string | null }
+        Insert: { id?: string; tenant_id: string; student_id: string; class_id: string; academic_year: string; status?: string; enrolled_at?: string; exited_at?: string | null; created_at?: string | null; updated_at?: string | null }
+        Update: { id?: string; tenant_id?: string; student_id?: string; class_id?: string; academic_year?: string; status?: string; enrolled_at?: string; exited_at?: string | null; created_at?: string | null; updated_at?: string | null }
+        Relationships: [
+          { foreignKeyName: "sis_enrollments_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
+          { foreignKeyName: "sis_enrollments_student_id_fkey"; columns: ["student_id"]; isOneToOne: false; referencedRelation: "students"; referencedColumns: ["id"] },
+          { foreignKeyName: "sis_enrollments_class_id_fkey"; columns: ["class_id"]; isOneToOne: false; referencedRelation: "sis_classes"; referencedColumns: ["id"] },
+        ]
+      }
+      comm_announcements: {
+        Row: { id: string; tenant_id: string; title: string; body: string; audience: string; priority: string; status: string; published_at: string | null; created_by: string | null; created_at: string | null; updated_at: string | null }
+        Insert: { id?: string; tenant_id: string; title: string; body: string; audience?: string; priority?: string; status?: string; published_at?: string | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
+        Update: { id?: string; tenant_id?: string; title?: string; body?: string; audience?: string; priority?: string; status?: string; published_at?: string | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
+        Relationships: [
+          { foreignKeyName: "comm_announcements_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
+          { foreignKeyName: "comm_announcements_created_by_fkey"; columns: ["created_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+        ]
+      }
+      comm_templates: {
+        Row: { id: string; tenant_id: string; name: string; channel: string | null; subject: string | null; body: string; variables: string[] | null; created_by: string | null; created_at: string | null; updated_at: string | null }
+        Insert: { id?: string; tenant_id: string; name: string; channel?: string | null; subject?: string | null; body: string; variables?: string[] | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
+        Update: { id?: string; tenant_id?: string; name?: string; channel?: string | null; subject?: string | null; body?: string; variables?: string[] | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
+        Relationships: [
+          { foreignKeyName: "comm_templates_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
+          { foreignKeyName: "comm_templates_created_by_fkey"; columns: ["created_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      aggregate_payroll_counts: {
+        Args: {
+          p_period_end: string
+          p_period_start: string
+          p_tenant_id: string
+        }
+        Returns: {
+          occurrences_count: number
+          teacher_id: string
+        }[]
+      }
       decrypt_credential: { Args: { p_id: string }; Returns: Json }
       encrypt_credential: { Args: { p_json: Json }; Returns: string }
       generate_future_session_occurrences: {
@@ -1299,6 +1656,16 @@ export type Database = {
         Returns: number
       }
       get_admin_dashboard_stats: { Args: never; Returns: Json }
+      grant_waiver: {
+        Args: {
+          p_amount: number
+          p_granted_by: string
+          p_invoice_id: string
+          p_reason: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       mark_own_teacher_attendance: {
         Args: {
           p_occurrence_id: string
@@ -1308,6 +1675,15 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: Json
+      }
+      rate_limit_gc: { Args: never; Returns: number }
+      rate_limit_hit: {
+        Args: { p_key: string; p_max: number; p_window_ms: number }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          reset_in_ms: number
+        }[]
       }
       reconcile_payment:
         | {
@@ -1347,10 +1723,9 @@ export type Database = {
         }
         Returns: Json
       }
-      set_tenant_context: {
-        Args: { p_role: string; p_tenant: string }
-        Returns: undefined
-      }
+      set_tenant_context:
+        | { Args: { p_role: string; p_tenant: string }; Returns: undefined }
+        | { Args: { p_tenant_id: string }; Returns: undefined }
       tenant_setting_enabled: {
         Args: { p_key: string; p_tenant: string }
         Returns: boolean

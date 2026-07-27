@@ -1,23 +1,21 @@
 import type { PageServerLoad } from './$types';
 import { requireTenantRole } from '$lib/server/auth';
+import { getAttendanceForEffectiveness } from '$lib/server/attendance';
+import { EXPORT_MAX_ROWS } from '$lib/config';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'principal');
-  const db = locals.srv;
 
-  const [attendanceRes, occurrencesRes] = await Promise.all([
-    db.from('teacher_attendance').select('id, status, marked_at, occurrence_id, teacher_id').eq('tenant_id', tenantId).limit(10000),
-    db.from('session_occurrences').select('id, status, occurs_on').eq('tenant_id', tenantId).limit(10000),
+  const [allAttendance, occurrences] = await Promise.all([
+    getAttendanceForEffectiveness(locals.srv, tenantId, EXPORT_MAX_ROWS),
+    locals.srv.from('session_occurrences').select('id, status, occurs_on').eq('tenant_id', tenantId).limit(EXPORT_MAX_ROWS).then(r => r.data ?? []),
   ]);
-
-  const allAttendance = attendanceRes.data ?? [];
-  const occurrences = occurrencesRes.data ?? [];
 
   const total = allAttendance.length;
   const present = allAttendance.filter(a => a.status === 'present' || a.status === 'late').length;
   const overallRate = total > 0 ? Math.round((present / total) * 100) : 0;
 
-  const doneSessions = occurrences.filter(o => o.status === 'done').length;
+  const doneSessions = occurrences.filter((o) => o.status === 'done').length;
   const totalSessions = occurrences.length;
 
   const last7Days: string[] = [];
@@ -29,8 +27,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const trend = last7Days.map(dateStr => {
-    const dayOccurrences = occurrences.filter(o => o.occurs_on?.startsWith(dateStr) ?? false);
-    const dayIds = new Set(dayOccurrences.map(o => o.id));
+    const dayOccurrences = occurrences.filter((o) => o.occurs_on?.startsWith(dateStr) ?? false);
+    const dayIds = new Set(dayOccurrences.map((o) => o.id));
     const dayAttendance = allAttendance.filter(a => dayIds.has(a.occurrence_id));
     const dayTotal = dayAttendance.length;
     const dayPresent = dayAttendance.filter(a => a.status === 'present' || a.status === 'late').length;

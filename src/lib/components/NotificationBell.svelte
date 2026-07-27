@@ -2,6 +2,8 @@
   import { getSupabase } from '$lib/supabase/client';
   import { formatNotificationDate, getNotificationToneClass, getStoredReadNotificationIds, markAllNotificationsRead, markNotificationAsRead, normalizeNotification, shouldSurfaceToast, dispatchNotificationToast, type NotificationItem } from '$lib/notifications';
 
+  const { tenantId }: { tenantId: string } = $props();
+
   let count = $state(0);
   let items = $state<NotificationItem[]>([]);
   let open = $state(false);
@@ -11,15 +13,24 @@
 
   const supabase = getSupabase();
 
+  async function ensureTenantContext() {
+    if (!tenantId) return;
+    await (supabase.rpc as any)('set_tenant_context', { p_tenant_id: tenantId });
+  }
+
   async function loadNotifications() {
     isLoading = true;
     error = null;
     try {
-      const { data, error: fetchError } = await supabase
+      await ensureTenantContext();
+      let q = supabase
         .from('notifications')
         .select('id, body, created_at, channel, template, status, related_type, related_id')
         .order('created_at', { ascending: false })
         .limit(10);
+      if (tenantId) q = q.eq('tenant_id', tenantId);
+
+      const { data, error: fetchError } = await q;
 
       if (fetchError) throw fetchError;
 
@@ -31,8 +42,7 @@
       nextItems
         .filter((n: NotificationItem) => shouldSurfaceToast(n, seenToastIds))
         .forEach((n: NotificationItem) => dispatchNotificationToast(n));
-    } catch (err) {
-      console.error(err);
+    } catch {
       error = 'We could not load notifications right now.';
     } finally {
       isLoading = false;
@@ -43,7 +53,7 @@
     loadNotifications();
     const sub = supabase
       .channel('notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () => loadNotifications())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: tenantId ? `tenant_id=eq.${tenantId}` : undefined }, () => loadNotifications())
       .subscribe();
     return () => sub.unsubscribe();
   });
@@ -115,7 +125,7 @@
 
       {#if isLoading}
         <div class="space-y-2 px-4 py-4">
-          {#each [0, 1, 2] as i}
+          {#each [0, 1, 2] as _i}
             <div class="h-12 animate-pulse rounded-md bg-ink-100"></div>
           {/each}
         </div>
