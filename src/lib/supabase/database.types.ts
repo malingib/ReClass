@@ -1013,6 +1013,113 @@ export type Database = {
           },
         ]
       }
+      group_members: {
+        Row: {
+          id: string
+          tenant_id: string
+          student_id: string
+          group_id: string
+          enrolled_at: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          student_id: string
+          group_id: string
+          enrolled_at?: string | null
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          student_id?: string
+          group_id?: string
+          enrolled_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "remedial_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      remedial_groups: {
+        Row: {
+          id: string
+          tenant_id: string
+          name: string
+          subject_id: string | null
+          teacher_id: string | null
+          room: string | null
+          capacity: number | null
+          term: string | null
+          created_at: string | null
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          name: string
+          subject_id?: string | null
+          teacher_id?: string | null
+          room?: string | null
+          capacity?: number | null
+          term?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          name?: string
+          subject_id?: string | null
+          teacher_id?: string | null
+          room?: string | null
+          capacity?: number | null
+          term?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remedial_groups_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remedial_groups_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remedial_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       subjects: {
         Row: {
           code: string | null

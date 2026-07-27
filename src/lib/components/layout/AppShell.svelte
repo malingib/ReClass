@@ -56,7 +56,6 @@
     school_admin: [
       { label: 'Front office', defaultOpen: true, items: [
         { label: 'Dashboard', href: '/admin', icon: 'dashboard' },
-        { label: 'Students', href: '/admin/students', icon: 'students' },
         { label: 'Parents', href: '/admin/parents', icon: 'parents' },
         { label: 'Remedial teachers', href: '/admin/teachers', icon: 'teachers' },
       ]},
@@ -72,6 +71,7 @@
       ]},
       { label: 'SIS', defaultOpen: true, items: [
         { label: 'Dashboard', href: '/admin/sis', icon: 'dashboard' },
+        { label: 'Students', href: '/admin/students', icon: 'students' },
         { label: 'Classes', href: '/admin/sis/classes', icon: 'subjects' },
         { label: 'Admissions', href: '/admin/sis/admissions', icon: 'students' },
       ]},

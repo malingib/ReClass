@@ -20,6 +20,21 @@ export async function getStudentsByTenant(
   });
 }
 
+export async function getRecentRemedialStudents(sb: App.Locals['srv'], tenantId: string, limit: number) {
+  // Students enrolled in at least one remedial group (via group_members),
+  // surfaced on the remedial dashboard — not the whole-school roster.
+  const { data } = await sb
+    .from('group_members')
+    .select('student_id, students(id, admission_no, first_name, last_name, grade, created_at)')
+    .eq('tenant_id', tenantId)
+    .order('enrolled_at', { ascending: false })
+    .limit(limit);
+  const rows = (data ?? []).map((r: any) => r.students).filter(Boolean);
+  // de-dupe by id (a student may be in multiple groups)
+  const seen = new Set<string>();
+  return rows.filter((s: any) => (seen.has(s.id) ? false : (seen.add(s.id), true)));
+}
+
 export async function getRecentStudents(sb: App.Locals['srv'], tenantId: string, limit: number) {
   const { data } = await sb
     .from('students')

@@ -1,8 +1,55 @@
-import { countRecords } from './query';
-import { getRecentStudents } from './students';
+import { countRecords, countRecordsDistinct } from './query';
+import { getRecentStudents, getRecentRemedialStudents } from './students';
 import { getRecentInvoices, getUnpaidAmount } from './invoices';
 import { getRecentAttendance } from './attendance';
 import { PAGE_OVERVIEW } from '$lib/config';
+
+export async function getReclassStats(sb: App.Locals['srv'], tenantId: string) {
+  const since = new Date(Date.now() - 14 * 864e5).toISOString();
+
+  const [
+    groups, teachers, enrolledStudents, sessions,
+    unpaid, paidInvoices,
+    rs, ri, ta, occ, sum,
+  ] = await Promise.all([
+    countRecords(sb, 'remedial_groups', tenantId),
+    // remedial teachers = distinct teachers assigned to remedial groups
+    countRecordsDistinct(sb, 'remedial_groups', tenantId, 'teacher_id'),
+    // enrolled remedial students = distinct students in group_members
+    countRecordsDistinct(sb, 'group_members', tenantId, 'student_id'),
+    countRecords(sb, 'sessions', tenantId),
+    countRecords(sb, 'invoices', tenantId, q => q.eq('status', 'unpaid')),
+    countRecords(sb, 'invoices', tenantId, q => q.eq('status', 'paid')),
+    getRecentRemedialStudents(sb, tenantId, PAGE_OVERVIEW),
+    getRecentInvoices(sb, tenantId, PAGE_OVERVIEW),
+    getRecentAttendance(sb, tenantId, since),
+    sb.from('session_occurrences').select('id, occurs_on, status').eq('tenant_id', tenantId).gte('occurs_on', since).then(r => r.data ?? []),
+    getUnpaidAmount(sb, tenantId),
+  ]);
+
+  const total = ta.length;
+  const present = ta.filter((a: { status?: string }) => a.status === 'present' || a.status === 'late').length;
+  const rate = total ? Math.round((present / total) * 100) : 0;
+
+  return {
+    stat: {
+      groups,
+      teachers,
+      enrolledStudents,
+      sessions,
+      unpaid,
+      paidInvoices,
+      unpaidAmount: sum,
+      attendanceRate: rate,
+      sessionsCount: occ.length,
+    },
+    recentStudents: rs,
+    recentInvoices: ri,
+    trend: computeTrend(occ),
+    activity: buildActivityFeed(ta, ri),
+    sessionsSummary: [],
+  };
+}
 
 export async function getAdminDashboardStats(sb: App.Locals['srv'], tenantId: string) {
   const since = new Date(Date.now() - 14 * 864e5).toISOString();

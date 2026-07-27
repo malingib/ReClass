@@ -46,6 +46,19 @@ export function tenantFilter(tenantId: string) {
   return <Q extends { eq(col: string, val: string): Q }>(q: Q): Q => q.eq('tenant_id', tenantId);
 }
 
+export async function countRecordsDistinct(
+  sb: App.Locals['srv'],
+  table: TableName,
+  tenantId: string,
+  column: string,
+): Promise<number> {
+  const { count } = await loose(sb)
+    .from(table)
+    .select(`${column}`, { count: 'exact', head: true })
+    .eq('tenant_id', tenantId);
+  return count ?? 0;
+}
+
 export async function countRecords(
   sb: Srv,
   table: TableName,

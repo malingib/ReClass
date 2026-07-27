@@ -62,7 +62,7 @@
     <!-- KPIs -->
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {@render kpi('Today', stat.sessionsCount ? 'Active' : 'Jul 16', `${stat.sessionsCount} session${stat.sessionsCount !== 1 ? 's' : ''} today`)}
-      {@render kpi('Remedial sessions', stat.sessions, `${stat.subjects} subjects`)}
+      {@render kpi('Remedial groups', stat.groups, `${stat.sessions} scheduled sessions`)}
       {@render kpi('Teacher attendance', `${stat.attendanceRate}%`, 'Last 14 days')}
       {@render kpi('Outstanding', `KES ${(stat.unpaidAmount ?? 0).toLocaleString()}`, `${stat.unpaid} unpaid invoices`)}
     </div>
@@ -72,12 +72,12 @@
       <Card>
         <CardContent class="space-y-3">
           <div class="grid grid-cols-2 gap-3">
-            {@render mini('Remedial sessions', `${stat.sessions}`, 'Subject cohorts')}
-            {@render mini('Remedial teachers', `${stat.teachers}`, 'On roster')}
-            {@render mini('Enrolled students', `${stat.students}`, 'Linked parents')}
-            {@render mini('Teacher attendance', `${stat.attendanceRate}%`, '+3.5%')}
+            {@render mini('Remedial groups', `${stat.groups}`, 'Cohorts')}
+            {@render mini('Remedial teachers', `${stat.teachers}`, 'Assigned')}
+            {@render mini('Enrolled students', `${stat.enrolledStudents}`, 'In groups')}
+            {@render mini('Teacher attendance', `${stat.attendanceRate}%`, 'Last 14d')}
             {@render mini('Paid invoices', `${stat.paidInvoices}`, 'M-Pesa confirmed')}
-            {@render mini('Outstanding', `KES ${(stat.unpaidAmount ?? 0).toLocaleString()}`, '-1.9%')}
+            {@render mini('Outstanding', `KES ${(stat.unpaidAmount ?? 0).toLocaleString()}`, `${stat.unpaid} open`)}
           </div>
         </CardContent>
       </Card>
@@ -87,7 +87,7 @@
         </CardHeader>
         <CardContent>
           <div class="grid grid-cols-4 gap-2 pb-4">
-            {#each [{ l: 'Sessions', v: `${stat.sessionsCount}` }, { l: 'Teachers', v: `${stat.teachers}`, sub: 'On roster' }, { l: 'Avg rate', v: `${stat.attendanceRate}%` }, { l: 'Groups', v: `${stat.sessions}`, sub: 'Active cohorts' }] as m}
+            {#each [{ l: 'Sessions', v: `${stat.sessionsCount}` }, { l: 'Teachers', v: `${stat.teachers}`, sub: 'Assigned' }, { l: 'Avg rate', v: `${stat.attendanceRate}%` }, { l: 'Groups', v: `${stat.groups}`, sub: 'Cohorts' }] as m}
               <div class="rounded-lg border border-border/60 bg-ink-50/50 px-3 py-2 text-center">
                 <p class="text-[10px] font-semibold uppercase tracking-wider text-ink-400">{m.l}</p>
                 <p class="text-xl font-bold text-ink-900">{m.v}</p>
