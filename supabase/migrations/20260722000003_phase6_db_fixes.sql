@@ -43,20 +43,28 @@ CREATE TRIGGER trg_teacher_attendance_updated
 -- 3. remedial_groups — add created_at, updated_at
 ------------------------------------------------------------------
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'remedial_groups' AND column_name = 'created_at') THEN
-    ALTER TABLE public.remedial_groups ADD COLUMN created_at timestamptz DEFAULT now();
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name = 'remedial_groups' AND column_name = 'updated_at') THEN
-    ALTER TABLE public.remedial_groups ADD COLUMN updated_at timestamptz DEFAULT now();
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = 'remedial_groups') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'remedial_groups' AND column_name = 'created_at') THEN
+      ALTER TABLE public.remedial_groups ADD COLUMN created_at timestamptz DEFAULT now();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'remedial_groups' AND column_name = 'updated_at') THEN
+      ALTER TABLE public.remedial_groups ADD COLUMN updated_at timestamptz DEFAULT now();
+    END IF;
   END IF;
 END $$;
 
-DROP TRIGGER IF EXISTS trg_remedial_groups_updated ON public.remedial_groups;
-CREATE TRIGGER trg_remedial_groups_updated
-  BEFORE UPDATE ON public.remedial_groups
-  FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = 'remedial_groups') THEN
+    DROP TRIGGER IF EXISTS trg_remedial_groups_updated ON public.remedial_groups;
+    CREATE TRIGGER trg_remedial_groups_updated
+      BEFORE UPDATE ON public.remedial_groups
+      FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
+  END IF;
+END $$;
 
 ------------------------------------------------------------------
 -- 4. subjects — add created_at, updated_at
