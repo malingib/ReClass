@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireTenantRole } from '$lib/server/auth';
-import { checkRateLimit, rateLimitedHeaders } from '$lib/server/rate-limit';
-import { csvResponse } from '$lib/server/csv';
+import { requireTenantRole } from '$lib/server/_auth/auth';
+import { checkRateLimit, rateLimitedHeaders } from '$lib/server/_platform/rate-limit';
+import { csvResponse } from '$lib/server/_platform/csv';
 import { EXPORT_BURSA_MAX_ROWS } from '$lib/config';
 
 export const GET: RequestHandler = async ({ locals }) => {

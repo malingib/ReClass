@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { flattenStudentName } from '$lib/server/query';
-import { paginatedQuery } from '$lib/server/query';
+import { flattenStudentName } from '$lib/server/_platform/query';
+import { paginatedQuery } from '$lib/server/_platform/query';
 
 describe('flattenStudentName', () => {
   it('extracts name from array students field', () => {
@@ -44,7 +44,7 @@ function mockClient() {
   const calls: { method: string; args: unknown[] }[] = [];
   const builder: Record<string, unknown> = {};
   const rec = (method: string) => (...args: unknown[]) => { calls.push({ method, args }); return builder; };
-  for (const m of ['select', 'eq', 'in', 'not', 'gte', 'lte', 'or', 'order', 'range']) builder[m] = rec(m);
+  for (const m of ['select', 'eq', 'in', 'not', 'gte', 'lte', 'or', 'is', 'order', 'range']) builder[m] = rec(m);
   // Terminal await resolves to a PostgREST-like result.
   (builder as { then: unknown }).then = (resolve: (v: unknown) => void) =>
     resolve({ data: [], count: 0, error: null });
@@ -69,8 +69,9 @@ describe('paginatedQuery', () => {
     const orCalls = calls.filter((c) => c.method === 'or');
     expect(orCalls.length).toBe(2);
     const expr = orCalls[0].args[0] as string;
-    // Injection characters are stripped from the term.
-    expect(expr).toBe('first_name.ilike.%john%,last_name.ilike.%john%');
+    // Injection characters (comma, parens) are stripped; literal % is escaped for ILIKE.
+    // The pattern is: opening wildcard % + escaped literal  \%  + closing wildcard %
+    expect(expr).toBe('first_name.ilike.%john\\%%,last_name.ilike.%john\\%%');
     expect(expr).not.toContain('(');
     expect(expr).not.toContain(')');
   });

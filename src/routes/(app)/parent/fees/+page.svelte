@@ -6,7 +6,7 @@
   const fees = $derived(data.fees);
 </script>
 
-<DashboardContent title="Remedial fee structure" subtitle="What your child's remediation costs and when">
+<DashboardContent title="Fee structure" subtitle="What your child's school fees cost and when they are due">
   <DataTable data={fees} columns={[
     { key: 'name', label: 'Fee', sortable: true },
     { key: 'amount', label: 'Amount', render: (f: any) => `KES ${Number(f.amount).toLocaleString()}` },

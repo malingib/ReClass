@@ -2,6 +2,21 @@ import { getServiceClient } from '../_shared/supabase.ts';
 import { verifyAuth } from '../_shared/auth.ts';
 import { json, badRequest, unauthorized, forbidden, notFound, handleOptions, internalError } from '../_shared/response.ts';
 
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 500;
+
+async function fetchWithRetry(url: string, opts: RequestInit, attempt = 0): Promise<Response> {
+  try {
+    return await fetch(url, opts);
+  } catch (err) {
+    if (attempt >= MAX_RETRIES) throw err;
+    const delay = BASE_DELAY_MS * 2 ** attempt;
+    console.warn(`[stk] fetch attempt ${attempt + 1} failed, retrying in ${delay}ms:`, (err as Error).message);
+    await new Promise((r) => setTimeout(r, delay));
+    return fetchWithRetry(url, opts, attempt + 1);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return handleOptions(req);
 
@@ -59,8 +74,10 @@ Deno.serve(async (req) => {
       ? 'https://sandbox.safaricom.co.ke' : 'https://api.safaricom.co.ke';
 
     const auth = btoa(`${secrets.consumer_key}:${secrets.consumer_secret}`);
-    const { access_token } = await fetch(`${base}/oauth/v1/generate?grant_type=client_credentials`,
-      { headers: { Authorization: `Basic ${auth}` } }).then(r => r.json());
+    const { access_token } = await fetchWithRetry(
+      `${base}/oauth/v1/generate?grant_type=client_credentials`,
+      { headers: { Authorization: `Basic ${auth}` } },
+    ).then(r => r.json());
 
     const ts = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
     const pwd = btoa(`${secrets.passkey}${secrets.shortcode}${ts}`);
@@ -74,7 +91,7 @@ Deno.serve(async (req) => {
       amount, phone, status: 'pending',
     });
 
-    const stk = await fetch(`${base}/mpesa/stkpush/v1/processrequest`, {
+    const stk = await fetchWithRetry(`${base}/mpesa/stkpush/v1/processrequest`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { getServerSupabase, getServiceClient } from '$lib/supabase/server';
 import { roleRoutes, isRole } from '$lib/auth';
 import type { Role } from '$lib/auth';
-import { checkRateLimit, rateLimitedHeaders } from '$lib/server/rate-limit';
+import { checkRateLimit, rateLimitedHeaders } from '$lib/server/_platform/rate-limit';
 
 export const load: PageServerLoad = async ({ setHeaders }) => {
   setHeaders(rateLimitedHeaders(await checkRateLimit(getServiceClient(), 'login-page', 'login', { windowMs: 60_000, max: 10 })));

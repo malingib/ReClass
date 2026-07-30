@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { requireTenantRole } from '$lib/server/auth';
+import { requireTenantRole } from '$lib/server/_auth/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
   requireTenantRole(locals, 'parent');
@@ -7,6 +7,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     .from('fee_types')
     .select('id, name, amount, due_date, term')
     .eq('tenant_id', locals.tenantId)
+    .eq('domain', 'school')
     .order('name');
 
   return { fees: feeTypes ?? [] };

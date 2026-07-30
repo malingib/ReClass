@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { countRecords } from '$lib/server/query';
+import { countRecords } from '$lib/server/_platform/query';
 import { PAGE_LIST_SMALL } from '$lib/config';
 
 export const load: PageServerLoad = async ({ locals }) => {

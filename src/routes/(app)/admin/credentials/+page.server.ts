@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
-import { requireTenantRole } from '$lib/server/auth';
-import { getCredentials, saveCredential, deleteCredential, testCredential } from '$lib/server/credentials';
+import { requireTenantRole } from '$lib/server/_auth/auth';
+import { getCredentials, saveCredential, deleteCredential, testCredential } from '$lib/server/_platform/credentials';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');

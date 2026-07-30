@@ -86,7 +86,6 @@
         { label: 'School settings', href: '/admin/settings', icon: 'dashboard' },
       ]},
       { label: 'Reporting', defaultOpen: false, items: [
-        { label: 'SMS Log', href: '/admin/notifications', icon: 'bell' },
         { label: 'Users', href: '/admin/users', icon: 'students' },
         { label: 'Reports', href: '/admin/reports', icon: 'fees' },
       ]},

@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getParentOwnership } from '$lib/server/ownership';
+import { getParentOwnership } from '$lib/server/_auth/ownership';
 import { PAGE_OVERVIEW } from '$lib/config';
 
 export const load: PageServerLoad = async ({ locals }) => {

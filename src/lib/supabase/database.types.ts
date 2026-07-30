@@ -12,101 +12,8 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
-      attendance: {
-        Row: {
-          created_at: string | null
-          edit_reason: string | null
-          id: string
-          locked: boolean | null
-          marked_at: string | null
-          marked_by: string | null
-          occurrence_id: string
-          status: string
-          student_id: string
-          tenant_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          edit_reason?: string | null
-          id?: string
-          locked?: boolean | null
-          marked_at?: string | null
-          marked_by?: string | null
-          occurrence_id: string
-          status: string
-          student_id: string
-          tenant_id: string
-        }
-        Update: {
-          created_at?: string | null
-          edit_reason?: string | null
-          id?: string
-          locked?: boolean | null
-          marked_at?: string | null
-          marked_by?: string | null
-          occurrence_id?: string
-          status?: string
-          student_id?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attendance_marked_by_fkey"
-            columns: ["marked_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendance_occurrence_id_fkey"
-            columns: ["occurrence_id"]
-            isOneToOne: false
-            referencedRelation: "session_occurrences"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendance_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendance_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       audit_log: {
         Row: {
           action: string
@@ -208,6 +115,117 @@ export type Database = {
           },
         ]
       }
+      comm_announcements: {
+        Row: {
+          audience: string | null
+          body: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          priority: string | null
+          published_at: string | null
+          status: string | null
+          tenant_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          audience?: string | null
+          body: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          priority?: string | null
+          published_at?: string | null
+          status?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          audience?: string | null
+          body?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          priority?: string | null
+          published_at?: string | null
+          status?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_announcements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comm_templates: {
+        Row: {
+          body: string
+          channel: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          subject: string | null
+          tenant_id: string
+          updated_at: string | null
+          variables: string[] | null
+        }
+        Insert: {
+          body: string
+          channel?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          subject?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Update: {
+          body?: string
+          channel?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          subject?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credentials: {
         Row: {
           created_at: string
@@ -221,7 +239,7 @@ export type Database = {
           provider: string
           purpose: string
           scope: string
-          tenant_id: string | null
+          tenant_id: string
           test_status: string | null
           updated_at: string
         }
@@ -237,7 +255,7 @@ export type Database = {
           provider: string
           purpose: string
           scope: string
-          tenant_id?: string | null
+          tenant_id: string
           test_status?: string | null
           updated_at?: string
         }
@@ -253,7 +271,7 @@ export type Database = {
           provider?: string
           purpose?: string
           scope?: string
-          tenant_id?: string | null
+          tenant_id?: string
           test_status?: string | null
           updated_at?: string
         }
@@ -267,10 +285,206 @@ export type Database = {
           },
         ]
       }
+      exam_results: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          exam_id: string
+          grade: string | null
+          id: string
+          remarks: string | null
+          score: number
+          student_id: string
+          subject_id: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          exam_id: string
+          grade?: string | null
+          id?: string
+          remarks?: string | null
+          score: number
+          student_id: string
+          subject_id: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          exam_id?: string
+          grade?: string | null
+          id?: string
+          remarks?: string | null
+          score?: number
+          student_id?: string
+          subject_id?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_results_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exams: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          exam_date: string | null
+          id: string
+          max_score: number
+          name: string
+          tenant_id: string
+          term: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          exam_date?: string | null
+          id?: string
+          max_score?: number
+          name: string
+          tenant_id: string
+          term?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          exam_date?: string | null
+          id?: string
+          max_score?: number
+          name?: string
+          tenant_id?: string
+          term?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          deleted_at: string | null
+          description: string
+          id: string
+          incurred_at: string
+          notes: string | null
+          paid_by: string | null
+          receipt_url: string | null
+          tenant_id: string
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description: string
+          id?: string
+          incurred_at?: string
+          notes?: string | null
+          paid_by?: string | null
+          receipt_url?: string | null
+          tenant_id: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          id?: string
+          incurred_at?: string
+          notes?: string | null
+          paid_by?: string | null
+          receipt_url?: string | null
+          tenant_id?: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_types: {
         Row: {
           amount: number
           deleted_at: string | null
+          domain: string
           due_date: string | null
           id: string
           name: string
@@ -280,6 +494,7 @@ export type Database = {
         Insert: {
           amount: number
           deleted_at?: string | null
+          domain?: string
           due_date?: string | null
           id?: string
           name: string
@@ -289,6 +504,7 @@ export type Database = {
         Update: {
           amount?: number
           deleted_at?: string | null
+          domain?: string
           due_date?: string | null
           id?: string
           name?: string
@@ -311,21 +527,21 @@ export type Database = {
           parent_id: string
           relationship: string | null
           student_id: string
-          tenant_id: string | null
+          tenant_id: string
         }
         Insert: {
           is_primary?: boolean | null
           parent_id: string
           relationship?: string | null
           student_id: string
-          tenant_id?: string | null
+          tenant_id: string
         }
         Update: {
           is_primary?: boolean | null
           parent_id?: string
           relationship?: string | null
           student_id?: string
-          tenant_id?: string | null
+          tenant_id?: string
         }
         Relationships: [
           {
@@ -395,6 +611,7 @@ export type Database = {
           amount_paid: number | null
           created_at: string | null
           deleted_at: string | null
+          domain: string
           due_date: string | null
           fee_type_id: string | null
           id: string
@@ -408,6 +625,7 @@ export type Database = {
           amount_paid?: number | null
           created_at?: string | null
           deleted_at?: string | null
+          domain?: string
           due_date?: string | null
           fee_type_id?: string | null
           id?: string
@@ -421,6 +639,7 @@ export type Database = {
           amount_paid?: number | null
           created_at?: string | null
           deleted_at?: string | null
+          domain?: string
           due_date?: string | null
           fee_type_id?: string | null
           id?: string
@@ -446,6 +665,64 @@ export type Database = {
           },
           {
             foreignKeyName: "invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          read_at: string | null
+          recipient_id: string
+          sender_id: string
+          sender_role: string
+          tenant_id: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          read_at?: string | null
+          recipient_id: string
+          sender_id: string
+          sender_role: string
+          tenant_id: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          read_at?: string | null
+          recipient_id?: string
+          sender_id?: string
+          sender_role?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -515,6 +792,63 @@ export type Database = {
           },
         ]
       }
+      other_income: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          deleted_at: string | null
+          description: string
+          id: string
+          notes: string | null
+          received_at: string
+          received_by: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description: string
+          id?: string
+          notes?: string | null
+          received_at?: string
+          received_by?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          id?: string
+          notes?: string | null
+          received_at?: string
+          received_by?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "other_income_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "other_income_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parents: {
         Row: {
           created_at: string | null
@@ -527,6 +861,7 @@ export type Database = {
           profile_id: string | null
           sms_consent: boolean | null
           tenant_id: string
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
@@ -539,6 +874,7 @@ export type Database = {
           profile_id?: string | null
           sms_consent?: boolean | null
           tenant_id: string
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
@@ -551,6 +887,7 @@ export type Database = {
           profile_id?: string | null
           sms_consent?: boolean | null
           tenant_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -573,8 +910,10 @@ export type Database = {
         Row: {
           created_at: string | null
           deleted_at: string | null
+          excess_amount: number | null
           id: string
           note: string | null
+          original_invoice_id: string | null
           originally_for: string | null
           payment_id: string
           reassigned_to_invoice: string | null
@@ -588,8 +927,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
+          excess_amount?: number | null
           id?: string
           note?: string | null
+          original_invoice_id?: string | null
           originally_for?: string | null
           payment_id: string
           reassigned_to_invoice?: string | null
@@ -603,8 +944,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           deleted_at?: string | null
+          excess_amount?: number | null
           id?: string
           note?: string | null
+          original_invoice_id?: string | null
           originally_for?: string | null
           payment_id?: string
           reassigned_to_invoice?: string | null
@@ -616,6 +959,13 @@ export type Database = {
           week_start?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_reconciliations_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_reconciliations_payment_id_fkey"
             columns: ["payment_id"]
@@ -649,7 +999,10 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          bank_name: string | null
+          bank_reference: string | null
           created_at: string | null
+          deposited_by: string | null
           id: string
           invoice_id: string
           method: string | null
@@ -663,7 +1016,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_name?: string | null
+          bank_reference?: string | null
           created_at?: string | null
+          deposited_by?: string | null
           id?: string
           invoice_id: string
           method?: string | null
@@ -677,7 +1033,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_name?: string | null
+          bank_reference?: string | null
           created_at?: string | null
+          deposited_by?: string | null
           id?: string
           invoice_id?: string
           method?: string | null
@@ -690,6 +1049,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_deposited_by_fkey"
+            columns: ["deposited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_invoice_id_fkey"
             columns: ["invoice_id"]
@@ -809,6 +1175,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rate_limits: {
+        Row: {
+          bucket_key: string
+          count: number
+          reset_at: string
+        }
+        Insert: {
+          bucket_key: string
+          count: number
+          reset_at: string
+        }
+        Update: {
+          bucket_key?: string
+          count?: number
+          reset_at?: string
+        }
+        Relationships: []
       }
       session_occurrences: {
         Row: {
@@ -953,6 +1337,188 @@ export type Database = {
           },
         ]
       }
+      sis_admissions: {
+        Row: {
+          admission_date: string | null
+          admission_number: string
+          created_at: string | null
+          created_by: string | null
+          grade_applied: string | null
+          id: string
+          notes: string | null
+          previous_school: string | null
+          status: string | null
+          student_id: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          admission_date?: string | null
+          admission_number: string
+          created_at?: string | null
+          created_by?: string | null
+          grade_applied?: string | null
+          id?: string
+          notes?: string | null
+          previous_school?: string | null
+          status?: string | null
+          student_id?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          admission_date?: string | null
+          admission_number?: string
+          created_at?: string | null
+          created_by?: string | null
+          grade_applied?: string | null
+          id?: string
+          notes?: string | null
+          previous_school?: string | null
+          status?: string | null
+          student_id?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sis_admissions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sis_admissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sis_admissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sis_classes: {
+        Row: {
+          academic_year: string | null
+          code: string
+          created_at: string | null
+          homeroom_teacher_id: string | null
+          id: string
+          name: string
+          status: string | null
+          stream: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year?: string | null
+          code: string
+          created_at?: string | null
+          homeroom_teacher_id?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          stream?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year?: string | null
+          code?: string
+          created_at?: string | null
+          homeroom_teacher_id?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          stream?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sis_classes_homeroom_teacher_id_fkey"
+            columns: ["homeroom_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sis_classes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sis_enrollments: {
+        Row: {
+          academic_year: string
+          class_id: string
+          created_at: string | null
+          enrolled_at: string | null
+          exited_at: string | null
+          id: string
+          status: string | null
+          student_id: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year: string
+          class_id: string
+          created_at?: string | null
+          enrolled_at?: string | null
+          exited_at?: string | null
+          id?: string
+          status?: string | null
+          student_id: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year?: string
+          class_id?: string
+          created_at?: string | null
+          enrolled_at?: string | null
+          exited_at?: string | null
+          id?: string
+          status?: string | null
+          student_id?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sis_enrollments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "sis_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sis_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sis_enrollments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           admission_no: string
@@ -1013,113 +1579,6 @@ export type Database = {
           },
         ]
       }
-      group_members: {
-        Row: {
-          id: string
-          tenant_id: string
-          student_id: string
-          group_id: string
-          enrolled_at: string | null
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          student_id: string
-          group_id: string
-          enrolled_at?: string | null
-        }
-        Update: {
-          id?: string
-          tenant_id?: string
-          student_id?: string
-          group_id?: string
-          enrolled_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "group_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "remedial_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_members_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_members_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      remedial_groups: {
-        Row: {
-          id: string
-          tenant_id: string
-          name: string
-          subject_id: string | null
-          teacher_id: string | null
-          room: string | null
-          capacity: number | null
-          term: string | null
-          created_at: string | null
-          deleted_at: string | null
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          name: string
-          subject_id?: string | null
-          teacher_id?: string | null
-          room?: string | null
-          capacity?: number | null
-          term?: string | null
-          created_at?: string | null
-          deleted_at?: string | null
-        }
-        Update: {
-          id?: string
-          tenant_id?: string
-          name?: string
-          subject_id?: string | null
-          teacher_id?: string | null
-          room?: string | null
-          capacity?: number | null
-          term?: string | null
-          created_at?: string | null
-          deleted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "remedial_groups_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "remedial_groups_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "teachers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "remedial_groups_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       subjects: {
         Row: {
           code: string | null
@@ -1173,6 +1632,7 @@ export type Database = {
           status: string
           teacher_id: string
           tenant_id: string
+          updated_at: string | null
         }
         Insert: {
           approval_status?: string
@@ -1188,6 +1648,7 @@ export type Database = {
           status: string
           teacher_id: string
           tenant_id: string
+          updated_at?: string | null
         }
         Update: {
           approval_status?: string
@@ -1203,6 +1664,7 @@ export type Database = {
           status?: string
           teacher_id?: string
           tenant_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1242,6 +1704,75 @@ export type Database = {
           },
         ]
       }
+      teacher_invoices: {
+        Row: {
+          amount_due: number
+          amount_paid: number | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          occurrences_count: number | null
+          paid_at: string | null
+          period_end: string | null
+          period_start: string | null
+          rate_per_session: number | null
+          status: string | null
+          teacher_id: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount_due: number
+          amount_paid?: number | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          occurrences_count?: number | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          rate_per_session?: number | null
+          status?: string | null
+          teacher_id: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          occurrences_count?: number | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          rate_per_session?: number | null
+          status?: string | null
+          teacher_id?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_invoices_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teachers: {
         Row: {
           created_at: string | null
@@ -1251,7 +1782,9 @@ export type Database = {
           id: string
           last_name: string
           profile_id: string | null
+          remedial_rate_per_session: number | null
           subjects: string[] | null
+          teacher_type: string
           tenant_id: string
         }
         Insert: {
@@ -1262,7 +1795,9 @@ export type Database = {
           id?: string
           last_name: string
           profile_id?: string | null
+          remedial_rate_per_session?: number | null
           subjects?: string[] | null
+          teacher_type?: string
           tenant_id: string
         }
         Update: {
@@ -1273,7 +1808,9 @@ export type Database = {
           id?: string
           last_name?: string
           profile_id?: string | null
+          remedial_rate_per_session?: number | null
           subjects?: string[] | null
+          teacher_type?: string
           tenant_id?: string
         }
         Relationships: [
@@ -1297,10 +1834,13 @@ export type Database = {
         Row: {
           academic_year: string | null
           brand_primary: string | null
+          buni_shortcode: string | null
           created_at: string | null
           currency: string | null
           deleted_at: string | null
           id: string
+          kcb_account_no: string | null
+          kcb_bank_name: string | null
           logo_url: string | null
           mpesa_passkey_secret_ref: string | null
           mpesa_paybill: string | null
@@ -1316,10 +1856,13 @@ export type Database = {
         Insert: {
           academic_year?: string | null
           brand_primary?: string | null
+          buni_shortcode?: string | null
           created_at?: string | null
           currency?: string | null
           deleted_at?: string | null
           id?: string
+          kcb_account_no?: string | null
+          kcb_bank_name?: string | null
           logo_url?: string | null
           mpesa_passkey_secret_ref?: string | null
           mpesa_paybill?: string | null
@@ -1335,10 +1878,13 @@ export type Database = {
         Update: {
           academic_year?: string | null
           brand_primary?: string | null
+          buni_shortcode?: string | null
           created_at?: string | null
           currency?: string | null
           deleted_at?: string | null
           id?: string
+          kcb_account_no?: string | null
+          kcb_bank_name?: string | null
           logo_url?: string | null
           mpesa_passkey_secret_ref?: string | null
           mpesa_paybill?: string | null
@@ -1444,298 +1990,6 @@ export type Database = {
           },
         ]
       }
-      exam_results: {
-        Row: {
-          id: string
-          tenant_id: string
-          exam_id: string
-          student_id: string
-          subject_id: string
-          score: number
-          grade: string | null
-          remarks: string | null
-          created_by: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          exam_id: string
-          student_id: string
-          subject_id: string
-          score: number
-          grade?: string | null
-          remarks?: string | null
-          created_by?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          tenant_id?: string
-          exam_id?: string
-          student_id?: string
-          subject_id?: string
-          score?: number
-          grade?: string | null
-          remarks?: string | null
-          created_by?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "exam_results_exam_id_fkey"
-            columns: ["exam_id"]
-            isOneToOne: false
-            referencedRelation: "exams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_results_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_results_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_results_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      exams: {
-        Row: {
-          id: string
-          tenant_id: string
-          name: string
-          term: string | null
-          exam_date: string | null
-          max_score: number
-          created_by: string | null
-          created_at: string | null
-          updated_at: string | null
-          deleted_at: string | null
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          name: string
-          term?: string | null
-          exam_date?: string | null
-          max_score: number
-          created_by?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-          deleted_at?: string | null
-        }
-        Update: {
-          id?: string
-          tenant_id?: string
-          name?: string
-          term?: string | null
-          exam_date?: string | null
-          max_score?: number
-          created_by?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-          deleted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "exams_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      messages: {
-        Row: {
-          id: string
-          tenant_id: string
-          conversation_id: string
-          sender_id: string
-          sender_role: string
-          recipient_id: string
-          body: string
-          read_at: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          conversation_id: string
-          sender_id: string
-          sender_role: string
-          recipient_id: string
-          body: string
-          read_at?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          tenant_id?: string
-          conversation_id?: string
-          sender_id?: string
-          sender_role?: string
-          recipient_id?: string
-          body?: string
-          read_at?: string | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "messages_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_recipient_id_fkey"
-            columns: ["recipient_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      teacher_invoices: {
-        Row: {
-          id: string
-          tenant_id: string
-          teacher_id: string
-          amount_due: number
-          amount_paid: number
-          status: string
-          period_start: string | null
-          period_end: string | null
-          occurrences_count: number | null
-          rate_per_session: number | null
-          due_date: string | null
-          paid_at: string | null
-          notes: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          teacher_id: string
-          amount_due: number
-          amount_paid?: number
-          status?: string
-          period_start?: string | null
-          period_end?: string | null
-          occurrences_count?: number | null
-          rate_per_session?: number | null
-          due_date?: string | null
-          paid_at?: string | null
-          notes?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          tenant_id?: string
-          teacher_id?: string
-          amount_due?: number
-          amount_paid?: number
-          status?: string
-          period_start?: string | null
-          period_end?: string | null
-          occurrences_count?: number | null
-          rate_per_session?: number | null
-          due_date?: string | null
-          paid_at?: string | null
-          notes?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teacher_invoices_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teacher_invoices_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "teachers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sis_classes: {
-        Row: { id: string; tenant_id: string; name: string; stream: string | null; code: string; academic_year: string | null; homeroom_teacher_id: string | null; status: string; created_at: string | null; updated_at: string | null }
-        Insert: { id?: string; tenant_id: string; name: string; stream?: string | null; code: string; academic_year?: string | null; homeroom_teacher_id?: string | null; status?: string; created_at?: string | null; updated_at?: string | null }
-        Update: { id?: string; tenant_id?: string; name?: string; stream?: string | null; code?: string; academic_year?: string | null; homeroom_teacher_id?: string | null; status?: string; created_at?: string | null; updated_at?: string | null }
-        Relationships: [
-          { foreignKeyName: "sis_classes_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
-          { foreignKeyName: "sis_classes_homeroom_teacher_id_fkey"; columns: ["homeroom_teacher_id"]; isOneToOne: false; referencedRelation: "teachers"; referencedColumns: ["id"] },
-        ]
-      }
-      sis_admissions: {
-        Row: { id: string; tenant_id: string; student_id: string | null; admission_number: string; admission_date: string; grade_applied: string | null; status: string; previous_school: string | null; notes: string | null; created_by: string | null; created_at: string | null; updated_at: string | null }
-        Insert: { id?: string; tenant_id: string; student_id?: string | null; admission_number: string; admission_date?: string; grade_applied?: string | null; status?: string; previous_school?: string | null; notes?: string | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
-        Update: { id?: string; tenant_id?: string; student_id?: string | null; admission_number?: string; admission_date?: string; grade_applied?: string | null; status?: string; previous_school?: string | null; notes?: string | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
-        Relationships: [
-          { foreignKeyName: "sis_admissions_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
-          { foreignKeyName: "sis_admissions_student_id_fkey"; columns: ["student_id"]; isOneToOne: false; referencedRelation: "students"; referencedColumns: ["id"] },
-          { foreignKeyName: "sis_admissions_created_by_fkey"; columns: ["created_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
-        ]
-      }
-      sis_enrollments: {
-        Row: { id: string; tenant_id: string; student_id: string; class_id: string; academic_year: string; status: string; enrolled_at: string; exited_at: string | null; created_at: string | null; updated_at: string | null }
-        Insert: { id?: string; tenant_id: string; student_id: string; class_id: string; academic_year: string; status?: string; enrolled_at?: string; exited_at?: string | null; created_at?: string | null; updated_at?: string | null }
-        Update: { id?: string; tenant_id?: string; student_id?: string; class_id?: string; academic_year?: string; status?: string; enrolled_at?: string; exited_at?: string | null; created_at?: string | null; updated_at?: string | null }
-        Relationships: [
-          { foreignKeyName: "sis_enrollments_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
-          { foreignKeyName: "sis_enrollments_student_id_fkey"; columns: ["student_id"]; isOneToOne: false; referencedRelation: "students"; referencedColumns: ["id"] },
-          { foreignKeyName: "sis_enrollments_class_id_fkey"; columns: ["class_id"]; isOneToOne: false; referencedRelation: "sis_classes"; referencedColumns: ["id"] },
-        ]
-      }
-      comm_announcements: {
-        Row: { id: string; tenant_id: string; title: string; body: string; audience: string; priority: string; status: string; published_at: string | null; created_by: string | null; created_at: string | null; updated_at: string | null }
-        Insert: { id?: string; tenant_id: string; title: string; body: string; audience?: string; priority?: string; status?: string; published_at?: string | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
-        Update: { id?: string; tenant_id?: string; title?: string; body?: string; audience?: string; priority?: string; status?: string; published_at?: string | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
-        Relationships: [
-          { foreignKeyName: "comm_announcements_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
-          { foreignKeyName: "comm_announcements_created_by_fkey"; columns: ["created_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
-        ]
-      }
-      comm_templates: {
-        Row: { id: string; tenant_id: string; name: string; channel: string | null; subject: string | null; body: string; variables: string[] | null; created_by: string | null; created_at: string | null; updated_at: string | null }
-        Insert: { id?: string; tenant_id: string; name: string; channel?: string | null; subject?: string | null; body: string; variables?: string[] | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
-        Update: { id?: string; tenant_id?: string; name?: string; channel?: string | null; subject?: string | null; body?: string; variables?: string[] | null; created_by?: string | null; created_at?: string | null; updated_at?: string | null }
-        Relationships: [
-          { foreignKeyName: "comm_templates_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
-          { foreignKeyName: "comm_templates_created_by_fkey"; columns: ["created_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -1751,6 +2005,10 @@ export type Database = {
           occurrences_count: number
           teacher_id: string
         }[]
+      }
+      cleanup_notifications: {
+        Args: { p_older_than_days?: number }
+        Returns: number
       }
       decrypt_credential: { Args: { p_id: string }; Returns: Json }
       encrypt_credential: { Args: { p_json: Json }; Returns: string }
@@ -1783,6 +2041,7 @@ export type Database = {
         }
         Returns: Json
       }
+      purge_retention: { Args: never; Returns: undefined }
       rate_limit_gc: { Args: never; Returns: number }
       rate_limit_hit: {
         Args: { p_key: string; p_max: number; p_window_ms: number }
@@ -1792,26 +2051,16 @@ export type Database = {
           reset_in_ms: number
         }[]
       }
-      reconcile_payment:
-        | {
-            Args: {
-              p_amount: number
-              p_checkout_id: string
-              p_phone: string
-              p_tenant_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_checkout_id: string
-              p_invoice_id: string
-              p_phone: string
-              p_tenant_id: string
-            }
-            Returns: Json
-          }
+      reconcile_payment: {
+        Args: {
+          p_amount: number
+          p_checkout_id: string
+          p_invoice_id: string
+          p_phone: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       resolve_credential: {
         Args: {
           p_allow_sandbox?: boolean
@@ -1965,9 +2214,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

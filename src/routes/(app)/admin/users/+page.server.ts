@@ -1,8 +1,8 @@
 import { z } from 'zod/v3';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { requireTenantRole } from '$lib/server/auth';
-import { parseForm } from '$lib/client/validation';
+import { requireTenantRole } from '$lib/server/_auth/auth';
+import { parseForm } from '$lib/server/_platform/validation';
 
 const userSchema = z.object({
   id: z.string().optional(),

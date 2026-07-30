@@ -1,40 +1,57 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { getTeacherOwnership } from '$lib/server/ownership';
+import { getTeacherOwnership } from '$lib/server/_auth/ownership';
+import { hasCapability } from '$lib/server/_auth/capabilities';
+import type { Capability } from '$lib/server/_auth/capabilities';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const { tenantId, teacher } = await getTeacherOwnership(locals);
+  const { user, tenantId, teacher } = await getTeacherOwnership(locals);
+  const caps = (locals as App.Locals & { capabilities?: Capability[] })['capabilities'] ?? [];
+
+  const canRemedial = hasCapability(locals.role, teacher.teacher_type, 'remedial:view');
+  const canSis = hasCapability(locals.role, teacher.teacher_type, 'sis:view');
+
   const from = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
   const through = new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
+
+  // Remedial teachers see their whole-class remedial sessions.
   const [{ data: timetable }, { data: occurrences }] = await Promise.all([
-    locals.srv
-      .from('sessions')
-      .select('id, class, day_of_week, start_time, end_time, room, subjects(name)')
-      .eq('tenant_id', tenantId)
-      .eq('teacher_id', teacher.id)
-      .eq('active', true)
-      .order('day_of_week'),
-    locals.srv
-      .from('session_occurrences')
-      .select('id, occurs_on, start_time, end_time, room, class, status, sessions!inner(subjects(name)), teacher_attendance(id, status, marked_at, approval_status, review_note)')
-      .eq('tenant_id', tenantId)
-      .eq('teacher_id', teacher.id)
-      .gte('occurs_on', from)
-      .lte('occurs_on', through)
-      .order('occurs_on')
-      .order('start_time'),
+    canRemedial
+      ? locals.srv
+          .from('sessions')
+          .select('id, class, day_of_week, start_time, end_time, room, subjects(name)')
+          .eq('tenant_id', tenantId)
+          .eq('teacher_id', teacher.id)
+          .eq('active', true)
+          .order('day_of_week')
+      : Promise.resolve({ data: [] as unknown[], error: null }),
+    canRemedial
+      ? locals.srv
+          .from('session_occurrences')
+          .select('id, occurs_on, start_time, end_time, room, class, status, sessions!inner(subjects(name)), teacher_attendance(id, status, marked_at, approval_status, review_note)')
+          .eq('tenant_id', tenantId)
+          .eq('teacher_id', teacher.id)
+          .gte('occurs_on', from)
+          .lte('occurs_on', through)
+          .order('occurs_on')
+          .order('start_time')
+      : Promise.resolve({ data: [] as unknown[], error: null }),
   ]);
 
-  const delivery = (occurrences ?? []).map((occurrence) => ({
+  const delivery = ((occurrences ?? []) as Record<string, unknown>[]).map((occurrence) => ({
     ...occurrence,
-    subject: occurrence.sessions?.subjects?.name ?? '',
-    attendance: occurrence.teacher_attendance?.[0] ?? null,
-  }));
+    subject: (occurrence['sessions'] as { subjects?: { name?: string } } | undefined)?.subjects?.name ?? '',
+    attendance: (occurrence['teacher_attendance'] as Record<string, unknown>[] | undefined)?.[0] ?? null,
+  })) as unknown as Array<Record<string, any>>;
 
   return {
+    capabilities: caps,
+    teacherType: teacher.teacher_type,
+    canRemedial,
+    canSis,
     stats: {
       sessions: timetable?.length ?? 0,
-      pending: delivery.filter((item) => item.attendance?.approval_status === 'pending').length,
+      pending: delivery.filter((item) => (item.attendance as { approval_status?: string } | null)?.approval_status === 'pending').length,
     },
     teacher,
     timetable: timetable ?? [],
@@ -45,6 +62,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions = {
   mark: async ({ locals, request }) => {
     const { user, tenantId, teacher } = await getTeacherOwnership(locals);
+    // Only teachers with remedial attendance capability may mark delivery.
+    if (!hasCapability(locals.role, teacher.teacher_type, 'remedial:attendance_mark')) {
+      return fail(403, { error: 'You do not have permission to mark remedial attendance' });
+    }
     const form = await request.formData();
     const occurrenceId = form.get('occurrence_id')?.toString();
     const status = form.get('status')?.toString();

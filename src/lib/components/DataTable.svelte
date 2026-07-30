@@ -3,7 +3,7 @@
   import { t } from '$lib/i18n';
   import { goto } from '$app/navigation';
 
-  interface Column<T> {
+  interface Column<T extends Record<string, unknown>> {
     key: string;
     label: string;
     sortable?: boolean;
@@ -22,6 +22,9 @@
     sortKey?: string | null;
     sortDir?: 'asc' | 'desc';
   }
+
+  // Callers pass richer types via render functions. Svelte 5 templates
+  // cannot flow generics through #each blocks, so props are typed loosely.
 
   const {
     columns,
@@ -98,7 +101,7 @@
     isServer
       ? data
       : searchQuery
-      ? data.filter((item: any) => {
+ ? data.filter((item: any) => {
           const q = searchQuery.toLowerCase();
           return columns.some((col) => {
             const val = col.render ? col.render(item) : String(item[col.key] ?? '');
@@ -121,6 +124,23 @@
 
   const totalRows = $derived(isServer ? (server?.total ?? 0) : sorted.length);
   const totalPages = $derived(Math.max(1, Math.ceil(totalRows / effectivePageSize)));
+
+  // Smart pagination: show first, last, current±2, ellipsis for gaps
+  type PageItem = { type: 'page'; num: number } | { type: 'ellipsis'; key: string };
+
+  const paginationItems = $derived.by((): PageItem[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => ({ type: 'page' as const, num: i + 1 }));
+    }
+    const items: PageItem[] = [{ type: 'page', num: 1 }];
+    if (currentPage > 3) items.push({ type: 'ellipsis', key: 'start-e' });
+    const rs = Math.max(2, currentPage - 2);
+    const re = Math.min(totalPages - 1, currentPage + 2);
+    for (let i = rs; i <= re; i++) items.push({ type: 'page', num: i });
+    if (currentPage < totalPages - 2) items.push({ type: 'ellipsis', key: 'end-e' });
+    items.push({ type: 'page', num: totalPages });
+    return items;
+  });
 
   // Reset to page 1 when search or data changes
   $effect(() => {
@@ -182,7 +202,7 @@
         </svg>
         <input
           type="text"
-          placeholder="Search…"
+          placeholder="Search\u2026"
           value={searchQuery}
           oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
           class="w-full rounded-lg border border-border bg-ink-50 py-2 pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
@@ -215,7 +235,7 @@
         </svg>
         <input
           type="text"
-          placeholder="Search…"
+          placeholder="Search\u2026"
           value={searchQuery}
           oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
           class="w-full rounded-lg border border-border bg-ink-50 py-2 pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
@@ -240,7 +260,7 @@
                   >
                     {col.label}
                     {#if sortKey === col.key}
-                      <span class="text-[10px]" aria-hidden="true">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                      <span class="text-[10px]" aria-hidden="true">{sortDir === 'asc' ? '\u2191' : '\u2193'}</span>
                     {/if}
                   </button>
                 {:else}
@@ -300,13 +320,17 @@
           >
             Previous
           </button>
-          {#each Array.from({ length: totalPages }, (_, i) => i + 1) as page}
-            <button
-              onclick={() => gotoPage(page)}
-              class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors {page === currentPage ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-ink-50'}"
-            >
-              {page}
-            </button>
+          {#each paginationItems as item (item.type === 'ellipsis' ? item.key : `p-${item.num}`)}
+            {#if item.type === 'ellipsis'}
+              <span class="px-1 text-xs text-ink-400" aria-hidden="true">&hellip;</span>
+            {:else}
+              <button
+                onclick={() => gotoPage(item.num)}
+                class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors {item.num === currentPage ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-ink-50'}"
+              >
+                {item.num}
+              </button>
+            {/if}
           {/each}
           <button
             onclick={nextPage}

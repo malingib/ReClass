@@ -10,3 +10,7 @@ graphify.py
 .agents
 test-results
 playwright-report
+
+# Python build artifacts
+__pycache__/
+*.pyc

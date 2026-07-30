@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getInvoiceCounts } from '$lib/server/invoices';
+import { getInvoiceCounts } from '$lib/server/_finance/invoices';
 import { EXPORT_BURSA_MAX_ROWS } from '$lib/config';
 
 export const load: PageServerLoad = async ({ locals }) => {

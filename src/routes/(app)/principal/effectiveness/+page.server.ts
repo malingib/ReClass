@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { requireTenantRole } from '$lib/server/auth';
-import { getAttendanceForEffectiveness } from '$lib/server/attendance';
+import { requireTenantRole } from '$lib/server/_auth/auth';
+import { getAttendanceForEffectiveness } from '$lib/server/_remedial/attendance';
 import { EXPORT_MAX_ROWS } from '$lib/config';
 
 export const load: PageServerLoad = async ({ locals }) => {

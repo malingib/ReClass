@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { csvResponse } from '$lib/server/csv';
+import { csvResponse } from '$lib/server/_platform/csv';
 
 describe('csvResponse', () => {
   it('returns a Response with CSV content', () => {

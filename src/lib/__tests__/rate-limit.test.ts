@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { rateLimitedHeaders, checkRateLimit, RATE_LIMITS } from '$lib/server/rate-limit';
+import { rateLimitedHeaders, checkRateLimit, RATE_LIMITS } from '$lib/server/_platform/rate-limit';
 
 const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
 

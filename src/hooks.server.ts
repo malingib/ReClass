@@ -2,8 +2,9 @@ import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { handleErrorWithSentry } from '@sentry/sveltekit';
 import {
   validateEnv, initClients, resolveSession,
-  handleImpersonation, correlationId, securityHeaders, routeGuard,
-} from '$lib/server/middleware';
+  handleImpersonation, bindTenantContext,
+  correlationId, securityHeaders, routeGuard,
+} from '$lib/server/_auth/middleware';
 
 validateEnv();
 
@@ -12,7 +13,7 @@ export const handle: Handle = ({ event, resolve }) => {
   correlationId(event);
   return resolveSession(event)
     .then(() => handleImpersonation(event))
-    .then(() => { securityHeaders(event); routeGuard(event); })
+    .then(() => { bindTenantContext(event); securityHeaders(event); routeGuard(event); })
     .then(() => resolve(event));
 };
 

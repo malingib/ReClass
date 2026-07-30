@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getParentOwnership } from '$lib/server/ownership';
+import { getParentOwnership } from '$lib/server/_auth/ownership';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId, studentIds } = await getParentOwnership(locals);

@@ -233,3 +233,21 @@ describe('role model', () => {
     );
   });
 });
+
+describe('cascade_tenant_deletes migration', () => {
+  const sql = readFileSync(join(migrationsDir, '20260727000005_cascade_tenant_deletes.sql'), 'utf8');
+
+  const childTables = ['students', 'teachers', 'parents', 'subjects', 'sessions', 'fee_types',
+    'invoices', 'guardians_link', 'credentials', 'other_income', 'expenses'];
+
+  for (const table of childTables) {
+    it(`drops and recreates FK on ${table} with ON DELETE CASCADE`, () => {
+      expect(sql).toMatch(
+        new RegExp(`DROP CONSTRAINT IF EXISTS\\s+${table}_tenant_id_fkey`, 'i')
+      );
+      expect(sql).toMatch(
+        new RegExp(`ADD CONSTRAINT\\s+${table}_tenant_id_fkey\\s+FOREIGN KEY\\s*\\(\\s*tenant_id\\s*\\)\\s*REFERENCES\\s+public\\.tenants\\(id\\)\\s+ON DELETE CASCADE`, 'i')
+      );
+    });
+  }
+});

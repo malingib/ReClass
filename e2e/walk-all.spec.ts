@@ -8,10 +8,12 @@ const ADMIN_ROUTES = [
   '/admin/students', '/admin/students/import', '/admin/teachers', '/admin/parents',
   '/admin/subjects', '/admin/fees', '/admin/teacher-invoices', '/admin/parent-payments',
   '/admin/attendance', '/admin/scheduling', '/admin/credentials', '/admin/reports',
-  '/admin/payroll', '/admin/finance', '/admin/communications',
+  '/admin/payroll', '/admin/finance', '/admin/finance/income', '/admin/finance/expenses',
+  '/admin/communications',
   '/admin/communications/announcements', '/admin/communications/templates',
   '/admin/reclass', '/admin/academic', '/admin/settings', '/admin/users',
   '/admin/notifications', '/notifications', '/account',
+  '/admin/exams',
 ];
 
 const CROSS_ROLE = ['/bursar', '/principal', '/teacher', '/parent', '/super-admin'];

@@ -1,9 +1,9 @@
 import type { PageServerLoad, Actions } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { signImpersonation } from '$lib/server/impersonation';
+import { signImpersonation } from '$lib/server/_auth/impersonation';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const { data: tenants } = await locals.srv
+  const { data: tenants } = await locals.adminSrv
     .from('tenants')
     .select('id, name, slug, created_at')
     .order('name');

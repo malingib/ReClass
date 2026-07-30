@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
-import { requireTenantRole } from '$lib/server/auth';
-import { getWaiversAndInvoices, createWaiver } from '$lib/server/waivers';
+import { requireTenantRole } from '$lib/server/_auth/auth';
+import { getWaiversAndInvoices, createWaiver } from '$lib/server/_finance/waivers';
 
 export const load: PageServerLoad = async ({ locals }) => {
   return getWaiversAndInvoices(locals.srv, locals.tenantId);

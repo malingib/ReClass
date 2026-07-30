@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { requireTenantRole } from '$lib/server/auth';
+import { requireTenantRole } from '$lib/server/_auth/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'principal');
