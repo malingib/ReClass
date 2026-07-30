@@ -42,28 +42,33 @@ function addTenantFilter(qb: any, tenantId: string) {
       const fn = target[prop];
       if (typeof fn !== 'function') return fn;
 
-      if (WRAP_AFTER.has(prop)) {
+      // Bind to the query-builder instance — Postgrest methods rely on `this`
+      // (e.g. cloneRequestState); calling them unbound throws at runtime.
+      const bound = fn.bind(target);
+      const key = String(prop);
+
+      if (WRAP_AFTER.has(key)) {
         return (...args: any[]) => {
-          const result = fn(...args);
+          const result = bound(...args);
           return result.eq('tenant_id', tenantId);
         };
       }
-      if (INJECT_INTO.has(prop)) {
+      if (INJECT_INTO.has(key)) {
         return (...args: any[]) => {
           const [data, ...rest] = args;
           if (Array.isArray(data)) {
-            return fn(
+            return bound(
               data.map((item: any) => ({ ...item, tenant_id: tenantId })),
               ...rest,
             );
           }
           if (isRecord(data)) {
-            return fn({ ...data, tenant_id: tenantId }, ...rest);
+            return bound({ ...data, tenant_id: tenantId }, ...rest);
           }
-          return fn(data, ...rest);
+          return bound(data, ...rest);
         };
       }
-      return fn.bind(target);
+      return bound;
     },
   });
 }

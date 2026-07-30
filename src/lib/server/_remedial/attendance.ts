@@ -29,9 +29,12 @@ export async function getRecentAttendance(
 ) {
   const { data } = await sb
     .from('teacher_attendance')
-    .select('*')
+    .select('id, status, marked_at, teacher_id, teachers(first_name, last_name), occurrence_id')
     .eq('tenant_id', tenantId)
-    .gte('marked_at', since);
+    .is('deleted_at', null)
+    .gte('marked_at', since)
+    .order('marked_at', { ascending: false })
+    .limit(50);
   return data ?? [];
 }
 
