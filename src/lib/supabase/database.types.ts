@@ -66,11 +66,13 @@ export type Database = {
           amount: number
           checkout_id: string
           created_at: string | null
+          fee_type_id: string | null
           id: string
           invoice_id: string | null
           phone: string | null
           reason: string | null
           status: string | null
+          student_id: string | null
           tenant_id: string
           updated_at: string | null
         }
@@ -78,11 +80,13 @@ export type Database = {
           amount: number
           checkout_id: string
           created_at?: string | null
+          fee_type_id?: string | null
           id?: string
           invoice_id?: string | null
           phone?: string | null
           reason?: string | null
           status?: string | null
+          student_id?: string | null
           tenant_id: string
           updated_at?: string | null
         }
@@ -90,20 +94,36 @@ export type Database = {
           amount?: number
           checkout_id?: string
           created_at?: string | null
+          fee_type_id?: string | null
           id?: string
           invoice_id?: string | null
           phone?: string | null
           reason?: string | null
           status?: string | null
+          student_id?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "checkout_requests_fee_type_id_fkey"
+            columns: ["fee_type_id"]
+            isOneToOne: false
+            referencedRelation: "fee_types"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "checkout_requests_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
           {
@@ -1001,16 +1021,21 @@ export type Database = {
           amount: number
           bank_name: string | null
           bank_reference: string | null
+          cashier_id: string | null
           created_at: string | null
           deposited_by: string | null
+          domain: string
+          fee_type_id: string | null
           id: string
-          invoice_id: string
+          invoice_id: string | null
           method: string | null
           mpesa_checkout_id: string | null
           mpesa_receipt: string | null
           phone: string | null
+          receipt_no: string | null
           reconciled_at: string | null
           status: string | null
+          student_id: string | null
           tenant_id: string
           updated_at: string | null
         }
@@ -1018,16 +1043,21 @@ export type Database = {
           amount: number
           bank_name?: string | null
           bank_reference?: string | null
+          cashier_id?: string | null
           created_at?: string | null
           deposited_by?: string | null
+          domain?: string
+          fee_type_id?: string | null
           id?: string
-          invoice_id: string
+          invoice_id?: string | null
           method?: string | null
           mpesa_checkout_id?: string | null
           mpesa_receipt?: string | null
           phone?: string | null
+          receipt_no?: string | null
           reconciled_at?: string | null
           status?: string | null
+          student_id?: string | null
           tenant_id: string
           updated_at?: string | null
         }
@@ -1035,20 +1065,32 @@ export type Database = {
           amount?: number
           bank_name?: string | null
           bank_reference?: string | null
+          cashier_id?: string | null
           created_at?: string | null
           deposited_by?: string | null
+          domain?: string
+          fee_type_id?: string | null
           id?: string
-          invoice_id?: string
+          invoice_id?: string | null
           method?: string | null
           mpesa_checkout_id?: string | null
           mpesa_receipt?: string | null
           phone?: string | null
+          receipt_no?: string | null
           reconciled_at?: string | null
           status?: string | null
+          student_id?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_cashier_id_fkey"
+            columns: ["cashier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_deposited_by_fkey"
             columns: ["deposited_by"]
@@ -1057,10 +1099,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payments_fee_type_id_fkey"
+            columns: ["fee_type_id"]
+            isOneToOne: false
+            referencedRelation: "fee_types"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "payments_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
           {
@@ -2021,12 +2077,11 @@ export type Database = {
         Returns: number
       }
       get_admin_dashboard_stats: { Args: never; Returns: Json }
-      grant_waiver: {
+      reconcile_payment: {
         Args: {
           p_amount: number
-          p_granted_by: string
-          p_invoice_id: string
-          p_reason: string
+          p_checkout_id: string
+          p_phone: string
           p_tenant_id: string
         }
         Returns: Json
@@ -2050,16 +2105,6 @@ export type Database = {
           remaining: number
           reset_in_ms: number
         }[]
-      }
-      reconcile_payment: {
-        Args: {
-          p_amount: number
-          p_checkout_id: string
-          p_invoice_id: string
-          p_phone: string
-          p_tenant_id: string
-        }
-        Returns: Json
       }
       resolve_credential: {
         Args: {

@@ -71,8 +71,8 @@
       ]},
       { label: 'Remedial M-Pesa', defaultOpen: true, items: [
         { label: 'Remedial fee definitions', href: '/admin/remedial-fees', icon: 'fees' },
-        { label: 'Teacher Invoices', href: '/admin/teacher-invoices', icon: 'invoices' },
         { label: 'M-Pesa Parent Payments', href: '/admin/parent-payments', icon: 'invoices' },
+        { label: 'Receipts', href: '/admin/receipts', icon: 'invoices' },
       ]},
       { label: 'SIS', defaultOpen: true, items: [
         { label: 'SIS Dashboard', href: '/admin/sis', icon: 'dashboard' },
@@ -121,8 +121,7 @@
     bursar: [
       { label: 'M-Pesa', defaultOpen: true, items: [
         { label: 'Workspace', href: '/bursar', icon: 'dashboard' },
-        { label: 'Aging', href: '/bursar/aging', icon: 'invoices' },
-        { label: 'Waivers', href: '/bursar/waivers', icon: 'bell' },
+        { label: 'Receipts', href: '/bursar/receipts', icon: 'invoices' },
       ]},
     ],
     super_admin: [
@@ -181,8 +180,8 @@
     ['/admin/scheduling', 'reclass'],
     ['/admin/attendance', 'reclass'],
     ['/admin/remedial-fees', 'reclass'],
-    ['/admin/teacher-invoices', 'reclass'],
     ['/admin/parent-payments', 'reclass'],
+    ['/admin/receipts', 'reclass'],
     ['/admin/credentials', 'reclass'],
     ['/admin/settings', 'reclass'],
     ['/admin/notifications', 'reclass'],

@@ -10,6 +10,8 @@ graphify.py
 .agents
 test-results
 playwright-report
+playwright/.auth
+e2e/*.png
 
 # Python build artifacts
 __pycache__/

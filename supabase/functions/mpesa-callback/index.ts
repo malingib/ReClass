@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: cr, error: e } = await supabase.from('checkout_requests')
-      .select('id, invoice_id, tenant_id, amount, status').eq('checkout_id', CheckoutRequestID).single();
+      .select('id, fee_type_id, student_id, tenant_id, amount, status').eq('checkout_id', CheckoutRequestID).single();
     if (e || !cr) return notFound('unknown_checkout', req);
     if (cr.status === 'completed')
       return json({ status: 'already_reconciled' }, 200, req);
@@ -52,14 +52,31 @@ Deno.serve(async (req) => {
     const finalAmount = Amount ?? cr.amount;
     const finalPhone = PhoneNumber ?? '';
 
+    // Reconcile: stamp the matching payment as paid (idempotent by checkout_id).
     const { data: rec } = await supabase.rpc('reconcile_payment', {
-      p_checkout_id: CheckoutRequestID, p_invoice_id: cr.invoice_id, p_amount: finalAmount,
+      p_checkout_id: CheckoutRequestID, p_amount: finalAmount,
       p_phone: finalPhone, p_tenant_id: cr.tenant_id,
     });
 
     if (rec?.status !== 'completed' && rec?.status !== 'duplicate') {
       await supabase.from('checkout_requests').update({ status: 'failed', reason: rec?.status ?? 'reconciliation_failed' }).eq('id', cr.id);
       return json(rec ?? { status: 'reconciliation_failed' }, 409, req);
+    }
+
+    // Attach the student + fee context to the receipt (payments are receipts).
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('mpesa_checkout_id', CheckoutRequestID)
+      .eq('tenant_id', cr.tenant_id)
+      .maybeSingle();
+    if (payment) {
+      await supabase.from('payments').update({
+        student_id: cr.student_id,
+        fee_type_id: cr.fee_type_id,
+        domain: 'remedial',
+        receipt_no: `RCP-${cr.tenant_id.slice(0, 6).toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${CheckoutRequestID.slice(0, 5).toUpperCase()}`,
+      }).eq('id', payment.id);
     }
 
     await supabase.from('checkout_requests').update({ status: 'completed' }).eq('id', cr.id);
@@ -69,7 +86,7 @@ Deno.serve(async (req) => {
       { p_tenant: cr.tenant_id, p_key: 'sms_payment_receipt' });
     if (receiptOn) {
       await supabase.from('notifications').insert({
-        tenant_id: cr.tenant_id, related_type: 'invoice', related_id: cr.invoice_id, channel: 'sms',
+        tenant_id: cr.tenant_id, related_type: 'payment', related_id: payment?.id ?? cr.id, channel: 'sms',
         recipient: finalPhone,
         body: `ReClass: Payment of KES ${finalAmount} received. Receipt: ${CheckoutRequestID.slice(0, 8)}`,
         status: 'queued',

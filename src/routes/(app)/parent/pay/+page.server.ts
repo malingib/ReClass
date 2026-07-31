@@ -3,15 +3,22 @@ import { getParentOwnership } from '$lib/server/_auth/ownership';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId, parent, studentIds } = await getParentOwnership(locals);
-  if (studentIds.length === 0) return { parent, invoices: [] };
+  if (studentIds.length === 0) return { parent, students: [], feeTypes: [] };
 
-  const { data: invoices } = await locals.srv
-    .from('invoices')
-    .select('id, student_id, amount_due, amount_paid, status, due_date, students(first_name, last_name, admission_no)')
-    .eq('tenant_id', tenantId)
-    .in('student_id', studentIds)
-    .in('status', ['unpaid', 'partial'])
-    .order('due_date');
+  const [{ data: students }, { data: feeTypes }] = await Promise.all([
+    locals.srv
+      .from('students')
+      .select('id, admission_no, first_name, last_name, grade')
+      .eq('tenant_id', tenantId)
+      .in('id', studentIds)
+      .order('first_name'),
+    locals.srv
+      .from('fee_types')
+      .select('id, name, amount, domain, due_date, term')
+      .eq('tenant_id', tenantId)
+      .eq('domain', 'school')
+      .order('name'),
+  ]);
 
-  return { parent, invoices: invoices ?? [] };
+  return { parent, students: students ?? [], feeTypes: feeTypes ?? [] };
 };

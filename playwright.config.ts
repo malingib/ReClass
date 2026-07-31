@@ -27,7 +27,7 @@ export default defineConfig({
     {
       name: 'chromium',
       dependencies: ['setup'],
-      testMatch: /frontend-review\.spec\.ts|nav-audit\.spec\.ts/,
+      testMatch: /frontend-review\.spec\.ts|nav-audit\.spec\.ts|receipts-smoke\.spec\.ts/,
       use: { browserName: 'chromium' },
     },
   ],

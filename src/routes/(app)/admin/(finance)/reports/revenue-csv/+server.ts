@@ -12,28 +12,30 @@ export const GET: RequestHandler = async ({ locals }) => {
     return new Response('Too many requests', { status: 429, headers: rateLimitedHeaders(rl) });
   }
 
-  const { data: invoices } = await locals.srv
-    .from('invoices')
+  const { data: payments } = await locals.srv
+    .from('payments')
     .select(`
-      id, amount_due, amount_paid, status, due_date, created_at,
-      students!inner(first_name, last_name, admission_no, grade)
+      id, amount, method, domain, bank_reference, mpesa_receipt, phone, receipt_no, created_at,
+      students!inner(first_name, last_name, admission_no, grade),
+      fee_types(name)
     `)
     .eq('tenant_id', locals.tenantId)
     .eq('status', 'paid')
     .order('created_at', { ascending: false })
     .limit(EXPORT_MAX_ROWS);
 
-  if (!invoices) error(500, 'Failed to fetch revenue data');
+  if (!payments) error(500, 'Failed to fetch revenue data');
 
-  const headers = ['Student', 'Admission No', 'Grade', 'Amount Due', 'Amount Paid', 'Status', 'Due Date', 'Created At'];
-  const rows = invoices.map((r) => [
-    `${r.students?.first_name ?? ''} ${r.students?.last_name ?? ''}`,
+  const headers = ['Student', 'Admission No', 'Grade', 'Fee', 'Amount (KES)', 'Channel', 'Reference', 'Receipt No', 'Created At'];
+  const rows = payments.map((r) => [
+    `${r.students?.first_name ?? ''} ${r.students?.last_name ?? ''}`.trim(),
     r.students?.admission_no ?? '',
     r.students?.grade ?? '',
-    r.amount_due,
-    r.amount_paid,
-    r.status,
-    r.due_date ?? '',
+    (r.fee_types as any)?.name ?? '',
+    Number(r.amount).toFixed(2),
+    r.domain === 'remedial' ? 'M-Pesa' : (r.method ?? ''),
+    r.method === 'bank' ? (r.bank_reference ?? '') : (r.mpesa_receipt ?? ''),
+    r.receipt_no ?? r.id.slice(0, 8),
     r.created_at ? new Date(r.created_at).toISOString() : '',
   ]);
 

@@ -1,13 +1,19 @@
 import type { PageServerLoad } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
 import { getSisClasses } from '$lib/server/_sis/sis';
-import { getTeachersList } from '$lib/server/_finance/teacher-invoices';
+import { countRecords } from '$lib/server/_platform/query';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-  const [classes, teachers] = await Promise.all([
+  const [classes, teacherCount] = await Promise.all([
     getSisClasses(locals.srv, tenantId),
-    getTeachersList(locals.srv, tenantId),
+    countRecord(locals.srv, tenantId),
   ]);
-  return { classes, teachers };
+  return { classes, teacherCount };
 };
+
+async function countRecord(sb: App.Locals['srv'], tenantId: string) {
+  const { count } = await sb.from('teachers').select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId).is('deleted_at', null);
+  return count ?? 0;
+}

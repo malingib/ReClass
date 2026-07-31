@@ -4,7 +4,7 @@
 
   const { data } = $props();
   const students = $derived(data.students);
-  const invoices = $derived(data.invoices);
+  const payments = $derived(data.payments);
 </script>
 
 <DashboardContent title="Welcome back" subtitle="Your child's remedial schedule and M-Pesa payments">
@@ -18,12 +18,13 @@
       ]} emptyMessage="No children linked" />
     </div>
     <div class="rounded-xl border border-border bg-white p-6 shadow-card">
-      <h3 class="text-sm font-semibold text-ink-900">Pending M-Pesa payments</h3>
-      <DataTable data={invoices} columns={[
-        { key: 'amount_due', label: 'Balance', render: (i: any) => `KES ${Number(i.amount_due - i.amount_paid).toLocaleString()}` },
-        { key: 'status', label: 'Status' },
-        { key: 'due_date', label: 'Due', render: (i: any) => i.due_date ? new Date(i.due_date).toLocaleDateString() : '—' },
-      ]} emptyMessage="No outstanding invoices" />
+      <h3 class="text-sm font-semibold text-ink-900">Recent payments</h3>
+      <DataTable data={payments} columns={[
+        { key: 'created_at', label: 'Date', render: (p: any) => p.created_at ? new Date(p.created_at).toLocaleDateString() : '—' },
+        { key: 'fee_type', label: 'Fee' },
+        { key: 'amount', label: 'Amount', render: (p: any) => `KES ${Number(p.amount).toLocaleString()}` },
+        { key: 'channel', label: 'Channel', render: (p: any) => p.domain === 'remedial' ? 'M-Pesa' : (p.method ?? 'Bank') },
+      ]} emptyMessage="No payments yet" />
     </div>
   </div>
 </DashboardContent>

@@ -23,8 +23,8 @@
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <KpiCard label="Teacher Attendance" value={`${stats.attendanceRate}%`} sub={`${stats.attendanceTotal} total records`} />
     <KpiCard label="Absences Recorded" value={stats.absenteeCount} sub="Marked absent" />
-    <KpiCard label="Sessions Covered" value={stats.sessionsCovered} sub="Completed sessions" />
-    <KpiCard label="Revenue Collected" value={`KES ${stats.totalPayments.toLocaleString()}`} sub={`${stats.paidInvoices} paid invoices`} />
+    <KpiCard label="M-Pesa Receipts" value={stats.remedialPayments} sub="Remedial fees" />
+    <KpiCard label="Revenue Collected" value={`KES ${stats.totalPayments.toLocaleString()}`} sub={`${stats.schoolPayments} school · ${stats.remedialPayments} M-Pesa`} />
   </div>
 
   <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

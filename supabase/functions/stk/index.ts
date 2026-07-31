@@ -25,8 +25,9 @@ Deno.serve(async (req) => {
     if (!user) return unauthorized(req);
 
     const supabase = getServiceClient();
-    const { invoice_id } = await req.json();
-    if (typeof invoice_id !== 'string') return badRequest('INVALID_INVOICE', req);
+    const { fee_type_id, student_id } = await req.json();
+    if (typeof fee_type_id !== 'string' || typeof student_id !== 'string')
+      return badRequest('INVALID_REQUEST', req);
 
     const { data: parent } = await supabase.from('parents')
       .select('id, tenant_id, phone')
@@ -34,33 +35,34 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!parent) return forbidden(req);
 
-    const { data: invoice } = await supabase.from('invoices')
-      .select('id, tenant_id, student_id, amount_due, amount_paid, status')
-      .eq('id', invoice_id)
+    const { data: feeType } = await supabase.from('fee_types')
+      .select('id, tenant_id, name, amount, domain')
+      .eq('id', fee_type_id)
       .eq('tenant_id', parent.tenant_id)
-      .in('status', ['unpaid', 'partial'])
+      .is('deleted_at', null)
       .maybeSingle();
-    if (!invoice) return notFound('INVOICE_NOT_FOUND', req);
+    if (!feeType) return notFound('FEE_TYPE_NOT_FOUND', req);
 
     const { data: link } = await supabase.from('guardians_link')
       .select('student_id')
       .eq('parent_id', parent.id)
-      .eq('student_id', invoice.student_id)
+      .eq('student_id', student_id)
       .maybeSingle();
     if (!link) return forbidden(req);
 
     const { count: pendingCount } = await supabase
       .from('checkout_requests')
       .select('*', { count: 'exact', head: true })
-      .eq('invoice_id', invoice_id)
+      .eq('fee_type_id', fee_type_id)
+      .eq('student_id', student_id)
       .eq('status', 'pending');
     if (pendingCount && pendingCount > 0) {
-      return json({ error: 'DUPLICATE_REQUEST', message: 'A payment request for this invoice is already being processed.' }, 429, req);
+      return json({ error: 'DUPLICATE_REQUEST', message: 'A payment request for this fee is already being processed.' }, 429, req);
     }
 
     const tenant_id = parent.tenant_id;
     const phone = parent.phone.replace(/[\s\-\(\)\.\+]/g, '');
-    const amount = Number(invoice.amount_due) - Number(invoice.amount_paid ?? 0);
+    const amount = Number(feeType.amount);
     if (amount <= 0 || !/^254[17]\d{8}$/.test(phone)) {
       return badRequest('INVALID_PAYMENT_DETAILS', req);
     }
@@ -87,7 +89,7 @@ Deno.serve(async (req) => {
     // provider acceptance still has local tracking for reconciliation.
     const checkoutId = crypto.randomUUID();
     await supabase.from('checkout_requests').insert({
-      tenant_id, invoice_id, checkout_id: checkoutId,
+      tenant_id, fee_type_id, student_id, checkout_id: checkoutId,
       amount, phone, status: 'pending',
     });
 
@@ -98,7 +100,7 @@ Deno.serve(async (req) => {
         BusinessShortCode: secrets.shortcode, Password: pwd, Timestamp: ts,
         TransactionType: 'CustomerPayBillOnline', Amount: amount,
         PartyA: phone, PartyB: secrets.shortcode, PhoneNumber: phone,
-        CallBackURL: callback, AccountReference: `INV-${invoice_id.slice(0, 8)}`,
+        CallBackURL: callback, AccountReference: `FEE-${fee_type_id.slice(0, 8)}`,
         TransactionDesc: 'ReClass fee payment',
       }),
     }).then(r => r.json());

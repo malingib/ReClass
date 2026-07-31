@@ -51,7 +51,8 @@
       {@render kpi('Students', stat.students, 'Enrolled')}
       {@render kpi('Teachers', stat.teachers, 'On roster')}
       {@render kpi('Attendance', `${stat.attendanceRate}%`, 'Last 14 days')}
-      {@render kpi('Outstanding', `KES ${(stat.unpaidAmount ?? 0).toLocaleString()}`, `${stat.unpaid} unpaid invoices`)}
+      {@render kpi('School Fees', `KES ${(stat.schoolCollected ?? 0).toLocaleString()}`, 'Collected (12mo)')}
+      {@render kpi('M-Pesa', `KES ${(stat.remedialCollected ?? 0).toLocaleString()}`, 'Remedial (12mo)')}
     </div>
 
     <!-- Modules quick access -->

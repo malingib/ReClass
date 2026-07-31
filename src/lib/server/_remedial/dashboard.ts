@@ -1,6 +1,5 @@
 import { countRecords } from '../_platform/query';
 import { getRecentRemedialStudents } from '../_sis/students';
-import { getRecentInvoices, getUnpaidAmount } from '../_finance/invoices';
 import { getRecentAttendance } from '../_remedial/attendance';
 import { computeTrend, buildActivityFeed } from '../_dashboard/admin-dashboard';
 import { PAGE_OVERVIEW } from '$lib/config';
@@ -8,12 +7,11 @@ import { PAGE_OVERVIEW } from '$lib/config';
 // ReClass (remedial) dashboard stats.
 //
 // NOTE: remedial_groups / group_members were collapsed into flat `sessions`
-// (see migration 20260716000002). All remedial stats are now derived from
-// `sessions` (carries class, subject_id, teacher_id) and `teacher_attendance`.
+// (see migration 20260716000002). Remedial fees are paid via M-Pesa and tracked
+// as payments (domain='remedial') — there is no invoice/balance lifecycle.
 export async function getReclassStats(sb: App.Locals['srv'], tenantId: string) {
   const since = new Date(Date.now() - 14 * 864e5).toISOString();
 
-  // Distinct teachers assigned to remedial sessions, and distinct classes.
   const [{ data: sessionTeachers }, { data: sessionClasses }] = await Promise.all([
     sb.from('sessions').select('teacher_id').eq('tenant_id', tenantId).is('deleted_at', null).eq('active', true),
     sb.from('sessions').select('class').eq('tenant_id', tenantId).is('deleted_at', null).eq('active', true),
@@ -23,17 +21,19 @@ export async function getReclassStats(sb: App.Locals['srv'], tenantId: string) {
 
   const [
     sessions,
-    unpaid, paidInvoices,
-    rs, ri, ta, occ, sum,
+    rs, ta, occ,
+    mpesaCollected, mpesaPayments,
+    recentPayments,
   ] = await Promise.all([
     countRecords(sb, 'sessions', tenantId, q => q.eq('active', true).is('deleted_at', null)),
-    countRecords(sb, 'invoices', tenantId, q => q.eq('status', 'unpaid')),
-    countRecords(sb, 'invoices', tenantId, q => q.eq('status', 'paid')),
     getRecentRemedialStudents(sb, tenantId, PAGE_OVERVIEW),
-    getRecentInvoices(sb, tenantId, PAGE_OVERVIEW),
     getRecentAttendance(sb, tenantId, since),
     sb.from('session_occurrences').select('id, occurs_on, status').eq('tenant_id', tenantId).gte('occurs_on', since).then(r => r.data ?? []),
-    getUnpaidAmount(sb, tenantId),
+    sb.from('payments').select('amount').eq('tenant_id', tenantId).eq('domain', 'remedial').eq('status', 'paid').then(r => (r.data ?? []).reduce((s: number, x: { amount: number }) => s + Number(x.amount ?? 0), 0)),
+    countRecords(sb, 'payments', tenantId, q => q.eq('domain', 'remedial').eq('status', 'paid')),
+    sb.from('payments').select('id, amount, method, created_at, students(first_name, last_name), fee_types(name)')
+      .eq('tenant_id', tenantId).eq('domain', 'remedial').eq('status', 'paid')
+      .order('created_at', { ascending: false }).limit(PAGE_OVERVIEW).then(r => r.data ?? []),
   ]);
 
   const total = ta.length;
@@ -42,20 +42,20 @@ export async function getReclassStats(sb: App.Locals['srv'], tenantId: string) {
 
   return {
     stat: {
+      allowedKeys: ['groups', 'teachers', 'enrolledStudents', 'sessions', 'mpesaCollected', 'mpesaPayments', 'attendanceRate', 'sessionsCount'],
       groups,
       teachers,
       enrolledStudents: rs.length,
       sessions,
-      unpaid,
-      paidInvoices,
-      unpaidAmount: sum,
+      mpesaCollected,
+      mpesaPayments,
       attendanceRate: rate,
       sessionsCount: occ.length,
     },
     recentStudents: rs,
-    recentInvoices: ri,
+    recentPayments,
     trend: computeTrend(occ),
-    activity: buildActivityFeed(ta, ri),
+    activity: buildActivityFeed(ta, recentPayments as any[]),
     sessionsSummary: [],
   };
 }

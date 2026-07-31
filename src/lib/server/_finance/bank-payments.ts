@@ -2,8 +2,15 @@ import { fail } from '@sveltejs/kit';
 import { z } from 'zod/v3';
 import { parseForm } from '$lib/server/_platform/validation';
 
+/**
+ * Record a school-fee payment made via KCB / Buni bank transfer.
+ * School fees are tracked separately from remedial (M-Pesa) fees — this is the
+ * bank channel for the Finance module. The payment IS the receipt: we no longer
+ * create or update invoices; the payment row carries student + fee_type + domain.
+ */
 const bankPaymentSchema = z.object({
-  invoice_id: z.string().min(1, 'Invoice is required'),
+  student_id: z.string().min(1, 'Student is required'),
+  fee_type_id: z.string().min(1, 'Fee type is required'),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than zero'),
   bank_reference: z.string().min(1, 'Bank reference is required').max(200),
   bank_name: z.string().max(100).optional(),
@@ -12,11 +19,12 @@ const bankPaymentSchema = z.object({
 
 export type BankPaymentInput = z.infer<typeof bankPaymentSchema>;
 
-/**
- * Record a school-fee payment made via KCB / Buni bank transfer.
- * School fees are tracked separately from remedial (M-Pesa) fees — this is the
- * bank channel for the Finance module.
- */
+function makeReceiptNo(tenantId: string): string {
+  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
+  return `RCP-${tenantId.slice(0, 6).toUpperCase()}-${stamp}-${rand}`;
+}
+
 export async function recordBankPayment(
   sb: App.Locals['srv'],
   tenantId: string,
@@ -26,42 +34,37 @@ export async function recordBankPayment(
   const v = parseForm(bankPaymentSchema, raw);
   if (!v.success) return fail(400, { errors: v.errors });
 
-  // Validate the invoice belongs to this tenant and is a school-fee invoice.
-  const { data: invoice, error: invErr } = await sb
-    .from('invoices')
-    .select('id, tenant_id, amount_due, amount_paid, status, domain')
-    .eq('id', v.data.invoice_id)
+  // Validate the fee type belongs to this tenant and is a school-fee definition.
+  const { data: feeType, error: ftErr } = await sb
+    .from('fee_types')
+    .select('id, tenant_id, name, domain')
+    .eq('id', v.data.fee_type_id)
     .eq('tenant_id', tenantId)
+    .is('deleted_at', null)
     .single();
-  if (invErr || !invoice) return fail(404, { message: 'Invoice not found.' });
-  if (invoice.domain && invoice.domain !== 'school') {
-    return fail(400, { message: 'This invoice is not a school fee. Use M-Pesa for remedial fees.' });
+  if (ftErr || !feeType) return fail(404, { message: 'Fee type not found.' });
+  if (feeType.domain && feeType.domain !== 'school') {
+    return fail(400, { message: 'This fee type is not a school fee. Use M-Pesa for remedial fees.' });
   }
 
   const amount = Number(v.data.amount);
   const { error: payErr } = await sb.from('payments').insert({
     tenant_id: tenantId,
-    invoice_id: v.data.invoice_id,
+    student_id: v.data.student_id,
+    fee_type_id: v.data.fee_type_id,
+    domain: 'school',
     amount,
     method: 'bank',
     bank_reference: v.data.bank_reference,
     bank_name: v.data.bank_name || 'KCB',
     phone: null,
     status: 'paid',
+    receipt_no: makeReceiptNo(tenantId),
+    cashier_id: userId ?? null,
     deposited_by: userId ?? null,
     reconciled_at: new Date().toISOString(),
   });
   if (payErr) return fail(500, { message: `Failed to record payment: ${payErr.message}` });
-
-  // Update invoice paid total + status (mirrors reconcile_payment behaviour).
-  const newPaid = Number(invoice.amount_paid ?? 0) + amount;
-  const newStatus = newPaid >= Number(invoice.amount_due) ? 'paid' : 'partial';
-  const { error: invUpdErr } = await sb
-    .from('invoices')
-    .update({ amount_paid: newPaid, status: newStatus })
-    .eq('id', v.data.invoice_id)
-    .eq('tenant_id', tenantId);
-  if (invUpdErr) return fail(500, { message: `Payment recorded but invoice update failed: ${invUpdErr.message}` });
 
   return { success: true as const, message: 'Bank payment recorded successfully' };
 }

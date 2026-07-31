@@ -5,97 +5,59 @@ import { isRole, roleRoutes, roleLabels, type Role } from '$lib/auth';
 
 const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
 
-describe('reconcile_payment (v2 — fix_payment_and_waiver)', () => {
-  const rpc = readFileSync(join(migrationsDir, '20260720000004_fix_payment_and_waiver.sql'), 'utf8');
+describe('reconcile_payment (receipts — no invoice lifecycle)', () => {
+  const rpc = readFileSync(join(migrationsDir, '20260731000001_drop_invoice_lifecycle.sql'), 'utf8');
 
-  it('accepts 5 arguments including p_tenant_id', () => {
+  it('accepts 4 arguments including p_tenant_id', () => {
     expect(rpc).toMatch(/FUNCTION\s+public\.reconcile_payment\s*\(/);
     expect(rpc).toMatch(/p_tenant_id\s+uuid/);
+    expect(rpc).toMatch(/p_checkout_id\s+text/);
+    expect(rpc).toMatch(/p_amount\s+numeric/);
+    expect(rpc).toMatch(/p_phone\s+text/);
   });
 
-  it('scopes invoice lookup by p_tenant_id', () => {
-    expect(rpc).toMatch(/WHERE\s+id\s*=\s*p_invoice_id\s+AND\s+tenant_id\s*=\s*p_tenant_id/i);
+  it('rejects non-positive amounts', () => {
+    expect(rpc).toMatch(/IF\s+p_amount\s*<=\s*0/i);
+    expect(rpc).toMatch(/'invalid_amount'/i);
   });
 
-  it('locks the invoice row with FOR UPDATE', () => {
-    expect(rpc).toMatch(/FOR\s+UPDATE/i);
-  });
-
-  it('detects duplicate checkout_id', () => {
+  it('detects duplicate checkout_id and marks paid', () => {
     expect(rpc).toMatch(/mpesa_checkout_id\s*=\s*p_checkout_id/i);
     expect(rpc).toMatch(/'duplicate'/i);
+    expect(rpc).toMatch(/UPDATE\s+public\.payments/i);
+    expect(rpc).toMatch(/reconciled_at\s*=\s*now\(\)/i);
   });
 
-  it('records overpayment to payment_reconciliations', () => {
-    expect(rpc).toMatch(/v_overpayment\s*>\s*0/i);
-    expect(rpc).toMatch(/INSERT\s+INTO\s+public\.payment_reconciliations/i);
-    expect(rpc).toMatch(/excess_amount/i);
+  it('creates the payment when no pending payment exists', () => {
+    expect(rpc).toMatch(/INSERT\s+INTO\s+public\.payments/i);
   });
 
-  it('returns partial_overpayment when amount exceeds balance', () => {
-    expect(rpc).toMatch(/'partial_overpayment'/i);
-    expect(rpc).toMatch(/'excess'/i);
-    expect(rpc).toMatch(/'reconciliation_id'/i);
-  });
-
-  it('does NOT manually UPDATE invoices.amount_paid', () => {
-    const reconcileBody = rpc.match(/CREATE OR REPLACE FUNCTION public\.reconcile_payment[\s\S]*?\$\$/);
-    expect(reconcileBody).not.toBeNull();
-    expect(reconcileBody![0]).not.toMatch(/UPDATE\s+public\.invoices/i);
+  it('does NOT touch invoices (invoice lifecycle removed)', () => {
+    const body = rpc.match(/CREATE OR REPLACE FUNCTION public\.reconcile_payment[\s\S]*?\$\$/);
+    expect(body).not.toBeNull();
+    expect(body![0]).not.toMatch(/public\.invoices/i);
   });
 
   it('is SECURITY DEFINER and granted only to service_role', () => {
     expect(rpc).toContain('SECURITY DEFINER');
     expect(rpc).toMatch(/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.reconcile_payment[^)]*\)\s*TO\s+service_role/i);
   });
-
-  it('rejects non-positive amounts', () => {
-    expect(rpc).toMatch(/IF\s+p_amount\s*<=\s*0/i);
-    expect(rpc).toMatch(/'invalid_amount'/i);
-  });
 });
 
-describe('grant_waiver RPC (atomic waiver)', () => {
-  const rpc = readFileSync(join(migrationsDir, '20260720000004_fix_payment_and_waiver.sql'), 'utf8');
+describe('grant_waiver RPC removed (no invoice balances)', () => {
+  const sql = readFileSync(join(migrationsDir, '20260731000001_drop_invoice_lifecycle.sql'), 'utf8');
+  const oldSql = readFileSync(join(migrationsDir, '20260720000004_fix_payment_and_waiver.sql'), 'utf8');
 
-  it('exists as a function with 5 params', () => {
-    expect(rpc).toMatch(/FUNCTION\s+public\.grant_waiver\s*\(/);
-    expect(rpc).toMatch(/p_invoice_id\s+uuid/);
-    expect(rpc).toMatch(/p_tenant_id\s+uuid/);
+  it('new migration no longer defines grant_waiver', () => {
+    expect(sql).not.toMatch(/FUNCTION\s+public\.grant_waiver\s*\(/);
   });
 
-  it('locks invoice row with FOR UPDATE', () => {
-    expect(rpc).toMatch(/FOR\s+UPDATE/i);
+  it('new migration drops the old grant_waiver function', () => {
+    expect(sql).toMatch(/DROP\s+FUNCTION\s+IF\s+EXISTS\s+public\.grant_waiver/i);
   });
 
-  it('rejects already-settled invoices', () => {
-    expect(rpc).toMatch(/IF\s+v_invoice\.status\s+IN\s+\(?\s*'paid'\s*,/i);
-    expect(rpc).toMatch(/'already_settled'/i);
-  });
-
-  it('validates waiver does not exceed outstanding balance', () => {
-    expect(rpc).toMatch(/p_amount\s*>\s*v_outstanding/i);
-    expect(rpc).toMatch(/'exceeds_balance'/i);
-  });
-
-  it('writes audit_log with before/after', () => {
-    expect(rpc).toMatch(/INSERT\s+INTO\s+public\.audit_log/i);
-    expect(rpc).toMatch(/waiver_granted/i);
-    expect(rpc).toMatch(/jsonb_build_object\('invoice_id',\s*p_invoice_id, 'amount_paid',\s*v_invoice\.amount_paid/i);
-  });
-
-  it('transitions invoice status to waived when fully paid', () => {
-    expect(rpc).toMatch(/CASE WHEN\s+v_new_paid\s*>=\s*v_invoice\.amount_due\s+THEN\s+'waived'/i);
-  });
-
-  it('is granted to service_role', () => {
-    expect(rpc).toMatch(/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.grant_waiver/i);
-  });
-
-  it('rejects non-positive amounts', () => {
-    expect(rpc).toMatch(/IF\s+p_amount\s*<=\s*0/i);
-    expect(rpc).toMatch(/'invalid_amount'/i);
-    expect(rpc).toMatch(/Waiver amount must be positive/i);
+  it('old migration still defined it (regression anchor)', () => {
+    expect(oldSql).toMatch(/FUNCTION\s+public\.grant_waiver\s*\(/);
   });
 });
 

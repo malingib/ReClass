@@ -9,7 +9,7 @@
   const { data } = $props();
   const stat = $derived(data.stat);
   const recentStudents = $derived(data.recentStudents);
-  const recentInvoices = $derived(data.recentInvoices);
+  const recentPayments = $derived(data.recentPayments);
   const trend = $derived(data.trend);
   const trendIsAllZero = $derived(trend.length > 0 && trend.every(d => d.value === 0));
   const activity = $derived(data.activity);
@@ -64,7 +64,7 @@
       {@render kpi('Today', stat.sessionsCount ? 'Active' : 'Jul 16', `${stat.sessionsCount} session${stat.sessionsCount !== 1 ? 's' : ''} today`)}
       {@render kpi('Remedial groups', stat.groups, `${stat.sessions} scheduled sessions`)}
       {@render kpi('Teacher attendance', `${stat.attendanceRate}%`, 'Last 14 days')}
-      {@render kpi('Outstanding', `KES ${(stat.unpaidAmount ?? 0).toLocaleString()}`, `${stat.unpaid} unpaid invoices`)}
+      {@render kpi('M-Pesa collected', `KES ${(stat.mpesaCollected ?? 0).toLocaleString()}`, `${stat.mpesaPayments} receipts`)}
     </div>
 
     <!-- Mini stats + chart row -->
@@ -76,8 +76,8 @@
             {@render mini('Remedial teachers', `${stat.teachers}`, 'Assigned')}
             {@render mini('Enrolled students', `${stat.enrolledStudents}`, 'In groups')}
             {@render mini('Teacher attendance', `${stat.attendanceRate}%`, 'Last 14d')}
-            {@render mini('Paid invoices', `${stat.paidInvoices}`, 'M-Pesa confirmed')}
-            {@render mini('Outstanding', `KES ${(stat.unpaidAmount ?? 0).toLocaleString()}`, `${stat.unpaid} open`)}
+            {@render mini('M-Pesa collected', `KES ${(stat.mpesaCollected ?? 0).toLocaleString()}`, `${stat.mpesaPayments} receipts`)}
+            {@render mini('M-Pesa receipts', `${stat.mpesaPayments}`, 'Count')}
           </div>
         </CardContent>
       </Card>
@@ -159,11 +159,11 @@
         </CardHeader>
         <CardContent class="p-0">
           <DataTable
-            data={recentInvoices}
+            data={recentPayments}
             columns={[
-              { key: 'parent', label: 'Parent', sortable: true },
-              { key: 'amount_paid', label: 'Paid', render: (r: any) => `KES ${Number(r.amount_paid ?? 0).toLocaleString()}` },
-              { key: 'status', label: 'Status', render: (r: any) => r.status },
+              { key: 'student_name', label: 'Student', sortable: true, render: (r: any) => r.student_name ?? '—' },
+              { key: 'amount', label: 'Paid', render: (r: any) => `KES ${Number(r.amount ?? 0).toLocaleString()}` },
+              { key: 'channel', label: 'Channel', render: (r: any) => r.domain === 'remedial' ? 'M-Pesa' : (r.method ?? 'Bank') },
             ]}
           />
         </CardContent>

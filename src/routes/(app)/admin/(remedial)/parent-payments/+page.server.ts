@@ -8,48 +8,41 @@ export const load: PageServerLoad = async ({ locals }) => {
   const yearStart = new Date(Date.now() - 365 * 864e5).toISOString();
 
   const [
-    { data: invoices },
     { data: payments },
     { count: totalStudents },
-    { count: paidCount },
-    { count: unpaidCount },
-    { count: partialCount },
+    { count: mpesaCount },
+    { count: bankCount },
   ] = await Promise.all([
     locals.srv
-      .from('invoices')
-      .select('id, student_id, amount_due, amount_paid, status, due_date, created_at, students(first_name, last_name, admission_no, grade)')
+      .from('payments')
+      .select(`
+        id, amount, method, domain, mpesa_receipt, phone, status, receipt_no, created_at,
+        students(first_name, last_name, admission_no, grade),
+        fee_types(name)
+      `)
       .eq('tenant_id', locals.tenantId)
       .order('created_at', { ascending: false })
       .limit(EXPORT_BURSA_MAX_ROWS),
-    locals.srv
-      .from('payments')
-      .select('id, invoice_id, amount, mpesa_receipt, phone, status, created_at')
-      .eq('tenant_id', locals.tenantId)
-      .gte('created_at', yearStart)
-      .eq('status', 'paid')
-      .order('created_at', { ascending: false })
-      .limit(200),
     locals.srv.from('students').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).then(r => ({ count: r.count })),
-    locals.srv.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).eq('status', 'paid').then(r => ({ count: r.count })),
-    locals.srv.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).eq('status', 'unpaid').then(r => ({ count: r.count })),
-    locals.srv.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).eq('status', 'partial').then(r => ({ count: r.count })),
+    locals.srv.from('payments').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).eq('domain', 'remedial').eq('status', 'paid').then(r => ({ count: r.count })),
+    locals.srv.from('payments').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).eq('domain', 'school').eq('status', 'paid').then(r => ({ count: r.count })),
   ]);
 
-  const invoiceData = (invoices ?? []).map((i) => ({
-    ...i,
-    student_name: i.students ? `${i.students.first_name} ${i.students.last_name}` : '—',
-    admission_no: i.students?.admission_no ?? '—',
-    grade: i.students?.grade ?? '—',
+  const paymentData = (payments ?? []).map((p: any) => ({
+    ...p,
+    student_name: p.students ? `${p.students.first_name} ${p.students.last_name}` : '—',
+    admission_no: p.students?.admission_no ?? '—',
+    grade: p.students?.grade ?? '—',
+    fee_type: p.fee_types?.name ?? '—',
   }));
 
   return {
-    invoices: invoiceData,
-    payments: payments ?? [],
+    payments: paymentData,
     stats: {
       totalStudents: totalStudents ?? 0,
-      paid: paidCount ?? 0,
-      unpaid: unpaidCount ?? 0,
-      partial: partialCount ?? 0,
+      paid: mpesaCount ?? 0,
+      unpaid: bankCount ?? 0,
+      partial: (payments ?? []).length,
     },
   };
 };
