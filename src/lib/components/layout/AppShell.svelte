@@ -55,7 +55,7 @@
   const roleNav: Record<string, NavGroup[]> = {
     school_admin: [
       { label: 'Front office', defaultOpen: true, items: [
-        { label: 'Dashboard', href: '/admin', icon: 'dashboard' },
+        { label: 'Overview', href: '/admin', icon: 'dashboard' },
         { label: 'Parents', href: '/admin/parents', icon: 'parents' },
         { label: 'Remedial teachers', href: '/admin/teachers', icon: 'teachers' },
       ]},
@@ -64,19 +64,24 @@
         { label: 'Scheduling', href: '/admin/scheduling', icon: 'calendar' },
         { label: 'Teacher attendance', href: '/admin/attendance', icon: 'calendar' },
       ]},
-      { label: 'M-Pesa payments', defaultOpen: true, items: [
-        { label: 'Fee definitions', href: '/admin/fees', icon: 'fees' },
+      { label: 'School fees', defaultOpen: true, items: [
+        { label: 'Bursar & Finance', href: '/admin/finance', icon: 'fees' },
+        { label: 'School fee definitions', href: '/admin/fees', icon: 'fees' },
+        { label: 'Payroll', href: '/admin/payroll', icon: 'invoices' },
+      ]},
+      { label: 'Remedial M-Pesa', defaultOpen: true, items: [
+        { label: 'Remedial fee definitions', href: '/admin/remedial-fees', icon: 'fees' },
         { label: 'Teacher Invoices', href: '/admin/teacher-invoices', icon: 'invoices' },
-        { label: 'Parent Payments', href: '/admin/parent-payments', icon: 'invoices' },
+        { label: 'M-Pesa Parent Payments', href: '/admin/parent-payments', icon: 'invoices' },
       ]},
       { label: 'SIS', defaultOpen: true, items: [
-        { label: 'Dashboard', href: '/admin/sis', icon: 'dashboard' },
+        { label: 'SIS Dashboard', href: '/admin/sis', icon: 'dashboard' },
         { label: 'Students', href: '/admin/students', icon: 'students' },
         { label: 'Classes', href: '/admin/sis/classes', icon: 'subjects' },
         { label: 'Admissions', href: '/admin/sis/admissions', icon: 'students' },
       ]},
       { label: 'Communications', defaultOpen: true, items: [
-        { label: 'Dashboard', href: '/admin/communications', icon: 'dashboard' },
+        { label: 'Comms Dashboard', href: '/admin/communications', icon: 'dashboard' },
         { label: 'Announcements', href: '/admin/communications/announcements', icon: 'bell' },
         { label: 'Templates', href: '/admin/communications/templates', icon: 'invoices' },
         { label: 'Message Log', href: '/admin/notifications', icon: 'bell' },
@@ -132,10 +137,11 @@
   const navGroupModule: Record<string, string> = {
     'Front office': 'reclass',
     'Remedial program': 'reclass',
-    'M-Pesa payments': 'reclass',
-    'Integrations': 'reclass',
+    'School fees': 'finance',
+    'Remedial M-Pesa': 'reclass',
     'SIS': 'sis',
     'Communications': 'communications',
+    'Integrations': 'reclass',
     'Reporting': 'reports',
     'Teaching': 'reclass',
     'My child': 'reclass',
@@ -158,20 +164,37 @@
     return href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
   }
 
+  // Ordered most-specific-first; first prefix match wins. Drives which nav
+  // groups show (module isolation) and the module switcher accent.
+  const ROUTE_MODULE: Array<[string, string]> = [
+    ['/admin/reclass', 'reclass'],
+    ['/admin/finance', 'finance'],
+    ['/admin/fees', 'finance'],
+    ['/admin/payroll', 'payroll'],
+    ['/admin/reports', 'reports'],
+    ['/admin/sis', 'sis'],
+    ['/admin/communications', 'communications'],
+    ['/admin/students', 'reclass'],
+    ['/admin/teachers', 'reclass'],
+    ['/admin/parents', 'reclass'],
+    ['/admin/subjects', 'reclass'],
+    ['/admin/scheduling', 'reclass'],
+    ['/admin/attendance', 'reclass'],
+    ['/admin/remedial-fees', 'reclass'],
+    ['/admin/teacher-invoices', 'reclass'],
+    ['/admin/parent-payments', 'reclass'],
+    ['/admin/credentials', 'reclass'],
+    ['/admin/settings', 'reclass'],
+    ['/admin/notifications', 'reclass'],
+    ['/admin/users', 'reclass'],
+  ];
+
   const activeModule = $derived.by(() => {
     const p = $page.url.pathname;
     if (p === '/admin') return '';
-    if (p.startsWith('/admin/reclass')) return 'reclass';
-    if (p.startsWith('/admin/payroll')) return 'payroll';
-    if (p.startsWith('/admin/reports')) return 'reports';
-    if (p.startsWith('/admin/finance')) return 'finance';
-    if (p.startsWith('/admin/sis')) return 'sis';
-    if (p.startsWith('/admin/communications')) return 'communications';
-    if (p.startsWith('/admin/students') || p.startsWith('/admin/teachers') || p.startsWith('/admin/parents')
-      || p.startsWith('/admin/subjects') || p.startsWith('/admin/scheduling') || p.startsWith('/admin/attendance')
-      || p.startsWith('/admin/fees') || p.startsWith('/admin/teacher-invoices') || p.startsWith('/admin/parent-payments')
-      || p.startsWith('/admin/credentials') || p.startsWith('/admin/settings') || p.startsWith('/admin/notifications')
-      || p.startsWith('/admin/users')) return 'reclass';
+    for (const [prefix, mod] of ROUTE_MODULE) {
+      if (p.startsWith(prefix)) return mod;
+    }
     return '';
   });
 
@@ -205,8 +228,8 @@
   const userEmail = $derived(user?.email ?? 'admin@reclass.app');
 
   const allItems = $derived(filteredNAV.flatMap((group) => group.items));
-  const navItemsVisible = $derived(allItems.length <= 4 ? allItems : allItems.slice(0, 3));
-  const navItemsMore = $derived(allItems.length <= 4 ? [] : allItems.slice(3));
+  const navItemsVisible = $derived(allItems.length <= 5 ? allItems : allItems.slice(0, 4));
+  const navItemsMore = $derived(allItems.length <= 5 ? [] : allItems.slice(4));
 
   $effect(() => {
     function handleClick(event: MouseEvent) {
