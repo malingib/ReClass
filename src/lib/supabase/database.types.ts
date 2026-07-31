@@ -68,7 +68,6 @@ export type Database = {
           created_at: string | null
           fee_type_id: string | null
           id: string
-          invoice_id: string | null
           phone: string | null
           reason: string | null
           status: string | null
@@ -82,7 +81,6 @@ export type Database = {
           created_at?: string | null
           fee_type_id?: string | null
           id?: string
-          invoice_id?: string | null
           phone?: string | null
           reason?: string | null
           status?: string | null
@@ -96,7 +94,6 @@ export type Database = {
           created_at?: string | null
           fee_type_id?: string | null
           id?: string
-          invoice_id?: string | null
           phone?: string | null
           reason?: string | null
           status?: string | null
@@ -110,13 +107,6 @@ export type Database = {
             columns: ["fee_type_id"]
             isOneToOne: false
             referencedRelation: "fee_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "checkout_requests_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -625,73 +615,6 @@ export type Database = {
           },
         ]
       }
-      invoices: {
-        Row: {
-          amount_due: number
-          amount_paid: number | null
-          created_at: string | null
-          deleted_at: string | null
-          domain: string
-          due_date: string | null
-          fee_type_id: string | null
-          id: string
-          last_reminded_at: string | null
-          status: string | null
-          student_id: string
-          tenant_id: string
-        }
-        Insert: {
-          amount_due: number
-          amount_paid?: number | null
-          created_at?: string | null
-          deleted_at?: string | null
-          domain?: string
-          due_date?: string | null
-          fee_type_id?: string | null
-          id?: string
-          last_reminded_at?: string | null
-          status?: string | null
-          student_id: string
-          tenant_id: string
-        }
-        Update: {
-          amount_due?: number
-          amount_paid?: number | null
-          created_at?: string | null
-          deleted_at?: string | null
-          domain?: string
-          due_date?: string | null
-          fee_type_id?: string | null
-          id?: string
-          last_reminded_at?: string | null
-          status?: string | null
-          student_id?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_fee_type_id_fkey"
-            columns: ["fee_type_id"]
-            isOneToOne: false
-            referencedRelation: "fee_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       messages: {
         Row: {
           body: string
@@ -926,96 +849,6 @@ export type Database = {
           },
         ]
       }
-      payment_reconciliations: {
-        Row: {
-          created_at: string | null
-          deleted_at: string | null
-          excess_amount: number | null
-          id: string
-          note: string | null
-          original_invoice_id: string | null
-          originally_for: string | null
-          payment_id: string
-          reassigned_to_invoice: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          status: string
-          tenant_id: string
-          updated_at: string | null
-          week_start: string
-        }
-        Insert: {
-          created_at?: string | null
-          deleted_at?: string | null
-          excess_amount?: number | null
-          id?: string
-          note?: string | null
-          original_invoice_id?: string | null
-          originally_for?: string | null
-          payment_id: string
-          reassigned_to_invoice?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: string
-          tenant_id: string
-          updated_at?: string | null
-          week_start: string
-        }
-        Update: {
-          created_at?: string | null
-          deleted_at?: string | null
-          excess_amount?: number | null
-          id?: string
-          note?: string | null
-          original_invoice_id?: string | null
-          originally_for?: string | null
-          payment_id?: string
-          reassigned_to_invoice?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: string
-          tenant_id?: string
-          updated_at?: string | null
-          week_start?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_reconciliations_original_invoice_id_fkey"
-            columns: ["original_invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_reconciliations_payment_id_fkey"
-            columns: ["payment_id"]
-            isOneToOne: false
-            referencedRelation: "payments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_reconciliations_reassigned_to_invoice_fkey"
-            columns: ["reassigned_to_invoice"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_reconciliations_resolved_by_fkey"
-            columns: ["resolved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_reconciliations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       payments: {
         Row: {
           amount: number
@@ -1027,7 +860,6 @@ export type Database = {
           domain: string
           fee_type_id: string | null
           id: string
-          invoice_id: string | null
           method: string | null
           mpesa_checkout_id: string | null
           mpesa_receipt: string | null
@@ -1049,7 +881,6 @@ export type Database = {
           domain?: string
           fee_type_id?: string | null
           id?: string
-          invoice_id?: string | null
           method?: string | null
           mpesa_checkout_id?: string | null
           mpesa_receipt?: string | null
@@ -1071,7 +902,6 @@ export type Database = {
           domain?: string
           fee_type_id?: string | null
           id?: string
-          invoice_id?: string | null
           method?: string | null
           mpesa_checkout_id?: string | null
           mpesa_receipt?: string | null
@@ -1103,13 +933,6 @@ export type Database = {
             columns: ["fee_type_id"]
             isOneToOne: false
             referencedRelation: "fee_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -1760,75 +1583,6 @@ export type Database = {
           },
         ]
       }
-      teacher_invoices: {
-        Row: {
-          amount_due: number
-          amount_paid: number | null
-          created_at: string | null
-          due_date: string | null
-          id: string
-          notes: string | null
-          occurrences_count: number | null
-          paid_at: string | null
-          period_end: string | null
-          period_start: string | null
-          rate_per_session: number | null
-          status: string | null
-          teacher_id: string
-          tenant_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          amount_due: number
-          amount_paid?: number | null
-          created_at?: string | null
-          due_date?: string | null
-          id?: string
-          notes?: string | null
-          occurrences_count?: number | null
-          paid_at?: string | null
-          period_end?: string | null
-          period_start?: string | null
-          rate_per_session?: number | null
-          status?: string | null
-          teacher_id: string
-          tenant_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          amount_due?: number
-          amount_paid?: number | null
-          created_at?: string | null
-          due_date?: string | null
-          id?: string
-          notes?: string | null
-          occurrences_count?: number | null
-          paid_at?: string | null
-          period_end?: string | null
-          period_start?: string | null
-          rate_per_session?: number | null
-          status?: string | null
-          teacher_id?: string
-          tenant_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teacher_invoices_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "teachers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teacher_invoices_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       teachers: {
         Row: {
           created_at: string | null
@@ -1994,58 +1748,6 @@ export type Database = {
           },
         ]
       }
-      waivers: {
-        Row: {
-          amount: number
-          created_at: string | null
-          granted_by: string | null
-          id: string
-          invoice_id: string | null
-          reason: string
-          tenant_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string | null
-          granted_by?: string | null
-          id?: string
-          invoice_id?: string | null
-          reason: string
-          tenant_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string | null
-          granted_by?: string | null
-          id?: string
-          invoice_id?: string | null
-          reason?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "waivers_granted_by_fkey"
-            columns: ["granted_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "waivers_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "waivers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -2076,7 +1778,6 @@ export type Database = {
         Args: { p_session_id: string; p_through?: string }
         Returns: number
       }
-      get_admin_dashboard_stats: { Args: never; Returns: Json }
       mark_own_teacher_attendance: {
         Args: {
           p_occurrence_id: string
