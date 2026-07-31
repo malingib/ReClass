@@ -1,0 +1,39 @@
+{
+  "cookies": [
+    {
+      "name": "sb-rlswdeswlkuaigwtojxw-auth-token",
+      "value": "base64-eyJhY2Nlc3NfdG9rZW4iOiJleUpoYkdjaU9pSkZVekkxTmlJc0ltdHBaQ0k2SWpoak9UY3dNRFUwTFdFeU1tRXROR0l5WkMxaU1EWXdMVE13WXpZMlkyRmtNMk00TnlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKcGMzTWlPaUpvZEhSd2N6b3ZMM0pzYzNka1pYTjNiR3QxWVdsbmQzUnZhbmgzTG5OMWNHRmlZWE5sTG1OdkwyRjFkR2d2ZGpFaUxDSnpkV0lpT2lJelpEVXpObVU0WXkxbU1XVTJMVFF6WmpNdFlUbGtZaTB3WlRJek5qRm1NR1ZtT0RVaUxDSmhkV1FpT2lKaGRYUm9aVzUwYVdOaGRHVmtJaXdpWlhod0lqb3hOemcxTlRBd05EVTJMQ0pwWVhRaU9qRTNPRFUwT1RZNE5UWXNJbVZ0WVdsc0lqb2lZV1J0YVc1QWMyTm9iMjlzTG1GakxtdGxJaXdpY0dodmJtVWlPaUlpTENKaGNIQmZiV1YwWVdSaGRHRWlPbnNpY0hKdmRtbGtaWElpT2lKbGJXRnBiQ0lzSW5CeWIzWnBaR1Z5Y3lJNld5SmxiV0ZwYkNKZGZTd2lkWE5sY2w5dFpYUmhaR0YwWVNJNmV5SmxiV0ZwYkY5MlpYSnBabWxsWkNJNmRISjFaU3dpWm5Wc2JGOXVZVzFsSWpvaVFXUnRhVzRnVlhObGNpSXNJbkp2YkdVaU9pSnpZMmh2YjJ4ZllXUnRhVzRpTENKMFpXNWhiblJmYVdRaU9pSXhNVEV4TVRFeE1TMHhNVEV4TFRFeE1URXRNVEV4TVMweE1URXhNVEV4TVRFeE1URWlmU3dpY205c1pTSTZJbUYxZEdobGJuUnBZMkYwWldRaUxDSmhZV3dpT2lKaFlXd3hJaXdpWVcxeUlqcGJleUp0WlhSb2IyUWlPaUp3WVhOemQyOXlaQ0lzSW5ScGJXVnpkR0Z0Y0NJNk1UYzROVFE1TmpnMU5uMWRMQ0p6WlhOemFXOXVYMmxrSWpvaU9UZ3lNbVExTVRrdE5ETm1ZaTAwTVRkaExUazNaV010TVdReE0ySm1PV1JqWldSa0lpd2lhWE5mWVc1dmJubHRiM1Z6SWpwbVlXeHpaWDAuZC0xdDBOX050d0tMT3lUT29YQVdxZVZUcmhwcFdkRTFPRTZ0ZzAtTUdja2w4THF4UDlDa0ZBNFN0UHJxUnhlWGdWTDZ4VWdRTS1rQ2lXRXItNG1heFEiLCJ0b2tlbl90eXBlIjoiYmVhcmVyIiwiZXhwaXJlc19pbiI6MzYwMCwiZXhwaXJlc19hdCI6MTc4NTUwMDQ1NiwicmVmcmVzaF90b2tlbiI6InVtYmh5cjZkZmd4NiIsInVzZXIiOnsiaWQiOiIzZDUzNmU4Yy1mMWU2LTQzZjMtYTlkYi0wZTIzNjFmMGVmODUiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJlbWFpbCI6ImFkbWluQHNjaG9vbC5hYy5rZSIsImVtYWlsX2NvbmZpcm1lZF9hdCI6IjIwMjYtMDctMTVUMjM6MDI6MTAuMjg1NTE5WiIsInBob25lIjoiIiwiY29uZmlybWVkX2F0IjoiMjAyNi0wNy0xNVQyMzowMjoxMC4yODU1MTlaIiwibGFzdF9zaWduX2luX2F0IjoiMjAyNi0wNy0zMVQxMToyMDo1Ni4wNTU3NDQxODlaIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWxfdmVyaWZpZWQiOnRydWUsImZ1bGxfbmFtZSI6IkFkbWluIFVzZXIiLCJyb2xlIjoic2Nob29sX2FkbWluIiwidGVuYW50X2lkIjoiMTExMTExMTEtMTExMS0xMTExLTExMTEtMTExMTExMTExMTExIn0sImlkZW50aXRpZXMiOlt7ImlkZW50aXR5X2lkIjoiYzYxM2MwN2QtYjY3MS00OWQ0LWIxYTQtMGMxOWU2OGNkZDFjIiwiaWQiOiIzZDUzNmU4Yy1mMWU2LTQzZjMtYTlkYi0wZTIzNjFmMGVmODUiLCJ1c2VyX2lkIjoiM2Q1MzZlOGMtZjFlNi00M2YzLWE5ZGItMGUyMzYxZjBlZjg1IiwiaWRlbnRpdHlfZGF0YSI6eyJlbWFpbCI6ImFkbWluQHNjaG9vbC5hYy5rZSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwicGhvbmVfdmVyaWZpZWQiOmZhbHNlLCJzdWIiOiIzZDUzNmU4Yy1mMWU2LTQzZjMtYTlkYi0wZTIzNjFmMGVmODUifSwicHJvdmlkZXIiOiJlbWFpbCIsImxhc3Rfc2lnbl9pbl9hdCI6IjIwMjYtMDctMTVUMjM6MDI6MTAuMjc5MDc4WiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA3LTE1VDIzOjAyOjEwLjI3OTE0WiIsInVwZGF0ZWRfYXQiOiIyMDI2LTA3LTE1VDIzOjAyOjEwLjI3OTE0WiIsImVtYWlsIjoiYWRtaW5Ac2Nob29sLmFjLmtlIn1dLCJjcmVhdGVkX2F0IjoiMjAyNi0wNy0xNVQyMzowMjoxMC4yNTM0NzhaIiwidXBkYXRlZF9hdCI6IjIwMjYtMDctMzFUMTE6MjA6NTYuMTAyODAzWiIsImlzX2Fub255bW91cyI6ZmFsc2V9LCJ3ZWFrX3Bhc3N3b3JkIjpudWxsfQ",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1820056856.58906,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "x-reclass-user",
+      "value": "%7B%22name%22%3A%22Admin%20User%22%2C%22email%22%3A%22admin%40school.ac.ke%22%7D",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1785497157.766515,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:4173",
+      "localStorage": [
+        {
+          "name": "reclass.locale",
+          "value": "en"
+        },
+        {
+          "name": "reclass.theme",
+          "value": "light"
+        }
+      ]
+    }
+  ]
+}

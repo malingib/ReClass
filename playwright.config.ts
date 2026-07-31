@@ -20,7 +20,14 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'setup',
+      testMatch: /_auth-setup\.spec\.ts/,
+      use: { browserName: 'chromium' },
+    },
+    {
       name: 'chromium',
+      dependencies: ['setup'],
+      testMatch: /frontend-review\.spec\.ts/,
       use: { browserName: 'chromium' },
     },
   ],

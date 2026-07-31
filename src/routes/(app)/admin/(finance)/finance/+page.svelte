@@ -51,7 +51,7 @@
     {#if bankMsg}
       <div class="mt-3 rounded-lg px-4 py-2 text-sm {bankMsg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{bankMsg.text}</div>
     {/if}
-    <form method="POST" action="?/record-bank" use:enhance={handleBankSubmit} class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <form method="POST" action="?/record-bank" use:enhance={handleBankSubmit} class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="space-y-1.5">
         <label for="invoice_id" class="text-xs font-medium text-ink-700">Invoice ID</label>
         <input id="invoice_id" name="invoice_id" bind:value={bankForm.invoice_id} required class="w-full rounded-lg border border-border px-3 py-2 text-sm" placeholder="invoice uuid" />
@@ -68,7 +68,7 @@
         <label for="bank_name" class="text-xs font-medium text-ink-700">Bank</label>
         <input id="bank_name" name="bank_name" bind:value={bankForm.bank_name} class="w-full rounded-lg border border-border px-3 py-2 text-sm" placeholder="KCB" />
       </div>
-      <div class="flex items-end">
+      <div class="flex items-end lg:col-span-4 lg:justify-end">
         <Button type="submit" variant="primary" size="md" disabled={bankSubmitting}>{bankSubmitting ? 'Recording…' : 'Record'}</Button>
       </div>
     </form>
