@@ -2000,7 +2000,7 @@ export type Database = {
           created_at: string | null
           granted_by: string | null
           id: string
-          invoice_id: string
+          invoice_id: string | null
           reason: string
           tenant_id: string
         }
@@ -2009,7 +2009,7 @@ export type Database = {
           created_at?: string | null
           granted_by?: string | null
           id?: string
-          invoice_id: string
+          invoice_id?: string | null
           reason: string
           tenant_id: string
         }
@@ -2018,7 +2018,7 @@ export type Database = {
           created_at?: string | null
           granted_by?: string | null
           id?: string
-          invoice_id?: string
+          invoice_id?: string | null
           reason?: string
           tenant_id?: string
         }
@@ -2077,15 +2077,6 @@ export type Database = {
         Returns: number
       }
       get_admin_dashboard_stats: { Args: never; Returns: Json }
-      reconcile_payment: {
-        Args: {
-          p_amount: number
-          p_checkout_id: string
-          p_phone: string
-          p_tenant_id: string
-        }
-        Returns: Json
-      }
       mark_own_teacher_attendance: {
         Args: {
           p_occurrence_id: string
@@ -2105,6 +2096,15 @@ export type Database = {
           remaining: number
           reset_in_ms: number
         }[]
+      }
+      reconcile_payment: {
+        Args: {
+          p_amount: number
+          p_checkout_id: string
+          p_phone: string
+          p_tenant_id: string
+        }
+        Returns: Json
       }
       resolve_credential: {
         Args: {

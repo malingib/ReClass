@@ -38,14 +38,25 @@ END $$;
 -- invoice_id no longer mandatory: a payment is now its own receipt.
 ALTER TABLE public.payments ALTER COLUMN invoice_id DROP NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_payments_student ON public.payments(student_id)
-  WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_payments_feetype ON public.payments(fee_type_id)
-  WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_payments_student ON public.payments(student_id);
+CREATE INDEX IF NOT EXISTS idx_payments_feetype ON public.payments(fee_type_id);
 CREATE INDEX IF NOT EXISTS idx_payments_receipt ON public.payments(receipt_no);
 
 -- 2. checkout_requests: invoice_id optional (parent now pays a fee_type) ------
 ALTER TABLE public.checkout_requests ALTER COLUMN invoice_id DROP NOT NULL;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'checkout_requests' AND column_name = 'student_id') THEN
+    ALTER TABLE public.checkout_requests
+      ADD COLUMN student_id uuid REFERENCES public.students(id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'checkout_requests' AND column_name = 'fee_type_id') THEN
+    ALTER TABLE public.checkout_requests
+      ADD COLUMN fee_type_id uuid REFERENCES public.fee_types(id);
+  END IF;
+END $$;
 
 -- 3. waivers: keep table for history, invoice linkage optional ----------------
 ALTER TABLE public.waivers ALTER COLUMN invoice_id DROP NOT NULL;

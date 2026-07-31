@@ -16,3 +16,7 @@ e2e/*.png
 # Python build artifacts
 __pycache__/
 *.pyc
+
+# Supabase CLI temp
+.supabase/.temp
+supabase/.temp
