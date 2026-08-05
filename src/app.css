@@ -1,0 +1,164 @@
+@import "./lib/styles/fonts.css";
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-card: #ffffff;
+  --color-border: #e4e7ec;
+  --color-brand-50: #ecfdf3;
+  --color-brand-100: #d1fadf;
+  --color-brand-200: #a6f4c5;
+  --color-brand-300: #6ce9a6;
+  --color-brand-400: #32d583;
+  --color-brand-500: #12b76a;
+  --color-brand-600: #039855;
+  --color-brand-700: #027a48;
+  --color-brand-800: #05603a;
+  --color-brand-900: #054f31;
+  --color-ink-50: #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-300: #cbd5e1;
+  --color-ink-400: #94a3b8;
+  --color-ink-500: #64748b;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+  --color-success: #039855;
+  --color-warning: #dc8b14;
+  --color-danger: #d92d20;
+  --color-info: #175cd3;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 9999px;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.08);
+  --shadow-card-hov: 0 8px 18px rgb(16 24 40 / 0.08);
+  --shadow-elevated: 0 16px 32px rgb(16 24 40 / 0.12);
+  --shadow-btn: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] {
+  --color-canvas: #0f172a;
+  --color-surface: #1e293b;
+  --color-card: #1e293b;
+  --color-border: #334155;
+  --color-brand-50: #052e16;
+  --color-brand-100: #064e3b;
+  --color-brand-200: #065f46;
+  --color-brand-300: #047857;
+  --color-brand-400: #059669;
+  --color-brand-500: #10b981;
+  --color-brand-600: #34d399;
+  --color-brand-700: #6ee7b7;
+  --color-brand-800: #a7f3d0;
+  --color-brand-900: #d1fae5;
+  --color-ink-50: #0f172a;
+  --color-ink-100: #1e293b;
+  --color-ink-200: #334155;
+  --color-ink-300: #475569;
+  --color-ink-400: #64748b;
+  --color-ink-500: #94a3b8;
+  --color-ink-600: #cbd5e1;
+  --color-ink-700: #e2e8f0;
+  --color-ink-800: #f1f5f9;
+  --color-ink-900: #f8fafc;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.4);
+  --shadow-card-hov: 0 8px 18px rgb(0 0 0 / 0.4);
+  --shadow-elevated: 0 16px 32px rgb(0 0 0 / 0.5);
+  --shadow-btn: 0 1px 2px rgb(0 0 0 / 0.2);
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-canvas);
+  color: var(--color-ink-700);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+}
+
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.anim-card {
+  opacity: 0;
+  animation: anim-card-in 0.5s ease-out forwards;
+}
+
+@keyframes anim-card-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Print styles — hide app chrome, show only report content */
+@media print {
+  aside, header, nav, [data-no-print], .no-print {
+    display: none !important;
+  }
+  main, [data-print-area], .print-area {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-break {
+    break-after: page;
+  }
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  th, td {
+    border: 1px solid #e4e7ec !important;
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+  }
+  .shadow-card, [class*="shadow"] {
+    box-shadow: none !important;
+  }
+}

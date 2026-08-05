@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReClass — Project Knowledge Graph</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body{font-family:Inter,system-ui,sans-serif;background:#fafafa;color:#242424;margin:0;padding:32px}
+  h1{font-size:22px;font-weight:600;letter-spacing:-.02em}
+  .sub{color:#898989;font-size:14px;margin:6px 0 24px}
+  .legend{display:flex;gap:16px;margin-bottom:20px;font-size:13px;color:#555}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+  .c-doc{background:#3b82f6}.c-sql{background:#16a34a}.c-edge{background:#a855f7}.c-con{background:#d97706}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .panel{background:#fff;border-radius:12px;padding:18px;box-shadow:rgba(34,42,53,.08) 0 0 0 1px,rgba(34,42,53,.05) 0 4px 8px}
+  .panel h2{font-size:15px;font-weight:600;margin:0 0 12px}
+  .mermaid{font-size:13px}
+  code{background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<h1>ReClass — Knowledge Graph</h1>
+<div class="sub">Planning package · docs/ + migrations/ · generated 2026-07-13 · not applied to <code>rlswdeswlkuaigwtojxw</code></div>
+<div class="legend">
+  <span><span class="dot c-doc"></span>doc</span>
+  <span><span class="dot c-sql"></span>SQL migration</span>
+  <span><span class="dot c-edge"></span>Edge Function</span>
+  <span><span class="dot c-con"></span>concept</span>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Build dependency chain (apply order)</h2>
+    <div class="mermaid">
+graph LR
+  m1[0001 credentials+RLS] --> m2[0002 resolve_credential]
+  m1 --> m3[0003 reconcile_payment]
+  m2 --> ef_stk[STK Push]
+  m1 --> ef_stk
+  m3 --> ef_cb[mpesa-callback]
+  m1 --> ef_no[notify SMS]
+  m1 --> ef_ct[credentials-test]
+  ef_cb --> m3
+  classDef sql fill:#dcfce7,stroke:#16a34a;
+  classDef edge fill:#f3e8ff,stroke:#a855f7;
+  class m1,m2,m3 sql;
+  class ef_stk,ef_cb,ef_no,ef_ct edge;
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Concept → credential model</h2>
+    <div class="mermaid">
+graph TD
+  C[C multi-tenant RLS] --> D[(database.md)]
+  Cr[C per-tenant credentials] --> D
+  Cr --> Sec[security.md encrypts]
+  STK[C M-Pesa STK] --> Cr
+  SMS[C Mobiwave SMS] --> Cr
+  STK -->|school_send daraja| Cr
+  SMS -->|school_send mobiwave| Cr
+  No[C notification engine] --> SMS
+  classDef con fill:#fef3c7,stroke:#d97706;
+  class C,Cr,STK,SMS,No con;
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Docs cross-reference (srs hub)</h2>
+    <div class="mermaid">
+graph TD
+  S[srs.md] --> Des[design.md]
+  S --> Db[database.md]
+  S --> Api[api.md]
+  S --> Arc[architecture.md]
+  S --> Sec[security.md]
+  S --> Dep[deployment.md]
+  S --> Tst[testing.md]
+  S --> Rm[roadmap.md]
+  S --> Int[integrations.md]
+  R[README.md] --> S
+  Cl[CHANGELOG.md] --> S
+  Int -->|callback threat| Sec
+  classDef doc fill:#dbeafe,stroke:#3b82f6;
+  class S,Des,Db,Api,Arc,Sec,Dep,Tst,Rm,Int,R,Cl doc;
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Edge Functions → dependencies</h2>
+    <div class="mermaid">
+graph TD
+  STK[STK Push] -->|resolve+decrypt| M1[(credentials)]
+  STK -->|per-tenant| Daraja[(Daraja)]
+  CB[mpesa-callback] -->|reconcile| M3[(reconcile_payment)]
+  NO[notify SMS] -->|dispatch| Mobi[(Mobiwave)]
+  NO -->|per-tenant| M1
+  CT[credentials-test] -->|validate| M1
+  CT --> Daraja
+  CT --> Mobi
+  classDef edge fill:#f3e8ff,stroke:#a855f7;
+  class STK,CB,NO,CT edge;
+    </div>
+  </div>
+</div>
+
+<script>mermaid.initialize({startOnLoad:true,theme:'default'});</script>
+</body>
+</html>

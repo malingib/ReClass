@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>eShule</title>
+    <script>
+      // Blocking theme initialisation — prevents flash of wrong theme before
+      // Svelte hydrates. Reads stored preference or falls back to 'light'.
+      (function() {
+        var t;
+        try { t = localStorage.getItem('reclass.theme'); } catch(e) {}
+        if (t !== 'light' && t !== 'dark' && t !== 'system') t = 'light';
+        var resolved = t;
+        if (t === 'system') {
+          resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', resolved);
+        document.documentElement.setAttribute('lang', 'en');
+      })();
+    </script>
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>

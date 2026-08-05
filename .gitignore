@@ -1,0 +1,30 @@
+node_modules
+.svelte-kit
+.vercel
+.env
+.env.local
+.env.*
+!.env.example
+graphify-output
+graphify.py
+.agents
+test-results
+playwright-report
+playwright/.auth
+e2e/*.png
+
+# Python build artifacts
+__pycache__/
+*.pyc
+
+# Supabase CLI temp
+.supabase/.temp
+supabase/.temp
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local caches / toolchains
+.npm-cache22/
+.tools/
