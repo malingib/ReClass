@@ -14,7 +14,6 @@
     full_name: string;
     phone: string;
     email: string | null;
-    locale: string | null;
     sms_consent: boolean;
     created_at: string;
     students?: Array<{ id: string; first_name: string; last_name: string; admission_no: string; grade: string | null }>;
@@ -80,7 +79,6 @@
       full_name: parent.full_name,
       phone: parent.phone,
       email: parent.email ?? '',
-      locale: parent.locale ?? 'en',
       sms_consent: parent.sms_consent ?? true,
     };
     showCreate = true;
@@ -202,19 +200,6 @@
             class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
             placeholder="parent@email.com"
           />
-        </div>
-
-        <div class="space-y-1.5">
-          <label for="locale" class="text-xs font-medium text-ink-700">Locale</label>
-          <select
-            id="locale"
-            name="locale"
-            value={formData.locale}
-            class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
-          >
-            <option value="en">English</option>
-            <option value="sw">Swahili</option>
-          </select>
         </div>
 
         <div class="flex items-center gap-2">

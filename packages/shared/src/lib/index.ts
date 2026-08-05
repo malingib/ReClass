@@ -16,11 +16,6 @@ export { formatNotificationDate, getStoredReadNotificationIds,
   dispatchToast } from './notifications.js';
 export type { NotificationItem, NotificationPriority } from './notifications.js';
 
-export { locale } from './stores/locale.js';
-export type { Locale } from './stores/locale.js';
-
-export { t } from './i18n.js';
-
 export { default as DashboardContent } from './components/DashboardContent.svelte';
 export { default as LoadingButton } from './components/LoadingButton.svelte';
 export { default as KpiCard } from './components/KpiCard.svelte';

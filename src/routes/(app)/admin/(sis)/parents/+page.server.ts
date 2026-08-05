@@ -14,7 +14,6 @@ const parentSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(200),
   phone: z.string().min(1, 'Phone is required').max(20),
   email: z.string().max(254).optional(),
-  locale: z.string().max(10).optional(),
   sms_consent: z.coerce.boolean().optional(),
 });
 
@@ -31,7 +30,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const sortDir: 'asc' | 'desc' = url.searchParams.get('dir') === 'desc' ? 'desc' : 'asc';
 
   const paged = await paginatedQuery<Record<string, unknown>>(db, 'parents', tenantId, {
-    select: 'id, full_name, phone, email, locale, sms_consent, created_at',
+    select: 'id, full_name, phone, email, sms_consent, created_at',
     order: { column: sortKey, ascending: sortDir === 'asc' },
     page,
     pageSize: PAGE_LIST_MEDIUM,
@@ -84,7 +83,6 @@ export const actions = {
       full_name: v.data.full_name,
       phone: v.data.phone,
       email: v.data.email || null,
-      locale: v.data.locale || 'en',
       sms_consent: v.data.sms_consent ?? true,
     });
     if (error) return fail(500, { message: `Failed: ${error.message}` });
@@ -103,7 +101,6 @@ export const actions = {
         full_name: v.data.full_name,
         phone: v.data.phone,
         email: v.data.email || null,
-        locale: v.data.locale || 'en',
         sms_consent: v.data.sms_consent ?? true,
       })
       .eq('id', v.data.id)

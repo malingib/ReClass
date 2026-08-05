@@ -43,42 +43,6 @@
   --shadow-btn: 0 1px 2px rgb(0 0 0 / 0.04);
 }
 
-/* Dark mode overrides */
-[data-theme="dark"] {
-  --color-canvas: #0f172a;
-  --color-surface: #1e293b;
-  --color-card: #1e293b;
-  --color-border: #334155;
-  --color-brand-50: #052e16;
-  --color-brand-100: #064e3b;
-  --color-brand-200: #065f46;
-  --color-brand-300: #047857;
-  --color-brand-400: #059669;
-  --color-brand-500: #10b981;
-  --color-brand-600: #34d399;
-  --color-brand-700: #6ee7b7;
-  --color-brand-800: #a7f3d0;
-  --color-brand-900: #d1fae5;
-  --color-ink-50: #0f172a;
-  --color-ink-100: #1e293b;
-  --color-ink-200: #334155;
-  --color-ink-300: #475569;
-  --color-ink-400: #64748b;
-  --color-ink-500: #94a3b8;
-  --color-ink-600: #cbd5e1;
-  --color-ink-700: #e2e8f0;
-  --color-ink-800: #f1f5f9;
-  --color-ink-900: #f8fafc;
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --color-info: #60a5fa;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.4);
-  --shadow-card-hov: 0 8px 18px rgb(0 0 0 / 0.4);
-  --shadow-elevated: 0 16px 32px rgb(0 0 0 / 0.5);
-  --shadow-btn: 0 1px 2px rgb(0 0 0 / 0.2);
-}
-
 body {
   font-family: var(--font-sans);
   background: var(--color-canvas);
@@ -108,11 +72,6 @@ button, a, input, select, textarea {
 .skeleton {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
   background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-}
-
-[data-theme="dark"] .skeleton {
-  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
   background-size: 200% 100%;
 }
 
