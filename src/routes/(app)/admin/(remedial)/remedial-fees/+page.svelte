@@ -1,5 +1,5 @@
 <script lang="ts">
-  import FeeManager from '$lib/components/FeeManager.svelte';
+  import FeeManager from '$lib/components/LazyFeeManager.svelte';
   import type { PageData } from './$types';
   const { data }: { data: PageData } = $props();
 </script>

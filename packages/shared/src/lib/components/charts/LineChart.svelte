@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { scaleLinear, scalePoint } from 'd3-scale';
-  import { line, area, curveMonotoneX } from 'd3-shape';
-  import { max } from 'd3-array';
+  import { onMount } from 'svelte';
 
   const {
     data = [],
@@ -19,6 +17,29 @@
 
   let svgEl: SVGSVGElement = $state()!;
   let width = $state(600);
+  let d3 = $state<typeof import('d3-scale') & typeof import('d3-shape') & typeof import('d3-array') | null>(null);
+
+  // Lazy-load d3 (~50 KB) only when the chart has data and is visible
+  onMount(() => {
+    if (data.length === 0) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          Promise.all([
+            import('d3-scale'),
+            import('d3-shape'),
+            import('d3-array'),
+          ]).then(([scale, shape, arr]) => {
+            d3 = { ...scale, ...shape, ...arr } as any;
+          });
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    if (svgEl) observer.observe(svgEl);
+    return () => observer.disconnect();
+  });
 
   $effect(() => {
     if (svgEl) {
@@ -34,34 +55,34 @@
   const lineData = $derived(data);
 
   const xScale = $derived(
-    scalePoint()
+    d3?.scalePoint()
       .domain(lineData.map(d => d.label))
       .range([padX, w - padX])
   );
 
   const yScale = $derived(
-    scaleLinear()
-      .domain([0, max(lineData.map(d => d.value)) || 1])
+    d3?.scaleLinear()
+      .domain([0, d3?.max(lineData.map(d => d.value)) || 1])
       .range([h - padY, padY])
   );
 
   const lineGenerator = $derived(
-    line<{ label: string; value: number }>()
-      .x(d => xScale(d.label) ?? 0)
-      .y(d => yScale(d.value))
-      .curve(curveMonotoneX)
+    d3?.line<{ label: string; value: number }>()
+      .x(d => xScale?.(d.label) ?? 0)
+      .y(d => yScale?.(d.value) ?? 0)
+      .curve(d3?.curveMonotoneX)
   );
 
   const areaGenerator = $derived(
-    area<{ label: string; value: number }>()
-      .x(d => xScale(d.label) ?? 0)
+    d3?.area<{ label: string; value: number }>()
+      .x(d => xScale?.(d.label) ?? 0)
       .y0(h - padY)
-      .y1(d => yScale(d.value))
-      .curve(curveMonotoneX)
+      .y1(d => yScale?.(d.value) ?? 0)
+      .curve(d3?.curveMonotoneX)
   );
 
-  const linePath = $derived(lineGenerator(lineData) ?? '');
-  const areaPath = $derived(areaGenerator(lineData) ?? '');
+  const linePath = $derived(lineGenerator?.(lineData) ?? '');
+  const areaPath = $derived(areaGenerator?.(lineData) ?? '');
 </script>
 
 {#if lineData.length === 0}
@@ -82,12 +103,12 @@
       <path d={linePath} fill="none" stroke={color} stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
       {#each lineData as point, i}
         {#if i % Math.ceil(lineData.length / 6) === 0}
-          <text x={xScale(point.label)} y={h - 6} text-anchor="middle" fill="#737373" font-size="11">
+          <text x={xScale?.(point.label)} y={h - 6} text-anchor="middle" fill="#737373" font-size="11">
             {point.label}
           </text>
         {/if}
-        {@const px = xScale(point.label) ?? 0}
-        {@const py = yScale(point.value)}
+        {@const px = xScale?.(point.label) ?? 0}
+        {@const py = yScale?.(point.value) ?? 0}
         <circle cx={px} cy={py} r="3.5" fill="#fff" stroke={color} stroke-width="2">
           <title>{point.label}: {format(point.value)}</title>
         </circle>

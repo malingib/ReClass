@@ -2,22 +2,32 @@ import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
 
+// Short-lived cache for stable dashboard counts (students, teachers, sessions).
+// These change rarely and avoid 3 DB round-trips on every page load.
+const STATS_CACHE_TTL_MS = 30_000; // 30s
+const statsCache = new Map<string, { students: number; teachers: number; sessions: number; ts: number }>();
+
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'principal');
   const since = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
   const db = locals.srv;
 
-  const [studentsRes, teachersRes, sessionsRes, dueRes, deliveredRes, pendingRes] = await Promise.all([
-    db.from('students')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
-    db.from('teachers')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
-    db.from('sessions')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
+  // Check cache for stable counts
+  const cached = statsCache.get(tenantId);
+  const now = Date.now();
+  const useCache = cached && now - cached.ts < STATS_CACHE_TTL_MS;
+
+  const [
+    studentsRes, teachersRes, sessionsRes,
+    dueRes, deliveredRes, pendingRes,
+  ] = await Promise.all([
+    useCache ? Promise.resolve({ count: cached!.students }) :
+      db.from('students').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    useCache ? Promise.resolve({ count: cached!.teachers }) :
+      db.from('teachers').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    useCache ? Promise.resolve({ count: cached!.sessions }) :
+      db.from('sessions').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     db.from('session_occurrences')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
@@ -38,6 +48,16 @@ export const load: PageServerLoad = async ({ locals }) => {
       .is('deleted_at', null)
       .order('marked_at'),
   ]);
+
+  // Update cache with fresh counts
+  if (!useCache) {
+    statsCache.set(tenantId, {
+      students: studentsRes.count ?? 0,
+      teachers: teachersRes.count ?? 0,
+      sessions: sessionsRes.count ?? 0,
+      ts: now,
+    });
+  }
 
   const attendanceRate = dueRes.count ? Math.round(((deliveredRes.count ?? 0) / dueRes.count) * 100) : 0;
 

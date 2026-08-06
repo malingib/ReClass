@@ -1,7 +1,7 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import ReceiptModal from '$lib/components/ReceiptModal.svelte';
+  import ReceiptModal from '$lib/components/LazyReceiptModal.svelte';
 
   const { data, form } = $props();
   const s = $derived(data.student);

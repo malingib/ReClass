@@ -8,11 +8,9 @@ export const load: PageServerLoad = async ({ locals }) => {
   const yearStart = new Date(Date.now() - 365 * 864e5).toISOString();
 
   const [
-    { data: payments },
-    { count: totalStudents },
-    { count: mpesaCount },
-    { count: bankCount },
-    { count: totalPaidCount },
+    paymentsRes,
+    studentsRes,
+    domainCounts,
   ] = await Promise.all([
     locals.srv
       .from('payments')
@@ -27,10 +25,25 @@ export const load: PageServerLoad = async ({ locals }) => {
       .order('created_at', { ascending: false })
       .limit(EXPORT_BURSA_MAX_ROWS),
     locals.srv.from('students').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).then(r => ({ count: r.count })),
-    locals.srv.from('payments').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).eq('domain', 'remedial').eq('status', 'paid').then(r => ({ count: r.count })),
-    locals.srv.from('payments').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).eq('domain', 'school').eq('status', 'paid').then(r => ({ count: r.count })),
-    locals.srv.from('payments').select('*', { count: 'exact', head: true }).eq('tenant_id', locals.tenantId).eq('status', 'paid').then(r => ({ count: r.count })),
+    // Single grouped count query replaces 3 separate count queries
+    locals.srv
+      .from('payments')
+      .select('domain')
+      .eq('tenant_id', locals.tenantId)
+      .eq('status', 'paid')
+      .is('deleted_at', null)
+      .then(r => {
+        const rows = r.data ?? [];
+        return {
+          remedial: rows.filter(p => p.domain === 'remedial').length,
+          school: rows.filter(p => p.domain === 'school').length,
+          total: rows.length,
+        };
+      }),
   ]);
+
+  const payments = paymentsRes.data;
+  const totalStudents = studentsRes.count;
 
   const paymentData = (payments ?? []).map((p: any) => ({
     ...p,
@@ -43,10 +56,10 @@ export const load: PageServerLoad = async ({ locals }) => {
   return {
     payments: paymentData,
     stats: {
-      totalStudents: totalStudents ?? 0,
-      paid: mpesaCount ?? 0,
-      unpaid: bankCount ?? 0,
-      totalReceipts: totalPaidCount ?? 0,
+      totalStudents: (totalStudents ?? 0) as number,
+      paid: domainCounts.remedial,
+      unpaid: domainCounts.school,
+      totalReceipts: domainCounts.total,
     },
   };
 };
