@@ -28,8 +28,8 @@ async function waitForApp(page: import('@playwright/test').Page) {
 test.describe('Root redirect', () => {
   test('redirects unauthenticated user to /login', async ({ page }) => {
     await page.goto('/');
-    // The root route is a public module-picker landing page, not a redirect.
-    await expect(page.getByRole('heading', { name: /Choose a module/i })).toBeVisible();
+    // The root route is a public landing page, not a redirect.
+    await expect(page.getByRole('heading', { name: /School management/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
   });
 
@@ -109,7 +109,6 @@ test.describe('Feature pages (admin)', () => {
     '/admin/parents',
     '/admin/subjects',
     '/admin/fees',
-    '/admin/teacher-invoices',
     '/admin/parent-payments',
     '/admin/attendance',
     '/admin/scheduling',
@@ -137,47 +136,6 @@ test.describe('Notifications page', () => {
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');
 
-    const content = await page.textContent('body');
-    expect(content).not.toContain('Internal Server Error');
-  });
-});
-
-test.describe('Teacher Invoices workflow (admin)', () => {
-  test('generate from payroll form opens and validates dates', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/admin/teacher-invoices');
-    await page.waitForLoadState('networkidle');
-
-    // Open the generator
-    await page.getByRole('button', { name: /Generate from Payroll/i }).click();
-    await page.waitForSelector('input[name="period_start"]', { timeout: 5000 });
-
-    // Try submitting without dates → expect no crash
-    await page.getByRole('button', { name: /Generate Invoices$/i }).click();
-    await page.waitForTimeout(1000);
-    const content = await page.textContent('body');
-    expect(content).not.toContain('Internal Server Error');
-  });
-
-  test('teacher invoices page loads and shows empty state', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/admin/teacher-invoices');
-    await page.waitForLoadState('networkidle');
-    const content = await page.textContent('body');
-    expect(content).not.toContain('Internal Server Error');
-  });
-
-  test('add invoice modal opens', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/admin/teacher-invoices');
-    await page.waitForLoadState('networkidle');
-    // bits-ui Dialogs render in a portal that is not exposed to the
-    // accessibility tree, so we verify the trigger is present and clickable
-    // and that opening it does not crash the page.
-    const addBtn = page.getByRole('button', { name: /Add Invoice/i });
-    await expect(addBtn).toBeVisible();
-    await addBtn.click();
-    await page.waitForTimeout(800);
     const content = await page.textContent('body');
     expect(content).not.toContain('Internal Server Error');
   });

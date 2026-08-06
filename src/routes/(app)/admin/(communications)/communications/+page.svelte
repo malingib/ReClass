@@ -1,7 +1,9 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
-  import Button from '$lib/components/ui/button.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Card, CardContent } from '$lib/components/ui/card/index.js';
+  import { Separator } from '$lib/components/ui/separator/index.js';
 
   const { data } = $props();
   const s = $derived(data.stats);
@@ -9,8 +11,9 @@
 
 <DashboardContent title="Communications" subtitle="Announcements, messaging and notification templates">
   {#snippet headerActions()}
-    <!-- Create action is intentionally not wired yet (read-only audit pass) -->
-    <Button variant="secondary" size="sm" disabled title="Creating announcements is coming soon">New Announcement (coming soon)</Button>
+    <Button href="/admin/communications/announcements" size="sm">
+      New Announcement
+    </Button>
   {/snippet}
 
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -29,8 +32,8 @@
         </svg>
       </span>
       <div>
-        <h3 class="text-sm font-semibold text-ink-900">Announcements</h3>
-        <p class="mt-1 text-xs text-ink-500">Create and publish school-wide announcements.</p>
+        <h3 class="text-sm font-semibold text-foreground">Announcements</h3>
+        <p class="mt-1 text-xs text-muted-foreground">Create and publish school-wide announcements.</p>
       </div>
       <span class="mt-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-orange-700 group-hover:text-orange-800">
         Manage Announcements
@@ -46,8 +49,8 @@
         </svg>
       </span>
       <div>
-        <h3 class="text-sm font-semibold text-ink-900">Message Templates</h3>
-        <p class="mt-1 text-xs text-ink-500">Create reusable SMS and email templates.</p>
+        <h3 class="text-sm font-semibold text-foreground">Message Templates</h3>
+        <p class="mt-1 text-xs text-muted-foreground">Create reusable SMS and email templates.</p>
       </div>
       <span class="mt-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-cyan-700 group-hover:text-cyan-800">
         Manage Templates
@@ -63,8 +66,8 @@
         </svg>
       </span>
       <div>
-        <h3 class="text-sm font-semibold text-ink-900">Message Log</h3>
-        <p class="mt-1 text-xs text-ink-500">View sent SMS and email notification history.</p>
+        <h3 class="text-sm font-semibold text-foreground">Message Log</h3>
+        <p class="mt-1 text-xs text-muted-foreground">View sent SMS and email notification history.</p>
       </div>
       <span class="mt-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-slate-700 group-hover:text-slate-800">
         View Log

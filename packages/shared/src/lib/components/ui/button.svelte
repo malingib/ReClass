@@ -1,50 +1,64 @@
 <script lang="ts">
   import { cn } from './utils';
+  import { type VariantProps, tv } from 'tailwind-variants';
+
+  export const buttonVariants = tv({
+    base: 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+    variants: {
+      variant: {
+        default: 'bg-primary text-white hover:bg-primary/90',
+        destructive: 'bg-red-600 text-white hover:bg-red-700',
+        outline: 'border border-slate-200 bg-white hover:bg-slate-50',
+        secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200',
+        ghost: 'hover:bg-slate-100',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: {
+        default: 'h-9 px-4 py-2',
+        sm: 'h-8 rounded px-3 text-xs',
+        lg: 'h-10 rounded-md px-6',
+        icon: 'h-9 w-9',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  });
+
+  type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
+  type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 
   interface Props {
-    variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-    size?: 'sm' | 'md' | 'lg';
+    variant?: ButtonVariant;
+    size?: ButtonSize;
     disabled?: boolean;
     loading?: boolean;
     type?: 'button' | 'submit' | 'reset';
-    onclick?: (_e: MouseEvent) => void;
     class?: string;
     children?: import('svelte').Snippet;
+    onclick?: (e: MouseEvent) => void;
     [key: string]: unknown;
   }
 
   const {
-    variant = 'primary',
-    size = 'md',
+    variant = 'default',
+    size = 'default',
     disabled = false,
     loading = false,
     type = 'button',
     children,
+    onclick,
     ...rest
   }: Props = $props();
-
-  const variants = {
-    primary: 'rounded-lg bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50',
-    secondary: 'rounded-lg border border-border bg-white text-ink-700 shadow-sm hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700',
-    ghost: 'rounded-lg border border-transparent bg-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900',
-    danger: 'rounded-lg bg-danger text-white shadow-sm hover:bg-red-700',
-  };
-
-  const sizes = {
-    sm: 'min-h-9 px-3 py-1.5 text-xs',
-    md: 'min-h-10 px-4 py-2 text-sm',
-    lg: 'min-h-11 px-5 py-2.5 text-base',
-  };
 </script>
 
 <button
   {type}
   {disabled}
-  onclick={rest.onclick}
+  {onclick}
   class={cn(
-    'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed',
-    variants[variant],
-    sizes[size],
+    buttonVariants({ variant, size }),
     String(rest.class ?? '')
   )}
 >

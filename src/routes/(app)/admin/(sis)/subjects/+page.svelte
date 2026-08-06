@@ -1,8 +1,8 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import Button from '$lib/components/ui/button.svelte';
-  import { Dialog } from 'bits-ui';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '$lib/components/ui/dialog/index.js';
   import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
@@ -85,9 +85,9 @@
 
 <DashboardContent title="Subjects" subtitle="Academic subjects offered">
   {#snippet headerActions()}
-    <button onclick={openCreate} class="rounded-full bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700 flex items-center gap-1.5">
+    <Button onclick={openCreate} size="sm">
       <Plus class="h-3.5 w-3.5" /> Add Subject
-    </button>
+    </Button>
   {/snippet}
 
   <DataTable
@@ -103,72 +103,63 @@
 </DashboardContent>
 
 <!-- Create/Edit Modal -->
-<Dialog.Root open={showCreate} onOpenChange={(o: boolean) => { if (!o) { showCreate = false; editingSubject = null; }}}>
-  <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-    <Dialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-elevated">
-      <div class="flex items-center justify-between border-b border-border px-6 py-4">
-        <Dialog.Title class="text-base font-semibold text-ink-900">{editingSubject ? 'Edit Subject' : 'Add Subject'}</Dialog.Title>
-        <Dialog.Close class="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700">
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-        </Dialog.Close>
+<Dialog open={showCreate} onOpenChange={(o: boolean) => { if (!o) { showCreate = false; editingSubject = null; }}}>
+  <DialogContent class="sm:max-w-lg p-0">
+    <DialogHeader class="border-b border-border px-6 py-4">
+      <DialogTitle class="text-base font-semibold text-foreground">{editingSubject ? 'Edit Subject' : 'Add Subject'}</DialogTitle>
+    </DialogHeader>
+
+    <form method="POST" action={editingSubject ? '?/update' : '?/create'} use:enhance={handleSubmit} class="px-6 py-5 space-y-4">
+      {#if editingSubject}
+        <input type="hidden" name="id" value={editingSubject.id} />
+      {/if}
+
+      <div class="space-y-1.5">
+        <label for="name" class="text-xs font-medium text-foreground">Name</label>
+        <input id="name" name="name" type="text" bind:value={formData.name} class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none" placeholder="Mathematics" />
+        {#if errors.name?.[0]}<p class="text-xs text-destructive">{errors.name?.[0]}</p>{/if}
       </div>
 
-      <form method="POST" action={editingSubject ? '?/update' : '?/create'} use:enhance={handleSubmit} class="px-6 py-5 space-y-4">
-        {#if editingSubject}
-          <input type="hidden" name="id" value={editingSubject.id} />
-        {/if}
+      <div class="space-y-1.5">
+        <label for="code" class="text-xs font-medium text-foreground">Code</label>
+        <input id="code" name="code" type="text" bind:value={formData.code} class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none" placeholder="MATH" />
+        {#if errors.code?.[0]}<p class="text-xs text-destructive">{errors.code?.[0]}</p>{/if}
+      </div>
 
-        <div class="space-y-1.5">
-          <label for="name" class="text-xs font-medium text-ink-700">Name</label>
-          <input id="name" name="name" type="text" bind:value={formData.name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Mathematics" />
-          {#if errors.name?.[0]}<p class="text-xs text-danger">{errors.name?.[0]}</p>{/if}
-        </div>
+      {#if msg}
+        <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-primary/10 text-primary' : 'bg-red-50 text-destructive'}">{msg.text}</div>
+      {/if}
 
-        <div class="space-y-1.5">
-          <label for="code" class="text-xs font-medium text-ink-700">Code</label>
-          <input id="code" name="code" type="text" bind:value={formData.code} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="MATH" />
-          {#if errors.code?.[0]}<p class="text-xs text-danger">{errors.code?.[0]}</p>{/if}
-        </div>
-
-        {#if msg}
-          <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{msg.text}</div>
-        {/if}
-
-        <div class="flex justify-end gap-3 pt-2">
-          <Dialog.Close>
-            <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
-          </Dialog.Close>
-          <Button type="submit" variant="primary" size="md" {submitting} disabled={submitting}>{editingSubject ? 'Update' : 'Create'}</Button>
-        </div>
-      </form>
-    </Dialog.Content>
-  </Dialog.Portal>
-</Dialog.Root>
+      <DialogFooter class="pt-2">
+        <DialogClose>
+          <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">Cancel</button>
+        </DialogClose>
+        <Button type="submit" disabled={submitting}>{editingSubject ? 'Update' : 'Create'}</Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
 
 <!-- Delete Confirmation Modal -->
-<Dialog.Root open={!!deletingSubject} onOpenChange={(o: boolean) => { if (!o) deletingSubject = null; }}>
-  <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-    <Dialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-elevated">
-      <div class="px-6 py-5 text-center">
-        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-danger">
-          <Trash2 class="h-6 w-6" />
-        </div>
-        <h3 class="text-base font-semibold text-ink-900">Delete Subject</h3>
-        <p class="mt-2 text-sm text-ink-500">
-          Are you sure you want to delete <strong>{deletingSubject?.name}</strong>? This action cannot be undone.
-        </p>
+<Dialog open={!!deletingSubject} onOpenChange={(o: boolean) => { if (!o) deletingSubject = null; }}>
+  <DialogContent class="sm:max-w-sm p-0">
+    <div class="px-6 py-5 text-center">
+      <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-destructive">
+        <Trash2 class="h-6 w-6" />
       </div>
-      <div class="flex justify-end gap-3 border-t border-border px-6 py-4">
-        <Dialog.Close>
-          <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
-        </Dialog.Close>
-        <form method="POST" action="?/delete" use:enhance>
-          <input type="hidden" name="id" value={deletingSubject?.id ?? ''} />
-          <Button type="submit" variant="danger" size="md">Delete</Button>
-        </form>
-      </div>
-    </Dialog.Content>
-  </Dialog.Portal>
-</Dialog.Root>
+      <h3 class="text-base font-semibold text-foreground">Delete Subject</h3>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Are you sure you want to delete <strong>{deletingSubject?.name}</strong>? This action cannot be undone.
+      </p>
+    </div>
+    <div class="flex justify-end gap-3 border-t border-border px-6 py-4">
+      <DialogClose>
+        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">Cancel</button>
+      </DialogClose>
+      <form method="POST" action="?/delete" use:enhance>
+        <input type="hidden" name="id" value={deletingSubject?.id ?? ''} />
+        <Button type="submit" variant="destructive">Delete</Button>
+      </form>
+    </div>
+  </DialogContent>
+</Dialog>

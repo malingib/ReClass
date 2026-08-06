@@ -1,1 +1,1 @@
-export { cn } from '@eshule/shared';
+export { cn } from '$lib/utils.js';

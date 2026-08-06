@@ -31,24 +31,24 @@
     />
   </div>
 
-  <div class="mt-8 rounded-xl border border-border bg-white p-6 shadow-card">
-    <h3 class="text-sm font-semibold text-ink-900">Generate monthly salary runs</h3>
-    <p class="mt-1 text-xs text-ink-500">
+  <div class="mt-8 rounded-xl border border-border bg-card p-6 shadow-card">
+    <h3 class="text-sm font-semibold text-foreground">Generate monthly salary runs</h3>
+    <p class="mt-1 text-xs text-muted-foreground">
       Creates one draft run per teacher with a monthly salary set (Finance &gt; Teachers &gt; edit teacher &gt; Monthly Salary).
     </p>
     <form method="POST" action="?/generate" class="mt-4 flex flex-wrap items-end gap-3">
       <label class="block">
-        <span class="mb-1 block text-xs font-medium text-ink-600">Period start</span>
+        <span class="mb-1 block text-xs font-medium text-muted-foreground">Period start</span>
         <input name="period_start" type="date" required
-          class="rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink-900" />
+          class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
       </label>
       <label class="block">
-        <span class="mb-1 block text-xs font-medium text-ink-600">Period end</span>
+        <span class="mb-1 block text-xs font-medium text-muted-foreground">Period end</span>
         <input name="period_end" type="date" required
-          class="rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink-900" />
+          class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
       </label>
       <button type="submit"
-        class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700">
+        class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90">
         Generate
       </button>
     </form>

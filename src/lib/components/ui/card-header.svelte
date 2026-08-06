@@ -1,5 +1,5 @@
 <script>
-  import { CardHeader } from '@eshule/shared';
+  import { CardHeader } from '$lib/components/ui/card/index.js';
   let props = $props();
 </script>
 

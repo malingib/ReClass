@@ -1,7 +1,9 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
-  import Button from '$lib/components/ui/button.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
+  import { Label } from '$lib/components/ui/label/index.js';
   import { enhance } from '$app/forms';
 
   const { data } = $props();
@@ -43,20 +45,20 @@
   </div>
 
   <!-- KCB/Buni bank payment entry -->
-  <div class="mt-8 rounded-xl border border-border bg-white p-5 shadow-card">
-    <h3 class="text-sm font-semibold text-ink-900">Record KCB / Buni Bank Payment</h3>
-    <p class="mt-1 text-xs text-ink-500">School fees paid via bank transfer. Remedial fees are paid separately by parents via M-Pesa paybill.</p>
+  <div class="mt-8 rounded-xl border border-border bg-card p-5 shadow-card">
+    <h3 class="text-sm font-semibold text-foreground">Record KCB / Buni Bank Payment</h3>
+    <p class="mt-1 text-xs text-muted-foreground">School fees paid via bank transfer. Remedial fees are paid separately by parents via M-Pesa paybill.</p>
     {#if bankMsg}
-      <div class="mt-3 rounded-lg px-4 py-2 text-sm {bankMsg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{bankMsg.text}</div>
+      <div class="mt-3 rounded-lg px-4 py-2 text-sm {bankMsg.type === 'success' ? 'bg-primary/10 text-primary' : 'bg-red-50 text-danger'}">{bankMsg.text}</div>
     {/if}
     <form method="POST" action="?/record-bank" use:enhance={handleBankSubmit} class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="space-y-1.5">
-        <label for="student_id" class="text-xs font-medium text-ink-700">Student</label>
-        <input id="student_id" name="student_id" bind:value={bankForm.student_id} required class="w-full rounded-lg border border-border px-3 py-2 text-sm" placeholder="student uuid" />
+        <Label for="student_id">Student</Label>
+        <Input id="student_id" name="student_id" bind:value={bankForm.student_id} required placeholder="student uuid" />
       </div>
       <div class="space-y-1.5">
-        <label for="fee_type_id" class="text-xs font-medium text-ink-700">Fee Type</label>
-        <select id="fee_type_id" name="fee_type_id" bind:value={bankForm.fee_type_id} required class="w-full rounded-lg border border-border px-3 py-2 text-sm">
+        <Label for="fee_type_id">Fee Type</Label>
+        <select id="fee_type_id" name="fee_type_id" bind:value={bankForm.fee_type_id} required class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
           <option value="">Select fee</option>
           {#each feeTypes as f}
             <option value={f.id}>{f.name} · KES {Number(f.amount).toLocaleString()}</option>
@@ -64,26 +66,26 @@
         </select>
       </div>
       <div class="space-y-1.5">
-        <label for="amount" class="text-xs font-medium text-ink-700">Amount (KES)</label>
-        <input id="amount" name="amount" type="number" step="0.01" bind:value={bankForm.amount} required class="w-full rounded-lg border border-border px-3 py-2 text-sm" placeholder="0.00" />
+        <Label for="amount">Amount (KES)</Label>
+        <Input id="amount" name="amount" type="number" step="0.01" bind:value={bankForm.amount} required placeholder="0.00" />
       </div>
       <div class="space-y-1.5">
-        <label for="bank_reference" class="text-xs font-medium text-ink-700">Bank Reference</label>
-        <input id="bank_reference" name="bank_reference" class="w-full rounded-lg border border-border px-3 py-2 text-sm" placeholder="KCB receipt / ref" bind:value={bankForm.bank_reference} required />
+        <Label for="bank_reference">Bank Reference</Label>
+        <Input id="bank_reference" name="bank_reference" bind:value={bankForm.bank_reference} required placeholder="KCB receipt / ref" />
       </div>
       <div class="space-y-1.5">
-        <label for="bank_name" class="text-xs font-medium text-ink-700">Bank</label>
-        <input id="bank_name" name="bank_name" bind:value={bankForm.bank_name} class="w-full rounded-lg border border-border px-3 py-2 text-sm" placeholder="KCB" />
+        <Label for="bank_name">Bank</Label>
+        <Input id="bank_name" name="bank_name" bind:value={bankForm.bank_name} placeholder="KCB" />
       </div>
       <div class="flex items-end lg:col-span-4 lg:justify-end">
-        <Button type="submit" variant="primary" size="md" disabled={bankSubmitting}>{bankSubmitting ? 'Recording…' : 'Record'}</Button>
+        <Button type="submit" disabled={bankSubmitting}>{bankSubmitting ? 'Recording…' : 'Record'}</Button>
       </div>
     </form>
   </div>
 
   <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <a href="/admin/parent-payments"
-      class="group flex flex-col gap-3 rounded-xl border border-border bg-white p-5 shadow-card transition-shadow hover:shadow-card-hov"
+      class="group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-card transition-shadow hover:shadow-card-hov"
     >
       <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -91,8 +93,8 @@
         </svg>
       </span>
       <div>
-        <h3 class="text-sm font-semibold text-ink-900">Parent Payments</h3>
-        <p class="mt-1 text-xs text-ink-500">View all parent payments and M-Pesa transactions.</p>
+        <h3 class="text-sm font-semibold text-foreground">Parent Payments</h3>
+        <p class="mt-1 text-xs text-muted-foreground">View all parent payments and M-Pesa transactions.</p>
       </div>
       <span class="mt-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-rose-700 group-hover:text-rose-800">
         View Details
@@ -100,7 +102,7 @@
       </span>
     </a>
     <a href="/admin/reports"
-      class="group flex flex-col gap-3 rounded-xl border border-border bg-white p-5 shadow-card transition-shadow hover:shadow-card-hov"
+      class="group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-card transition-shadow hover:shadow-card-hov"
     >
       <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-50 text-slate-700">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -108,8 +110,8 @@
         </svg>
       </span>
       <div>
-        <h3 class="text-sm font-semibold text-ink-900">Financial Reports</h3>
-        <p class="mt-1 text-xs text-ink-500">Revenue CSV and financial summary exports.</p>
+        <h3 class="text-sm font-semibold text-foreground">Financial Reports</h3>
+        <p class="mt-1 text-xs text-muted-foreground">Revenue CSV and financial summary exports.</p>
       </div>
       <span class="mt-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-slate-700 group-hover:text-slate-800">
         View Reports

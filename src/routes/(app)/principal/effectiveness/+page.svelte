@@ -1,5 +1,7 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
+  import { Card, CardContent } from '$lib/components/ui/card/index.js';
+  import { Badge } from '$lib/components/ui/badge/index.js';
 
   const { data } = $props();
   const trend = $derived(data.trend ?? []);
@@ -13,7 +15,7 @@
 
 <DashboardContent title="Program Effectiveness" subtitle="Teacher attendance rate trends and remediation impact">
   {#snippet headerActions()}
-    <select class="rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-ink-600">
+    <select class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
       <option>This week</option>
       <option>This month</option>
       <option>This term</option>
@@ -22,19 +24,23 @@
 
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     {#each summary as stat}
-      <div class="rounded-xl border border-border bg-white p-5 shadow-card">
-        <p class="text-sm font-medium text-ink-400">{stat.label}</p>
-        <p class="mt-2 text-2xl font-semibold tracking-tight text-ink-900">{stat.value}</p>
-        <p class="mt-1 text-xs text-ink-500">{stat.sub}</p>
-      </div>
+      <Card>
+        <CardContent class="pt-6">
+          <p class="text-sm font-medium text-muted-foreground">{stat.label}</p>
+          <p class="mt-2 text-2xl font-semibold tracking-tight text-foreground">{stat.value}</p>
+          <p class="mt-1 text-xs text-muted-foreground">{stat.sub}</p>
+        </CardContent>
+      </Card>
     {/each}
   </div>
 
-  <div class="rounded-xl border border-border bg-white p-6 shadow-card">
-    <h3 class="text-sm font-semibold text-ink-900">Attendance Rate Trend</h3>
-    <p class="mt-1 text-xs text-ink-500">Daily teacher attendance rate over the selected period</p>
-    <div class="mt-4">
-      <LineChart data={trend} format={(v: number) => `${v}%`} height={220} color="#039855" />
-    </div>
-  </div>
+  <Card>
+    <CardContent class="pt-6">
+      <h3 class="text-sm font-semibold text-foreground">Attendance Rate Trend</h3>
+      <p class="mt-1 text-xs text-muted-foreground">Daily teacher attendance rate over the selected period</p>
+      <div class="mt-4">
+        <LineChart data={trend} format={(v: number) => `${v}%`} height={220} color="#039855" />
+      </div>
+    </CardContent>
+  </Card>
 </DashboardContent>

@@ -5,9 +5,9 @@ import { PAGE_OVERVIEW } from '$lib/config';
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId, parent, studentIds } = await getParentOwnership(locals);
 
-  if (studentIds.length === 0) return { parent, students: [], payments: [] };
+  if (studentIds.length === 0) return { parent, students: [], payments: [], announcements: [] };
 
-  const [{ data: students }, { data: payments }] = await Promise.all([
+  const [{ data: students }, { data: payments }, { data: announcements }] = await Promise.all([
     locals.srv
       .from('students')
       .select('id, admission_no, first_name, last_name, grade, status')
@@ -20,6 +20,14 @@ export const load: PageServerLoad = async ({ locals }) => {
       .in('student_id', studentIds)
       .order('created_at', { ascending: false })
       .limit(PAGE_OVERVIEW),
+    locals.srv
+      .from('comm_announcements')
+      .select('id, title, body, audience, priority, published_at')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'published')
+      .or('audience.eq.all,audience.eq.parents')
+      .order('published_at', { ascending: false })
+      .limit(10),
   ]);
 
   return {
@@ -29,5 +37,9 @@ export const load: PageServerLoad = async ({ locals }) => {
       ...p,
       fee_type: p.fee_types?.name ?? '—',
     })),
+    announcements: (announcements ?? []).filter((a: any) => {
+      const audience = a.audience ?? 'all';
+      return audience === 'all' || audience === 'parents';
+    }),
   };
 };

@@ -1,8 +1,10 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import Button from '$lib/components/ui/button.svelte';
-  import { Dialog } from 'bits-ui';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
+  import { Label } from '$lib/components/ui/label/index.js';
+  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '$lib/components/ui/dialog/index.js';
   import { Plus, Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { ActionResult } from '@sveltejs/kit';
@@ -49,9 +51,9 @@
 
 <DashboardContent {title} {subtitle}>
   {#snippet headerActions()}
-    <button onclick={openCreate} class="rounded-full bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700 flex items-center gap-1.5">
+    <Button onclick={openCreate} size="sm">
       <Plus class="h-3.5 w-3.5" /> Add Fee
-    </button>
+    </Button>
   {/snippet}
 
   <DataTable
@@ -68,66 +70,67 @@
   />
 </DashboardContent>
 
-<Dialog.Root open={showCreate} onOpenChange={(o: boolean) => { if (!o) { showCreate = false; editingFee = null; } }}>
-  <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-    <Dialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-elevated">
-      <div class="flex items-center justify-between border-b border-border px-6 py-4">
-        <Dialog.Title class="text-base font-semibold text-ink-900">{editingFee ? 'Edit Fee' : 'Add Fee'}</Dialog.Title>
-        <Dialog.Close class="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700">
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-        </Dialog.Close>
-      </div>
-      <form method="POST" action={editingFee ? '?/update' : '?/create'} use:enhance={handleSubmit} class="px-6 py-5 space-y-4">
-        {#if editingFee}<input type="hidden" name="id" value={editingFee.id} />{/if}
-        <div class="space-y-1.5">
-          <label for="name" class="text-xs font-medium text-ink-700">Fee Name</label>
-          <input id="name" name="name" type="text" bind:value={formData.name} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Term 1 Fee" />
-          {#if errors.name?.[0]}<p class="text-xs text-danger">{errors.name?.[0]}</p>{/if}
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-1.5">
-            <label for="amount" class="text-xs font-medium text-ink-700">Amount (KES)</label>
-            <input id="amount" name="amount" type="number" step="0.01" bind:value={formData.amount} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="5000" />
-            {#if errors.amount?.[0]}<p class="text-xs text-danger">{errors.amount?.[0]}</p>{/if}
-          </div>
-          <div class="space-y-1.5">
-            <label for="due_date" class="text-xs font-medium text-ink-700">Due Date</label>
-            <input id="due_date" name="due_date" type="date" bind:value={formData.due_date} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" />
-            {#if errors.due_date?.[0]}<p class="text-xs text-danger">{errors.due_date?.[0]}</p>{/if}
-          </div>
-        </div>
-        <div class="space-y-1.5">
-          <label for="term" class="text-xs font-medium text-ink-700">Term</label>
-          <input id="term" name="term" type="text" bind:value={formData.term} class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" placeholder="Term 1, 2026" />
-          {#if errors.term?.[0]}<p class="text-xs text-danger">{errors.term?.[0]}</p>{/if}
-        </div>
-        {#if msg}<div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">{msg.text}</div>{/if}
-        <div class="flex justify-end gap-3 pt-2">
-          <Dialog.Close><button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button></Dialog.Close>
-          <Button type="submit" variant="primary" size="md" disabled={submitting}>{editingFee ? 'Update' : 'Create'}</Button>
-        </div>
-      </form>
-    </Dialog.Content>
-  </Dialog.Portal>
-</Dialog.Root>
+<Dialog open={showCreate} onOpenChange={(o: boolean) => { if (!o) { showCreate = false; editingFee = null; } }}>
+  <DialogContent class="sm:max-w-lg p-0">
+    <DialogHeader class="border-b border-slate-200 px-6 py-4">
+      <DialogTitle class="text-base font-semibold">{editingFee ? 'Edit Fee' : 'Add Fee'}</DialogTitle>
+    </DialogHeader>
 
-<Dialog.Root open={!!deletingFee} onOpenChange={(o: boolean) => { if (!o) deletingFee = null; }}>
-  <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-    <Dialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-elevated">
-      <div class="px-6 py-5 text-center">
-        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-danger"><Trash2 class="h-6 w-6" /></div>
-        <h3 class="text-base font-semibold text-ink-900">Delete Fee</h3>
-        <p class="mt-2 text-sm text-ink-500">Delete <strong>{deletingFee?.name}</strong>? This cannot be undone.</p>
+    <form method="POST" action={editingFee ? '?/update' : '?/create'} use:enhance={handleSubmit} class="px-6 py-5 space-y-4">
+      {#if editingFee}<input type="hidden" name="id" value={editingFee.id} />{/if}
+
+      <div class="space-y-1.5">
+        <Label for="name">Fee Name</Label>
+        <Input id="name" name="name" type="text" bind:value={formData.name} placeholder="Term 1 Fee" />
+        {#if errors.name?.[0]}<p class="text-xs text-destructive">{errors.name?.[0]}</p>{/if}
       </div>
-      <div class="flex justify-end gap-3 border-t border-border px-6 py-4">
-        <Dialog.Close><button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button></Dialog.Close>
-        <form method="POST" action="?/delete" use:enhance>
-          <input type="hidden" name="id" value={deletingFee?.id ?? ''} />
-          <Button type="submit" variant="danger" size="md">Delete</Button>
-        </form>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-1.5">
+          <Label for="amount">Amount (KES)</Label>
+          <Input id="amount" name="amount" type="number" step="0.01" bind:value={formData.amount} placeholder="5000" />
+          {#if errors.amount?.[0]}<p class="text-xs text-destructive">{errors.amount?.[0]}</p>{/if}
+        </div>
+        <div class="space-y-1.5">
+          <Label for="due_date">Due Date</Label>
+          <Input id="due_date" name="due_date" type="date" bind:value={formData.due_date} />
+          {#if errors.due_date?.[0]}<p class="text-xs text-destructive">{errors.due_date?.[0]}</p>{/if}
+        </div>
       </div>
-    </Dialog.Content>
-  </Dialog.Portal>
-</Dialog.Root>
+
+      <div class="space-y-1.5">
+        <Label for="term">Term</Label>
+        <Input id="term" name="term" type="text" bind:value={formData.term} placeholder="Term 1, 2026" />
+        {#if errors.term?.[0]}<p class="text-xs text-destructive">{errors.term?.[0]}</p>{/if}
+      </div>
+
+      {#if msg}<div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-primary/10 text-primary' : 'bg-red-50 text-destructive'}">{msg.text}</div>{/if}
+
+      <DialogFooter>
+        <DialogClose>
+          <button type="button" class="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+        </DialogClose>
+        <Button type="submit" disabled={submitting}>{editingFee ? 'Update' : 'Create'}</Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
+
+<Dialog open={!!deletingFee} onOpenChange={(o: boolean) => { if (!o) deletingFee = null; }}>
+  <DialogContent class="max-w-sm">
+    <div class="px-6 py-5 text-center">
+      <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-destructive"><Trash2 class="h-6 w-6" /></div>
+      <h3 class="text-base font-semibold">Delete Fee</h3>
+      <p class="mt-2 text-sm text-muted-foreground">Delete <strong>{deletingFee?.name}</strong>? This cannot be undone.</p>
+    </div>
+    <DialogFooter>
+      <DialogClose>
+        <button type="button" class="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+      </DialogClose>
+      <form method="POST" action="?/delete" use:enhance>
+        <input type="hidden" name="id" value={deletingFee?.id ?? ''} />
+        <Button type="submit" variant="destructive">Delete</Button>
+      </form>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>

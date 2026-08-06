@@ -6,6 +6,6 @@
   } = $props();
 </script>
 
-<div class={cn('rounded-xl border border-border bg-white shadow-card', className)}>
+<div class={cn('rounded-lg border border-slate-200 bg-white', className)}>
   {@render children?.()}
 </div>

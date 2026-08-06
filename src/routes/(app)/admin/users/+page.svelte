@@ -1,9 +1,13 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import Button from '$lib/components/ui/button.svelte';
-  import { Dialog } from 'bits-ui';
-  import { Plus, Trash2 } from 'lucide-svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '$lib/components/ui/dialog/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
+  import { Label } from '$lib/components/ui/label/index.js';
+  import { Alert, AlertTitle, AlertDescription } from '$lib/components/ui/alert/index.js';
+  import { Separator } from '$lib/components/ui/separator/index.js';
+  import { Trash2 } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
   import type { ActionResult } from '@sveltejs/kit';
@@ -105,9 +109,9 @@
 
 <DashboardContent title="Users" subtitle="System users and role assignments">
   {#snippet headerActions()}
-    <button onclick={openCreate} class="rounded-full bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700 flex items-center gap-1.5">
-      <Plus class="h-3.5 w-3.5" /> Assign Role
-    </button>
+    <Button onclick={openCreate} class="gap-1.5">
+      <span class="text-xs">+</span> Assign Role
+    </Button>
   {/snippet}
 
   <DataTable
@@ -123,128 +127,111 @@
   />
 </DashboardContent>
 
-<!-- Create/Edit Modal -->
-<Dialog.Root open={showCreate} onOpenChange={(o: boolean) => { if (!o) closeCreate(); }}>
-  <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-    <Dialog.Content
-      class="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-elevated"
-    >
-      <div class="flex items-center justify-between border-b border-border px-6 py-4">
-        <Dialog.Title class="text-base font-semibold text-ink-900">
-          {editingUser ? 'Edit User Role' : 'Assign Role'}
-        </Dialog.Title>
-        <Dialog.Close class="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700">
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </Dialog.Close>
-      </div>
+<Dialog bind:open={showCreate}>
+  <DialogContent class="sm:max-w-lg">
+    <DialogHeader>
+      <DialogTitle>{editingUser ? 'Edit User Role' : 'Assign Role'}</DialogTitle>
+      <DialogDescription>Assign a role to a user to grant them access to the system.</DialogDescription>
+    </DialogHeader>
 
-      <form
-        method="POST"
-        action={editingUser ? '?/update' : '?/create'}
-        class="px-6 py-5 space-y-4"
-        use:enhance={handleSubmit}
-      >
+    <form
+      method="POST"
+      action={editingUser ? '?/update' : '?/create'}
+      class="space-y-4"
+      use:enhance={handleSubmit}
+    >
+      {#if editingUser}
+        <input type="hidden" name="id" value={editingUser.id} />
+      {/if}
+
+      <div class="space-y-2">
+        <Label for="user_id">User (Profile)</Label>
         {#if editingUser}
-          <input type="hidden" name="id" value={editingUser.id} />
-        {/if}
-
-        <div class="space-y-1.5">
-          <label for="user_id" class="text-xs font-medium text-ink-700">User (Profile)</label>
-          {#if editingUser}
-            <input
-              id="user_id"
-              name="user_id"
-              type="text"
-              value={formData.user_id}
-              readonly
-              class="w-full rounded-lg border border-border bg-ink-50 px-3 py-2 text-sm text-ink-500 cursor-not-allowed"
-            />
-          {:else}
-            <select
-              id="user_id"
-              name="user_id"
-              value={formData.user_id}
-              class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
-            >
-              <option value="">Select a user…</option>
-              {#each availableProfiles as profile}
-                <option value={profile.id}>{profile.full_name}</option>
-              {/each}
-            </select>
-          {/if}
-          {#if errors.user_id?.[0]}
-            <p class="text-xs text-danger">{errors.user_id?.[0]}</p>
-          {/if}
-        </div>
-
-        <div class="space-y-1.5">
-          <label for="role" class="text-xs font-medium text-ink-700">Role</label>
+          <Input
+            id="user_id"
+            name="user_id"
+            value={formData.user_id}
+            readonly
+            class="bg-muted"
+          />
+        {:else}
           <select
-            id="role"
-            name="role"
-            value={formData.role}
-            class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
+            id="user_id"
+            name="user_id"
+            value={formData.user_id}
+            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
-            <option value="">Select role…</option>
-            <option value="school_admin">Admin</option>
-            <option value="principal">Principal</option>
-            <option value="teacher">Teacher</option>
-            <option value="bursar">Bursar</option>
-            <option value="parent">Parent</option>
+            <option value="">Select a user…</option>
+            {#each availableProfiles as profile}
+              <option value={profile.id}>{profile.full_name}</option>
+            {/each}
           </select>
-          {#if errors.role?.[0]}
-            <p class="text-xs text-danger">{errors.role?.[0]}</p>
-          {/if}
-        </div>
-
-        {#if msg}
-          <div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-danger'}">
-            {msg.text}
-          </div>
         {/if}
+        {#if errors.user_id?.[0]}
+          <p class="text-xs text-destructive">{errors.user_id?.[0]}</p>
+        {/if}
+      </div>
 
-        <div class="flex justify-end gap-3 pt-2">
-          <Dialog.Close>
-            <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
-          </Dialog.Close>
-          <Button type="submit" variant="primary" size="md" {submitting} disabled={submitting}>
+      <div class="space-y-2">
+        <Label for="role">Role</Label>
+        <select
+          id="role"
+          name="role"
+          value={formData.role}
+          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="">Select role…</option>
+          <option value="school_admin">Admin</option>
+          <option value="principal">Principal</option>
+          <option value="teacher">Teacher</option>
+          <option value="bursar">Bursar</option>
+          <option value="parent">Parent</option>
+        </select>
+        {#if errors.role?.[0]}
+          <p class="text-xs text-destructive">{errors.role?.[0]}</p>
+        {/if}
+      </div>
+
+      {#if msg}
+        <Alert variant={msg.type === 'success' ? 'default' : 'destructive'}>
+          <AlertTitle>{msg.text}</AlertTitle>
+        </Alert>
+      {/if}
+
+      <DialogFooter>
+        <DialogClose>
+          <Button type="button" variant="outline">Cancel</Button>
+        </DialogClose>
+        <Button type="submit" disabled={submitting}>
+          {#if submitting}
+            <svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Saving...
+          {:else}
             {editingUser ? 'Update' : 'Assign'}
-          </Button>
-        </div>
+          {/if}
+        </Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
+
+<Dialog open={!!deletingUser} onOpenChange={(o: boolean) => { if (!o) closeDelete(); }}>
+  <DialogContent class="sm:max-w-sm">
+    <DialogHeader>
+      <DialogTitle>Remove User Role</DialogTitle>
+      <DialogDescription>Are you sure you want to remove the role <strong>{deletingUser ? (roleLabels[deletingUser.role] ?? deletingUser.role) : ''}</strong> from this user?</DialogDescription>
+    </DialogHeader>
+    <DialogFooter>
+      <DialogClose>
+        <Button type="button" variant="outline">Cancel</Button>
+      </DialogClose>
+      <form method="POST" action="?/delete" use:enhance class="inline">
+        <input type="hidden" name="id" value={deletingUser?.id ?? ''} />
+        <Button type="submit" variant="destructive">Remove</Button>
       </form>
-    </Dialog.Content>
-  </Dialog.Portal>
-</Dialog.Root>
-
-<!-- Delete Confirmation Modal -->
-<Dialog.Root open={!!deletingUser} onOpenChange={(o: boolean) => { if (!o) closeDelete(); }}>
-  <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-    <Dialog.Content
-      class="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-elevated"
-    >
-      <div class="px-6 py-5 text-center">
-        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-danger">
-          <Trash2 class="h-6 w-6" />
-        </div>
-        <h3 class="text-base font-semibold text-ink-900">Remove User Role</h3>
-        <p class="mt-2 text-sm text-ink-500">
-          Are you sure you want to remove the role <strong>{deletingUser ? (roleLabels[deletingUser.role] ?? deletingUser.role) : ''}</strong> from this user?
-        </p>
-      </div>
-
-      <div class="flex justify-end gap-3 border-t border-border px-6 py-4">
-        <Dialog.Close>
-          <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
-        </Dialog.Close>
-        <form method="POST" action="?/delete" use:enhance>
-          <input type="hidden" name="id" value={deletingUser?.id ?? ''} />
-          <Button type="submit" variant="danger" size="md">Remove</Button>
-        </form>
-      </div>
-    </Dialog.Content>
-  </Dialog.Portal>
-</Dialog.Root>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>

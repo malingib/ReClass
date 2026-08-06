@@ -1,5 +1,5 @@
 <script>
-  import { Button } from '@eshule/shared';
+  import { Button } from '$lib/components/ui/button/index.js';
   let props = $props();
 </script>
 

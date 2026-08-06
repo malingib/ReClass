@@ -6,7 +6,7 @@ const PASSWORD = process.env.TEST_USER_PASSWORD || 'ReClass2026!';
 const ADMIN_ROUTES = [
   '/admin', '/admin/modules', '/admin/sis', '/admin/sis/classes', '/admin/sis/admissions',
   '/admin/students', '/admin/students/import', '/admin/teachers', '/admin/parents',
-  '/admin/subjects', '/admin/fees', '/admin/teacher-invoices', '/admin/parent-payments',
+  '/admin/subjects', '/admin/fees', '/admin/parent-payments',
   '/admin/attendance', '/admin/scheduling', '/admin/credentials', '/admin/reports',
   '/admin/payroll', '/admin/finance', '/admin/finance/income', '/admin/finance/expenses',
   '/admin/communications',

@@ -136,59 +136,40 @@ async function seed() {
   ];
   await insert('fee_types', feeTypes);
 
-  // 8. Remedial groups
-  const groups = [
-    { id: 'f0000001-0000-0000-0000-000000000001', tenant_id: T, name: 'Math Booster - Form 4', subject_id: subjects[0].id,  teacher_id: teachers[0].id, room: 'Rm 12', capacity: 30, term: 'Term 1' },
-    { id: 'f0000001-0000-0000-0000-000000000002', tenant_id: T, name: 'English Lit - Form 3/4', subject_id: subjects[1].id,   teacher_id: teachers[1].id, room: 'Rm 8', capacity: 35, term: 'Term 1' },
-    { id: 'f0000001-0000-0000-0000-000000000003', tenant_id: T, name: 'Kiswahili Sarufi - Form 3/4', subject_id: subjects[2].id, teacher_id: teachers[2].id, room: 'Rm 5', capacity: 30, term: 'Term 1' },
-    { id: 'f0000001-0000-0000-0000-000000000004', tenant_id: T, name: 'Science Lab - Form 4', subject_id: subjects[3].id,   teacher_id: teachers[6].id, room: 'Lab 1', capacity: 25, term: 'Term 1' },
-    { id: 'f0000001-0000-0000-0000-000000000005', tenant_id: T, name: 'Geography Mapwork - Form 3/4', subject_id: subjects[5].id, teacher_id: teachers[3].id, room: 'Rm 10', capacity: 30, term: 'Term 1' },
-    { id: 'f0000001-0000-0000-0000-000000000006', tenant_id: T, name: 'History - Form 2/3', subject_id: subjects[4].id,    teacher_id: teachers[7].id, room: 'Rm 3', capacity: 35, term: 'Term 1' },
-    { id: 'f0000001-0000-0000-0000-000000000007', tenant_id: T, name: 'Business - Form 3/4', subject_id: subjects[6].id,      teacher_id: teachers[8].id, room: 'Rm 7', capacity: 25, term: 'Term 1' },
-    { id: 'f0000001-0000-0000-0000-000000000008', tenant_id: T, name: 'Math Foundation - Form 1/2', subject_id: subjects[0].id, teacher_id: teachers[4].id, room: 'Rm 12', capacity: 30, term: 'Term 1' },
-  ];
-  await insert('remedial_groups', groups);
-
-  // 9. Invoices (simple version - no payments or complex states)
-  for (const s of students) {
-    const ft1 = feeTypes[0], ft2 = feeTypes[1];
-    for (const ft of [ft1, ft2]) {
-      const r = Math.random();
-      const status = r < 0.3 ? 'unpaid' : r < 0.6 ? 'partial' : 'paid';
-      const amountPaid = status === 'unpaid' ? 0 : status === 'partial' ? ft.amount / 2 : ft.amount;
-      try {
-        await sb.from('invoices').insert({
-          tenant_id: T, student_id: s.id, fee_type_id: ft.id,
-          amount_due: ft.amount, amount_paid: amountPaid,
-          status, due_date: ft.due_date,
-        });
-      } catch {} // ignore dupes
-    }
-  }
-  console.log('  invoices: 40 rows (approx)');
-
-  // 10. Sessions + occurrences - simplified
+  // 8. Sessions + occurrences - simplified
   const now = new Date();
   const day = now.getDay();
   const monday = new Date(now);
   monday.setDate(now.getDate() + (day === 0 ? -6 : 1 - day));
 
-  for (let i = 0; i < groups.length; i++) {
-    const g = groups[i];
+  const sessionData = [
+    { class: 'Form 4', subject: subjects[0], teacher: teachers[0], room: 'Rm 12' },
+    { class: 'Form 3/4', subject: subjects[1], teacher: teachers[1], room: 'Rm 8' },
+    { class: 'Form 3/4', subject: subjects[2], teacher: teachers[2], room: 'Rm 5' },
+    { class: 'Form 4', subject: subjects[3], teacher: teachers[6], room: 'Lab 1' },
+    { class: 'Form 3/4', subject: subjects[5], teacher: teachers[3], room: 'Rm 10' },
+    { class: 'Form 2/3', subject: subjects[4], teacher: teachers[7], room: 'Rm 3' },
+    { class: 'Form 3/4', subject: subjects[6], teacher: teachers[8], room: 'Rm 7' },
+    { class: 'Form 1/2', subject: subjects[0], teacher: teachers[4], room: 'Rm 12' },
+  ];
+
+  for (let i = 0; i < sessionData.length; i++) {
+    const s = sessionData[i];
     const dw = i % 2 === 0 ? 1 : 2; // Mon or Tue
     const startH = 7 + (i % 4) * 1;
     const startMin = (i % 2) * 30;
     const endH = startH + 1;
     
-    // Insert session (only existing columns: id, tenant_id, group_id, day_of_week, start_time, end_time, slot, active)
     const sessionId = `s0000001-0000-0000-0000-${String(i + 1).padStart(12, '0')}`;
     try {
       await sb.from('sessions').insert({
-        id: sessionId, tenant_id: T, group_id: g.id,
+        id: sessionId, tenant_id: T,
+        subject_id: s.subject.id, teacher_id: s.teacher.id, class: s.class,
         day_of_week: dw,
         start_time: `${String(startH).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`,
         end_time: `${String(endH).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`,
         slot: i % 2 === 0 ? 'morning' : 'evening',
+        room: s.room,
         active: true,
       });
     } catch {}
@@ -204,7 +185,7 @@ async function seed() {
           occurs_on: occDate.toISOString().slice(0, 10),
           start_time: `${String(startH).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`,
           end_time: `${String(endH).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`,
-          room: g.room,
+          room: s.room,
           status: isPast ? 'done' : 'scheduled',
         });
       } catch {}
@@ -230,8 +211,8 @@ async function seed() {
     console.log('  notifications: 3 rows');
   }
 
-  console.log('\n✅ Seed complete! Tables seeded: tenants, subjects, teachers, students, parents, guardians_link, fee_types, remedial_groups, invoices, sessions, session_occurrences, notifications');
-  console.log('   Skipped (need migrations): group_members, teacher_attendance, payroll_runs');
+  console.log('\n✅ Seed complete! Tables seeded: tenants, subjects, teachers, students, parents, guardians_link, fee_types, invoices, sessions, session_occurrences, notifications');
+  console.log('   Skipped (need migrations): teacher_attendance, payroll_runs');
 }
 
 seed().catch(e => { console.error('FATAL:', e); process.exit(1); });

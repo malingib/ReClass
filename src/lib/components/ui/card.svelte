@@ -1,5 +1,5 @@
 <script>
-  import { Card } from '@eshule/shared';
+  import { Card } from '$lib/components/ui/card/index.js';
   let props = $props();
 </script>
 

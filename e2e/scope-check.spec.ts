@@ -15,12 +15,12 @@ test('module dashboards are scoped to their own domains', async ({ page }, testI
   testInfo.setTimeout(120000);
   await loginOnce(page);
 
-  // Reclass = remedial domain: must reference remedial groups / enrolled students,
+  // Reclass = remedial domain: must reference remedial teachers / active sessions,
   // and must NOT surface a whole-school "Total Students" KPI (that is /admin + /admin/sis).
   await page.goto('/admin/reclass', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => (document.body?.innerText ?? '').includes('Remedial'), { timeout: 15000 });
   const reclass = await page.textContent('body');
-  expect(reclass).toMatch(/Remedial groups|Enrolled students|Remedial teachers/i);
+  expect(reclass).toMatch(/Remedial teachers|Active sessions|Teacher attendance/i);
   expect(reclass).not.toContain('Internal Server Error');
 
   // SIS = owns students/classes/admissions.

@@ -7,7 +7,7 @@ describe('Admin dashboard page', () => {
   });
 
   it('exports expected page data shape', () => {
-    const expectedKeys = ['stat', 'recentStudents', 'recentInvoices', 'trend', 'activity', 'sessionsSummary'];
+    const expectedKeys = ['stat', 'recentStudents', 'recentPayments', 'trend', 'activity'];
     // Sanity-check that these are the keys the load function returns
     expect(expectedKeys.length).toBeGreaterThan(0);
     expect(expectedKeys).toContain('stat');

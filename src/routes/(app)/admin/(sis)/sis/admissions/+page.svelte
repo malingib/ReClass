@@ -1,7 +1,7 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import Button from '$lib/components/ui/button.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
 
   const { data } = $props();
   const admissions = $derived(data.admissions);
@@ -9,7 +9,7 @@
 
 <DashboardContent title="Admissions" subtitle="Student applications and admission tracking">
   {#snippet headerActions()}
-    <Button variant="primary" size="sm">New Admission</Button>
+    <Button>New Admission</Button>
   {/snippet}
 
   <DataTable

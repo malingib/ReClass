@@ -186,50 +186,45 @@
 </script>
 
 {#if loading}
-  <div class="space-y-3">
+  <div class="space-y-2">
     {#each [1, 2, 3] as _i}
-      <div class="skeleton h-12 w-full rounded-xl"></div>
+      <div class="skeleton h-11 w-full rounded-md"></div>
     {/each}
   </div>
 {:else if data.length === 0}
-  {#if isServer && searchQuery}
-  <div class="overflow-hidden rounded-[20px] border border-border/80 bg-white/70 shadow-[0_16px_40px_rgba(15,23,42,0.05)] backdrop-blur-sm">
-    <div class="border-b border-border/70 px-4 py-3">
-      <div class="relative">
-        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search\u2026"
-          value={searchQuery}
-          oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
-          class="w-full rounded-lg border border-border bg-ink-50 py-2 pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-        />
+  <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+    {#if isServer && searchQuery}
+      <div class="border-b border-slate-200 px-4 py-3">
+        <div class="relative">
+          <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search\u2026"
+            value={searchQuery}
+            oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
+            aria-label="Search table data"
+            class="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
       </div>
-    </div>
+    {/if}
     <div class="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-      <p class="text-sm text-ink-500">{emptyMessage || 'No data yet'}</p>
-    </div>
-  </div>
-  {:else}
-  <div class="overflow-hidden rounded-[20px] border border-border/80 bg-white/70 shadow-[0_16px_40px_rgba(15,23,42,0.05)] backdrop-blur-sm">
-    <div class="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-      <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500">
-        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <div class="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
         </svg>
       </div>
-      <p class="text-sm text-ink-500">{emptyMessage || 'No data yet'}</p>
+      <p class="text-sm text-slate-500">{emptyMessage || 'No data yet'}</p>
     </div>
   </div>
-  {/if}
 {:else}
-  <div class="overflow-hidden rounded-[20px] border border-border/80 bg-white/70 shadow-[0_16px_40px_rgba(15,23,42,0.05)] backdrop-blur-sm">
+  <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
     <!-- Search bar -->
-    <div class="border-b border-border/70 px-4 py-3">
+    <div class="border-b border-slate-200 px-4 py-3">
       <div class="relative">
-        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
         </svg>
         <input
@@ -237,17 +232,18 @@
           placeholder="Search\u2026"
           value={searchQuery}
           oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
-          class="w-full rounded-lg border border-border bg-ink-50 py-2 pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          aria-label="Search table data"
+          class="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-border/70 bg-ink-50/70">
+          <tr class="border-b border-slate-200 bg-slate-50">
             {#each columns as col}
               <th
-                class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.26em] text-ink-400 {col.sortable ? 'cursor-pointer hover:text-brand-500' : ''}"
+                class="px-4 py-2.5 text-left text-xs font-medium text-slate-500 {col.sortable ? 'cursor-pointer' : ''}"
                 aria-sort={col.sortable ? (sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
               >
                 {#if col.sortable}
@@ -255,31 +251,31 @@
                     type="button"
                     onclick={() => toggleSort(col.key)}
                     onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleSort(col.key)}
-                    class="inline-flex items-center gap-1.5 hover:underline focus:outline-none focus:underline"
+                    class="inline-flex items-center gap-1 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:rounded"
                   >
                     {col.label}
                     {#if sortKey === col.key}
-                      <span class="text-[10px]" aria-hidden="true">{sortDir === 'asc' ? '\u2191' : '\u2193'}</span>
+                      <span class="text-[10px] text-primary" aria-hidden="true">{sortDir === 'asc' ? '\u2191' : '\u2193'}</span>
                     {/if}
                   </button>
                 {:else}
-                  <span class="inline-flex items-center gap-1.5">{col.label}</span>
+                  <span>{col.label}</span>
                 {/if}
               </th>
             {/each}
             {#if hasRowActions}
-              <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.26em] text-ink-400">Actions</th>
+              <th class="px-4 py-2.5 text-right text-xs font-medium text-slate-500">Actions</th>
             {/if}
             {#if rowExtra}
-              <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.26em] text-ink-400">Manage</th>
+              <th class="px-4 py-2.5 text-right text-xs font-medium text-slate-500">Manage</th>
             {/if}
           </tr>
         </thead>
         <tbody>
-          {#each paginated as item, idx (item.id)}
-            <tr class="border-b border-border/70 transition-colors last:border-b-0 hover:bg-brand-50/40 {idx % 2 === 0 ? 'bg-white/60' : 'bg-ink-50/40'}">
+          {#each paginated as item (item.id)}
+            <tr class="border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50">
               {#each columns as col}
-                <td class="px-4 py-3 text-ink-700">
+                <td class="px-4 py-3 text-slate-700">
                   {col.render ? col.render(item) : item[col.key]}
                 </td>
               {/each}
@@ -287,10 +283,10 @@
                 <td class="px-4 py-3 text-right">
                   <div class="inline-flex items-center gap-3">
                     {#if onEdit}
-                      <button onclick={() => onEdit(item)} class="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700">{typeof editLabel === 'function' ? editLabel(item) : editLabel ?? 'Edit'}</button>
+                      <button onclick={() => onEdit(item)} class="text-xs font-medium text-primary hover:underline">{typeof editLabel === 'function' ? editLabel(item) : editLabel ?? 'Edit'}</button>
                     {/if}
                     {#if onDelete}
-                      <button onclick={() => confirmDelete(item)} class="text-xs font-medium text-ink-400 transition-colors hover:text-danger">{deleteLabel}</button>
+                      <button onclick={() => confirmDelete(item)} class="text-xs font-medium text-slate-400 hover:text-red-600">{deleteLabel}</button>
                     {/if}
                   </div>
                 </td>
@@ -307,25 +303,25 @@
     </div>
     <!-- Pagination -->
     {#if totalPages > 1}
-      <div class="flex items-center justify-between border-t border-border/70 px-4 py-3">
-        <p class="text-xs text-ink-500">
+      <div class="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+        <p class="text-xs text-slate-500">
           {((currentPage - 1) * effectivePageSize) + 1}&ndash;{Math.min(currentPage * effectivePageSize, totalRows)} of {totalRows}
         </p>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
           <button
             onclick={prevPage}
             disabled={currentPage <= 1}
-            class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-ink-600 transition-colors hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-40"
+            class="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Previous
           </button>
           {#each paginationItems as item (item.type === 'ellipsis' ? item.key : `p-${item.num}`)}
             {#if item.type === 'ellipsis'}
-              <span class="px-1 text-xs text-ink-400" aria-hidden="true">&hellip;</span>
+              <span class="px-1 text-xs text-slate-400" aria-hidden="true">&hellip;</span>
             {:else}
               <button
                 onclick={() => gotoPage(item.num)}
-                class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors {item.num === currentPage ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-ink-50'}"
+                class="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors {item.num === currentPage ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-50'}"
               >
                 {item.num}
               </button>
@@ -334,7 +330,7 @@
           <button
             onclick={nextPage}
             disabled={currentPage >= totalPages}
-            class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-ink-600 transition-colors hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-40"
+            class="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Next
           </button>
@@ -345,14 +341,14 @@
 {/if}
 
 {#if deleteTarget}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onclick={() => deleteTarget = null} onkeydown={(e) => e.key === 'Escape' && (deleteTarget = null)} role="dialog" aria-modal="true" tabindex="-1">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onclick={() => deleteTarget = null} onkeydown={(e) => e.key === 'Escape' && (deleteTarget = null)} role="dialog" aria-modal="true" tabindex="-1">
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onclick={(e) => e.stopPropagation()}>
-      <h3 class="text-lg font-semibold text-ink-900">Confirm deletion</h3>
-      <p class="mt-2 text-sm text-ink-600">This action cannot be undone. Are you sure you want to delete this item?</p>
-      <div class="mt-6 flex items-center justify-end gap-3">
-        <button onclick={() => deleteTarget = null} class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50">Cancel</button>
-        <button onclick={handleConfirm} class="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-danger/90">Delete</button>
+    <div class="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-lg" onclick={(e) => e.stopPropagation()}>
+      <h3 class="text-base font-semibold text-slate-900">Confirm deletion</h3>
+      <p class="mt-1.5 text-sm text-slate-600">This action cannot be undone. Are you sure you want to delete this item?</p>
+      <div class="mt-5 flex items-center justify-end gap-2">
+        <button onclick={() => deleteTarget = null} class="rounded-md border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+        <button onclick={handleConfirm} class="rounded-md bg-red-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-red-700">Delete</button>
       </div>
     </div>
   </div>

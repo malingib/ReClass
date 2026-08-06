@@ -1,9 +1,12 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import DashboardContent from '$lib/components/DashboardContent.svelte';
-  import Button from '$lib/components/ui/button.svelte';
-  import Card from '$lib/components/ui/card.svelte';
-  import CardContent from '$lib/components/ui/card-content.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Card, CardContent } from '$lib/components/ui/card/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
+  import { Label } from '$lib/components/ui/label/index.js';
+  import { Alert, AlertTitle, AlertDescription } from '$lib/components/ui/alert/index.js';
+  import { Badge } from '$lib/components/ui/badge/index.js';
   import DataTable from '$lib/components/DataTable.svelte';
 
   const { data, form } = $props();
@@ -59,44 +62,44 @@
     }
   }
 
-  function statusBadge(status: string) {
-    const map: Record<string, string> = {
-      ok: 'bg-brand-50 text-brand-700',
-      failed: 'bg-danger/10 text-danger',
-      untested: 'bg-ink-100 text-ink-500',
+  function statusVariant(status: string) {
+    const map: Record<string, 'default' | 'secondary' | 'destructive'> = {
+      ok: 'default',
+      failed: 'destructive',
+      untested: 'secondary',
     };
-    return map[status] ?? 'bg-ink-100 text-ink-500';
+    return map[status] ?? 'secondary';
   }
 </script>
 
 <DashboardContent title="Credentials" subtitle="Mobiwave SMS &amp; Daraja M-Pesa credentials">
   {#snippet headerActions()}
     {#if !showForm}
-      <Button onclick={openAdd} variant="primary">Add Credential</Button>
+      <Button onclick={openAdd}>Add Credential</Button>
     {/if}
   {/snippet}
 
   {#if form?.success && !showForm}
-    <div class="rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm font-medium text-success">
-      Credential saved successfully.
-    </div>
+    <Alert>
+      <AlertTitle>Credential saved successfully.</AlertTitle>
+    </Alert>
   {/if}
   {#if form?.error && !showForm}
-    <div class="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm font-medium text-danger">
-      {form.error}
-    </div>
+    <Alert variant="destructive">
+      <AlertTitle>{form.error}</AlertTitle>
+    </Alert>
   {/if}
 
   {#if testResult}
-    <div class="rounded-xl border {testResult.ok ? 'border-success/30 bg-success/5 text-success' : 'border-danger/30 bg-danger/5 text-danger'} px-4 py-3 text-sm font-medium">
-      {testResult.msg}
-    </div>
+    <Alert variant={testResult.ok ? 'default' : 'destructive'}>
+      <AlertTitle>{testResult.msg}</AlertTitle>
+    </Alert>
   {/if}
 
   {#if showForm}
     <Card>
-      <CardContent>
-        <h3 class="mb-4 text-sm font-semibold text-ink-800">{editId ? 'Edit Credential' : 'Add Credential'}</h3>
+      <CardContent class="pt-6">
+        <h3 class="mb-4 text-sm font-semibold text-foreground">{editId ? 'Edit Credential' : 'Add Credential'}</h3>
         <form method="POST" action="?/save" use:enhance={() => {
           saving = true;
           return async () => { saving = false; };
@@ -105,55 +108,62 @@
             <input type="hidden" name="id" value={editId} />
           {/if}
           <div class="space-y-4">
-            <div>
-              <label for="cred-provider" class="mb-1.5 block text-sm font-medium text-ink-700">Provider</label>
+            <div class="space-y-2">
+              <Label for="cred-provider">Provider</Label>
               <select
                 id="cred-provider" name="provider"
                 bind:value={formProvider}
-                class="w-full rounded-lg border border-ink-200 px-4 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="mpesa">M-Pesa (Daraja)</option>
                 <option value="mobiwave_sms">Mobiwave SMS</option>
               </select>
             </div>
-            <div>
-              <label for="cred-env" class="mb-1.5 block text-sm font-medium text-ink-700">Environment</label>
+            <div class="space-y-2">
+              <Label for="cred-env">Environment</Label>
               <select
                 id="cred-env" name="environment"
                 bind:value={formEnv}
-                class="w-full rounded-lg border border-ink-200 px-4 py-2.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="sandbox">Sandbox</option>
                 <option value="production">Production</option>
               </select>
             </div>
-            <div>
-              <label for="cred-label" class="mb-1.5 block text-sm font-medium text-ink-700">Label</label>
-              <input
+            <div class="space-y-2">
+              <Label for="cred-label">Label</Label>
+              <Input
                 id="cred-label" name="label" type="text" bind:value={formLabel}
-                class="w-full rounded-lg border border-ink-200 px-4 py-2.5 text-sm text-ink-900 placeholder-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 placeholder="e.g. Production Daraja"
               />
             </div>
-            <div>
-              <label for="cred-blob" class="mb-1.5 block text-sm font-medium text-ink-700">
+            <div class="space-y-2">
+              <Label for="cred-blob">
                 {formProvider === 'mpesa' ? 'JSON Blob (consumer_key, consumer_secret, passkey, shortcode)' : 'API Token'}
-              </label>
+              </Label>
               <textarea
                 id="cred-blob" name="encrypted_blob"
                 bind:value={formBlob}
                 rows={4}
-                class="w-full rounded-lg border border-ink-200 px-4 py-2.5 text-sm text-ink-900 font-mono placeholder-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono"
                 placeholder={formProvider === 'mpesa' ? '{"consumer_key":"...","consumer_secret":"...","passkey":"...","shortcode":"..."}' : '{"api_token":"..."}'}
                 required
               ></textarea>
-              <p class="mt-1 text-xs text-ink-400">This data will be encrypted at rest.</p>
+              <p class="text-xs text-muted-foreground">This data will be encrypted at rest.</p>
             </div>
             <div class="flex items-center gap-3">
-              <Button type="submit" variant="primary" loading={saving}>
-                {editId ? 'Update' : 'Save'} Credential
+              <Button type="submit" disabled={saving}>
+                {#if saving}
+                  <svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Saving...
+                {:else}
+                  {editId ? 'Update' : 'Save'} Credential
+                {/if}
               </Button>
-              <Button type="button" variant="ghost" onclick={cancelForm}>Cancel</Button>
+              <Button type="button" variant="outline" onclick={cancelForm}>Cancel</Button>
             </div>
           </div>
         </form>
@@ -161,13 +171,13 @@
     </Card>
   {:else}
     {#if credentials.length === 0}
-      <div class="flex flex-col items-center justify-center gap-3 rounded-[20px] border border-border/80 bg-white/70 px-6 py-12 text-center shadow-card">
-        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500">
+      <div class="flex flex-col items-center justify-center gap-3 rounded-lg border border-slate-200 bg-white px-6 py-12 text-center">
+        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
           <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
           </svg>
         </div>
-        <p class="text-sm text-ink-500">No credentials configured yet</p>
+        <p class="text-sm text-muted-foreground">No credentials configured yet</p>
         <Button onclick={openAdd} variant="secondary">Add Credential</Button>
       </div>
     {:else}
@@ -185,7 +195,7 @@
           {
             key: 'test_status',
             label: 'Test Status',
-            render: (c: any) => `<span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusBadge(c.test_status)}">${c.test_status}</span>`,
+            render: (c: any) => `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">${c.test_status}</span>`,
           },
         ]}
         onEdit={openEdit}
@@ -203,27 +213,36 @@
     {#if credentials.length > 0}
       <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {#each credentials as cred}
-          <div class="rounded-xl border border-border bg-white p-4 shadow-card">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-ink-800">{cred.label}</p>
-                <p class="text-xs text-ink-400">{cred.provider === 'mpesa' ? 'M-Pesa' : 'SMS'} · {cred.environment}</p>
+          <Card>
+            <CardContent class="pt-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-foreground">{cred.label}</p>
+                  <p class="text-xs text-muted-foreground">{cred.provider === 'mpesa' ? 'M-Pesa' : 'SMS'} · {cred.environment}</p>
+                </div>
+                <Badge variant={statusVariant(cred.test_status ?? 'untested')}>
+                  {cred.test_status}
+                </Badge>
               </div>
-              <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide {statusBadge(cred.test_status ?? 'untested')}">
-                {cred.test_status}
-              </span>
-            </div>
-            <div class="mt-3 flex gap-2">
-              <Button
-                size="sm" variant="secondary"
-                onclick={() => runTest(cred.id)}
-                loading={testing === cred.id}
-              >
-                Test
-              </Button>
-              <Button size="sm" variant="ghost" onclick={() => openEdit(cred)}>Edit</Button>
-            </div>
-          </div>
+              <div class="mt-3 flex gap-2">
+                <Button
+                  size="sm" variant="secondary"
+                  onclick={() => runTest(cred.id)}
+                  disabled={testing === cred.id}
+                >
+                  {#if testing === cred.id}
+                    <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  {:else}
+                    Test
+                  {/if}
+                </Button>
+                <Button size="sm" variant="ghost" onclick={() => openEdit(cred)}>Edit</Button>
+              </div>
+            </CardContent>
+          </Card>
         {/each}
       </div>
     {/if}

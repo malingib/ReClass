@@ -1,7 +1,7 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import Button from '$lib/components/ui/button.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
 
   const { data } = $props();
   const classes = $derived(data.classes);
@@ -9,7 +9,7 @@
 
 <DashboardContent title="Classes & Streams" subtitle="Manage forms, streams and homeroom assignments">
   {#snippet headerActions()}
-    <Button variant="primary" size="sm">Add Class</Button>
+    <Button>Add Class</Button>
   {/snippet}
 
   <DataTable

@@ -1,7 +1,7 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
-  import Button from '$lib/components/ui/button.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
 
   const { data } = $props();
   const s = $derived(data.stats);
@@ -10,10 +10,10 @@
 <DashboardContent title="Student Information System" subtitle="Admissions, classes, enrollments and student records">
   {#snippet headerActions()}
     <a href="/admin/sis/admissions">
-      <Button variant="primary" size="sm">New Admission</Button>
+      <Button>New Admission</Button>
     </a>
     <a href="/admin/students">
-      <Button variant="secondary" size="sm">All Students</Button>
+      <Button variant="secondary">All Students</Button>
     </a>
   {/snippet}
 
@@ -26,7 +26,7 @@
 
   <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <a href="/admin/sis/classes"
-      class="group flex flex-col gap-3 rounded-xl border border-border bg-white p-5 shadow-card transition-shadow hover:shadow-card-hov"
+      class="group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-card transition-shadow hover:shadow-card-hov"
     >
       <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -34,8 +34,8 @@
         </svg>
       </span>
       <div>
-        <h3 class="text-sm font-semibold text-ink-900">Classes & Streams</h3>
-        <p class="mt-1 text-xs text-ink-500">Manage forms, streams, and homeroom assignments.</p>
+        <h3 class="text-sm font-semibold text-foreground">Classes & Streams</h3>
+        <p class="mt-1 text-xs text-muted-foreground">Manage forms, streams, and homeroom assignments.</p>
       </div>
       <span class="mt-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-blue-700 group-hover:text-blue-800">
         Manage Classes
@@ -43,7 +43,7 @@
       </span>
     </a>
     <a href="/admin/sis/admissions"
-      class="group flex flex-col gap-3 rounded-xl border border-border bg-white p-5 shadow-card transition-shadow hover:shadow-card-hov"
+      class="group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-card transition-shadow hover:shadow-card-hov"
     >
       <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -51,8 +51,8 @@
         </svg>
       </span>
       <div>
-        <h3 class="text-sm font-semibold text-ink-900">Admissions</h3>
-        <p class="mt-1 text-xs text-ink-500">Process new student applications and track admission status.</p>
+        <h3 class="text-sm font-semibold text-foreground">Admissions</h3>
+        <p class="mt-1 text-xs text-muted-foreground">Process new student applications and track admission status.</p>
       </div>
       <span class="mt-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-amber-700 group-hover:text-amber-800">
         View Admissions
@@ -60,7 +60,7 @@
       </span>
     </a>
     <a href="/admin/students"
-      class="group flex flex-col gap-3 rounded-xl border border-border bg-white p-5 shadow-card transition-shadow hover:shadow-card-hov"
+      class="group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-card transition-shadow hover:shadow-card-hov"
     >
       <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -68,8 +68,8 @@
         </svg>
       </span>
       <div>
-        <h3 class="text-sm font-semibold text-ink-900">Student Records</h3>
-        <p class="mt-1 text-xs text-ink-500">View and manage all student profiles and information.</p>
+        <h3 class="text-sm font-semibold text-foreground">Student Records</h3>
+        <p class="mt-1 text-xs text-muted-foreground">View and manage all student profiles and information.</p>
       </div>
       <span class="mt-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-emerald-700 group-hover:text-emerald-800">
         View Students

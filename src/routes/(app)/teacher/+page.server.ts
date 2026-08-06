@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const through = new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
 
   // Remedial teachers see their whole-class remedial sessions.
-  const [{ data: timetable }, { data: occurrences }] = await Promise.all([
+  const [{ data: timetable }, { data: occurrences }, { data: announcements }] = await Promise.all([
     canRemedial
       ? locals.srv
           .from('sessions')
@@ -36,6 +36,14 @@ export const load: PageServerLoad = async ({ locals }) => {
           .order('occurs_on')
           .order('start_time')
       : Promise.resolve({ data: [] as unknown[], error: null }),
+    locals.srv
+      .from('comm_announcements')
+      .select('id, title, body, audience, priority, published_at')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'published')
+      .or('audience.eq.all,audience.eq.teachers')
+      .order('published_at', { ascending: false })
+      .limit(10),
   ]);
 
   const delivery = ((occurrences ?? []) as Record<string, unknown>[]).map((occurrence) => ({
@@ -56,6 +64,10 @@ export const load: PageServerLoad = async ({ locals }) => {
     teacher,
     timetable: timetable ?? [],
     occurrences: delivery,
+    announcements: (announcements ?? []).filter((a: any) => {
+      const audience = a.audience ?? 'all';
+      return audience === 'all' || audience === 'teachers';
+    }),
   };
 };
 
