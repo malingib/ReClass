@@ -18,6 +18,12 @@ const REQUIRED_ENV_VARS = [
   [SUPABASE_SERVICE_ROLE_KEY, 'SUPABASE_SERVICE_ROLE_KEY', 'Supabase service role key (bypasses RLS)'],
 ] as const;
 
+// ── In-memory cache for user role lookups ────────────────────────────────────
+// user_roles changes very rarely (admin action). Caching avoids a DB round-trip
+// on every single page navigation — the single biggest per-request cost.
+const ROLE_CACHE_TTL_MS = 120_000; // 2 min
+const roleCache = new Map<string, { role: string | null; tenantId: string; ts: number }>();
+
 export function validateEnv(): void {
   for (const [value, key, label] of REQUIRED_ENV_VARS) {
     if (!value) {
@@ -68,16 +74,28 @@ export async function resolveSession(event: Parameters<Handle>[0]['event']): Pro
     email: user.email ?? '',
   }), { maxAge: COOKIE_USER_TTL_SECONDS, path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
 
-  const { data: roleRows } = await event.locals.supabase
-    .from('user_roles')
-    .select('role, tenant_id')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(1);
-  const roleRow = roleRows?.[0];
-  if (roleRow && isRole(roleRow.role)) {
-    event.locals.role = roleRow.role as Role;
-    event.locals.tenantId = roleRow.tenant_id;
+  // Check role cache first
+  const cachedRole = roleCache.get(user.id);
+  if (cachedRole && Date.now() - cachedRole.ts < ROLE_CACHE_TTL_MS) {
+    if (cachedRole.role && isRole(cachedRole.role)) {
+      event.locals.role = cachedRole.role as Role;
+      event.locals.tenantId = cachedRole.tenantId;
+    }
+  } else {
+    const { data: roleRows } = await event.locals.supabase
+      .from('user_roles')
+      .select('role, tenant_id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1);
+    const roleRow = roleRows?.[0];
+    if (roleRow && isRole(roleRow.role)) {
+      event.locals.role = roleRow.role as Role;
+      event.locals.tenantId = roleRow.tenant_id;
+      roleCache.set(user.id, { role: roleRow.role, tenantId: roleRow.tenant_id, ts: Date.now() });
+    } else {
+      roleCache.set(user.id, { role: null, tenantId: '', ts: Date.now() });
+    }
   }
 
   // Module provisioning — which modules this tenant may use (null = all).
@@ -113,13 +131,25 @@ export function correlationId(event: Parameters<Handle>[0]['event']): void {
 
 /** Add security headers to every response. */
 export function securityHeaders(event: Parameters<Handle>[0]['event']): void {
-  event.setHeaders({
+  const headers: Record<string, string> = {
     'X-Content-Type-Options': 'nosniff',
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     'X-Frame-Options': 'SAMEORIGIN',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Content-Security-Policy': CONTENT_SECURITY_POLICY,
-  });
+  };
+
+  // Short-lived Cache-Control for authenticated module pages.
+  // Prevents the browser from re-fetching on back/forward navigation
+  // while keeping content fresh (private + must-revalidate).
+  const { pathname } = event.url;
+  if (pathname.startsWith('/admin') || pathname.startsWith('/teacher') ||
+      pathname.startsWith('/parent') || pathname.startsWith('/principal') ||
+      pathname.startsWith('/bursar')) {
+    headers['Cache-Control'] = 'private, max-age=30, stale-while-revalidate=60';
+  }
+
+  event.setHeaders(headers);
 }
 
 export function routeGuard(event: Parameters<Handle>[0]['event']): void {

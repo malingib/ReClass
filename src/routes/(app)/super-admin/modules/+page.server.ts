@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
 import { suiteModules } from '$lib/modules';
+import { invalidateModuleCache } from '$lib/server/_platform/modules';
 
 // Super admin provisions which modules each tenant can use.
 // System-level table — no tenant filter (super admin only).
@@ -49,6 +50,11 @@ export const actions: Actions = {
     );
 
     if (error) return { error: error.message };
+
+    // Bust the in-memory module cache so the tenant's next page load sees
+    // the updated provisioning immediately.
+    invalidateModuleCache(tenantId);
+
     return { success: true as const, tenantId, moduleId, enabled };
   },
 };

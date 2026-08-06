@@ -37,9 +37,6 @@ export const load: PageServerLoad = async ({ locals }) => {
       ...p,
       fee_type: p.fee_types?.name ?? '—',
     })),
-    announcements: (announcements ?? []).filter((a: any) => {
-      const audience = a.audience ?? 'all';
-      return audience === 'all' || audience === 'parents';
-    }),
+    announcements: announcements ?? [],
   };
 };

@@ -64,10 +64,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     teacher,
     timetable: timetable ?? [],
     occurrences: delivery,
-    announcements: (announcements ?? []).filter((a: any) => {
-      const audience = a.audience ?? 'all';
-      return audience === 'all' || audience === 'teachers';
-    }),
+    announcements: announcements ?? [],
   };
 };
 

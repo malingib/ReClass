@@ -19,10 +19,12 @@ export type { NotificationItem, NotificationPriority } from './notifications.js'
 export { default as DashboardContent } from './components/DashboardContent.svelte';
 export { default as LoadingButton } from './components/LoadingButton.svelte';
 export { default as KpiCard } from './components/KpiCard.svelte';
+export { default as EnhancedKpiCard } from './components/EnhancedKpiCard.svelte';
 export { default as RecentActivity } from './components/RecentActivity.svelte';
 export { default as LineChart } from './components/charts/LineChart.svelte';
 export { default as Button } from './components/ui/button.svelte';
 export { default as Card } from './components/ui/card.svelte';
 export { default as CardContent } from './components/ui/card-content.svelte';
 export { default as CardHeader } from './components/ui/card-header.svelte';
+export { default as Skeleton } from './components/ui/skeleton.svelte';
 export { cn } from './components/ui/utils.js';

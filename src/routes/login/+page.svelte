@@ -2,33 +2,11 @@
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
   import type { ActionResult } from '@sveltejs/kit';
-  import { onMount } from 'svelte';
-  import { animate } from 'animejs';
-
   const { form } = $props();
 
   let error = $state('');
   let loading = $state(false);
   let showPw = $state(false);
-  let cardEl: HTMLDivElement | undefined = $state();
-
-  onMount(() => {
-    if (!cardEl) return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
-
-    const els = cardEl.querySelectorAll<HTMLElement>('[data-stagger]');
-    if (els.length) {
-      els.forEach(el => { el.style.opacity = '0'; el.style.transform = 'translateY(10px)'; });
-      animate(els, {
-        opacity: [0, 1],
-        translateY: [10, 0],
-        duration: 500,
-        delay: (_t: unknown, i = 0) => 80 + i * 70,
-        ease: 'easeOutQuad',
-      });
-    }
-  });
 </script>
 
 <svelte:head>
@@ -38,16 +16,15 @@
 <div class="flex min-h-screen items-center justify-center bg-slate-50 p-4">
   <a
     href="/"
-    class="group fixed left-6 top-6 z-10 flex items-center gap-1.5 text-sm text-slate-400 no-underline transition-colors hover:text-slate-600"
-    data-stagger
+    class="anim-card stagger-1 group fixed left-6 top-6 z-10 flex items-center gap-1.5 text-sm text-slate-400 no-underline transition-colors hover:text-slate-600"
   >
     <svg class="h-4 w-4 transition-transform group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
     Back to eShule
   </a>
 
-  <div class="relative w-full max-w-sm" bind:this={cardEl}>
+  <div class="relative w-full max-w-sm">
     <div class="rounded-lg border border-slate-200 bg-white p-8 shadow-lg">
-      <div class="mb-7 flex flex-col items-center" data-stagger>
+      <div class="anim-card stagger-2 mb-7 flex flex-col items-center">
         <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-base font-bold text-white">
           R
         </div>
@@ -56,12 +33,12 @@
       </div>
 
       {#if form?.error}
-        <div class="mb-5 flex items-center gap-2.5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600" data-stagger>
+        <div class="anim-card stagger-3 mb-5 flex items-center gap-2.5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
           <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span>{form.error}</span>
         </div>
       {:else if error}
-        <div class="mb-5 flex items-center gap-2.5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600" data-stagger>
+        <div class="anim-card stagger-3 mb-5 flex items-center gap-2.5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
           <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span>{error}</span>
         </div>
@@ -79,7 +56,7 @@
           }
         };
       }} class="space-y-4">
-        <div data-stagger>
+        <div class="anim-card stagger-4">
           <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
           <div class="relative">
             <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
@@ -95,7 +72,7 @@
           </div>
         </div>
 
-        <div data-stagger>
+        <div class="anim-card stagger-5">
           <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
           <div class="relative">
             <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -127,8 +104,7 @@
         <button
           type="submit"
           disabled={loading}
-          class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-          data-stagger
+          class="anim-card stagger-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if loading}
             <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -140,6 +116,6 @@
         </button>
       </form>
     </div>
-    <p class="mt-6 text-center text-xs text-slate-400" data-stagger>eShule &mdash; School Management Platform</p>
+    <p class="anim-card stagger-7 mt-6 text-center text-xs text-slate-400">eShule &mdash; School Management Platform</p>
   </div>
 </div>

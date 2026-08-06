@@ -218,6 +218,18 @@
 
   let profileOpen = $state(false);
   let moreDrawerOpen = $state(false);
+  let bellReady = $state(false);
+
+  // Defer NotificationBell mount until browser is idle so the query +
+  // realtime subscription don't block first paint.
+  $effect(() => {
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(() => { bellReady = true; });
+      return () => cancelIdleCallback(id);
+    }
+    const t = setTimeout(() => { bellReady = true; }, 100);
+    return () => clearTimeout(t);
+  });
 
   const userName = $derived(user?.name ?? 'eShule Admin');
   const userEmail = $derived(user?.email ?? 'admin@eshule.app');
@@ -310,7 +322,7 @@
                 <li>
                   <a
                     href={item.href}
-                    class="flex items-center gap-2.5 rounded-md px-2 py-2 text-[13px] {active
+                    class="nav-item flex items-center gap-2.5 rounded-md px-2 py-2 text-[13px] {active
                       ? 'bg-primary/8 text-primary font-medium'
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}"
                   >
@@ -362,16 +374,18 @@
           {new Date().toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}
         </div>
 
-        <NotificationBell tenantId={$page.data.tenantId} />
+        {#if bellReady}
+          <NotificationBell tenantId={$page.data.tenantId} />
+        {/if}
 
         <div data-profile-menu class="relative">
-          <button
-            onclick={() => profileOpen = !profileOpen}
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white"
-            aria-label="Open profile menu"
-          >
-            {userName.slice(0, 1).toUpperCase()}
-          </button>
+      <button
+        onclick={() => profileOpen = !profileOpen}
+        class="btn-press flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white transition-all duration-200 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25"
+        aria-label="Open profile menu"
+      >
+        {userName.slice(0, 1).toUpperCase()}
+      </button>
 
           {#if profileOpen}
             <div class="absolute right-0 z-50 mt-1.5 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
@@ -401,7 +415,9 @@
           {@render children?.()}
         </div>
       </main>
-      <NotificationToaster />
+      {#if bellReady}
+        <NotificationToaster />
+      {/if}
       {#if rightRail}
         <aside class="hidden w-72 shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-5 xl:block">
           {@render rightRail()}

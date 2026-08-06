@@ -3,6 +3,27 @@ import type { Database } from '$lib/supabase/database.types';
 
 export const MODULE_LOOKUP_TIMEOUT_MS = 3000;
 
+// ── In-memory cache for enabled modules ──────────────────────────────────────
+// Module provisioning changes rarely (super-admin action). Caching avoids a
+// database round-trip on every single page navigation while staying fresh.
+const MODULE_CACHE_TTL_MS = 60_000; // 60 s
+const moduleCache = new Map<string, { data: string[] | null; ts: number }>();
+
+function cacheKey(tenantId: string, role: string | null): string {
+  return `${tenantId}::${role ?? 'none'}`;
+}
+
+/** Purge stale entries every 5 minutes (lazy sweep on access). */
+let lastSweep = Date.now();
+function maybeSweepCache() {
+  const now = Date.now();
+  if (now - lastSweep < 300_000) return;
+  lastSweep = now;
+  for (const [k, v] of moduleCache) {
+    if (now - v.ts > MODULE_CACHE_TTL_MS) moduleCache.delete(k);
+  }
+}
+
 /**
  * Module provisioning — the super admin decides which modules a tenant can use.
  *
@@ -19,6 +40,14 @@ export async function getEnabledModules(
 ): Promise<string[] | null> {
   if (role === 'super_admin') return null; // null = all modules
 
+  // Check cache first
+  maybeSweepCache();
+  const key = cacheKey(tenantId, role);
+  const cached = moduleCache.get(key);
+  if (cached && Date.now() - cached.ts < MODULE_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), MODULE_LOOKUP_TIMEOUT_MS);
   try {
@@ -34,9 +63,23 @@ export async function getEnabledModules(
 
     const ids = (data ?? []).map((r) => r.module_id);
     // A successful empty result means the tenant has not been provisioned yet.
-    return ids.length > 0 ? ids : null;
+    const result = ids.length > 0 ? ids : null;
+
+    moduleCache.set(key, { data: result, ts: Date.now() });
+    return result;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+/** Invalidate cache after module provisioning changes (call from admin endpoints). */
+export function invalidateModuleCache(tenantId?: string) {
+  if (tenantId) {
+    for (const k of moduleCache.keys()) {
+      if (k.startsWith(tenantId + '::')) moduleCache.delete(k);
+    }
+  } else {
+    moduleCache.clear();
   }
 }
 
