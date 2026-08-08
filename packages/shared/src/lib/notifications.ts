@@ -14,6 +14,34 @@ export type NotificationItem = {
 };
 
 const READ_STORAGE_KEY = 'reclass.read-notifications';
+// Persisted set of notification ids that have already been surfaced as a
+// toast, so a high-priority notification pops up at most once per browser
+// instead of again on every page load / HMR remount.
+const SEEN_STORAGE_KEY = 'reclass.seen-notifications';
+
+function readStoredIds(key: string): Set<string> {
+  if (typeof window === 'undefined') return new Set<string>();
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (!stored) return new Set<string>();
+    const parsed = JSON.parse(stored);
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+// Cap persisted seen ids so the key can't grow unbounded (localStorage quota).
+const SEEN_STORAGE_CAP = 1000;
+
+function writeStoredIds(key: string, ids: Set<string>) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(Array.from(ids)));
+  } catch {
+    // Quota / privacy-mode failures must never break notification loading.
+  }
+}
 
 export function formatNotificationDate(value: string) {
   const date = new Date(value);
@@ -27,29 +55,38 @@ export function formatNotificationDate(value: string) {
 }
 
 export function getStoredReadNotificationIds(): Set<string> {
-  if (typeof window === 'undefined') return new Set<string>();
-  try {
-    const stored = window.localStorage.getItem(READ_STORAGE_KEY);
-    if (!stored) return new Set<string>();
-    const parsed = JSON.parse(stored);
-    return new Set(Array.isArray(parsed) ? parsed : []);
-  } catch {
-    return new Set<string>();
-  }
+  return readStoredIds(READ_STORAGE_KEY);
 }
 
 export function markNotificationAsRead(id: string) {
   if (typeof window === 'undefined') return;
   const nextIds = getStoredReadNotificationIds();
   nextIds.add(id);
-  window.localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(Array.from(nextIds)));
+  writeStoredIds(READ_STORAGE_KEY, nextIds);
 }
 
 export function markAllNotificationsRead(ids: string[]) {
   if (typeof window === 'undefined') return;
   const nextIds = new Set(getStoredReadNotificationIds());
   ids.forEach((id) => nextIds.add(id));
-  window.localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(Array.from(nextIds)));
+  writeStoredIds(READ_STORAGE_KEY, nextIds);
+}
+
+export function getStoredSeenNotificationIds(): Set<string> {
+  return readStoredIds(SEEN_STORAGE_KEY);
+}
+
+export function markNotificationSeen(id: string) {
+  if (typeof window === 'undefined') return;
+  const nextIds = getStoredSeenNotificationIds();
+  nextIds.add(id);
+  // Evict the oldest surfaced ids first (insertion order = surfacing order) so
+  // the seen set can never exceed the cap.
+  if (nextIds.size > SEEN_STORAGE_CAP) {
+    const overflow = nextIds.size - SEEN_STORAGE_CAP;
+    Array.from(nextIds).slice(0, overflow).forEach((oldId) => nextIds.delete(oldId));
+  }
+  writeStoredIds(SEEN_STORAGE_KEY, nextIds);
 }
 
 export function normalizeNotification(raw: Record<string, unknown>, readIds: Set<string> = getStoredReadNotificationIds()): NotificationItem {
@@ -86,6 +123,18 @@ export function shouldSurfaceToast(notification: Pick<NotificationItem, 'id' | '
   if (notification.priority !== 'high' || notification.read) return false;
   if (seenIds.has(notification.id)) return false;
   seenIds.add(notification.id);
+  return true;
+}
+
+/**
+ * Surface a high-priority toast exactly once per browser: checks the seen
+ * set, persists the id on first fire, then dispatches the toast event.
+ * Returns true when the toast was actually dispatched.
+ */
+export function surfaceNotificationToast(notification: NotificationItem, seenIds: Set<string>): boolean {
+  if (!shouldSurfaceToast(notification, seenIds)) return false;
+  markNotificationSeen(notification.id);
+  dispatchNotificationToast(notification);
   return true;
 }
 

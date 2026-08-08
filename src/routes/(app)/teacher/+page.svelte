@@ -192,7 +192,17 @@
               <p class="mt-0.5 text-sm text-slate-500">Student Information System access</p>
             </div>
           </div>
-          <p class="text-sm text-slate-600">
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="rounded-lg border border-slate-100 bg-slate-50/50 p-4">
+              <p class="text-xs font-medium uppercase tracking-wider text-slate-400">My homeroom classes</p>
+              <p class="mt-1 text-2xl font-bold text-slate-900">{data.homeroomCount ?? 0}</p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50/50 p-4">
+              <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Rosters</p>
+              <p class="mt-1 text-sm text-slate-600">View class lists under <a href="/teacher/classes" class="font-medium text-primary hover:text-primary/80">My classes</a>.</p>
+            </div>
+          </div>
+          <p class="mt-4 text-sm text-slate-600">
             You have classroom (SIS) access. Remedial scheduling and attendance are not assigned to your role.
             Student and class records are available from the Student Information module.
           </p>

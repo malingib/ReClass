@@ -7,7 +7,8 @@ test('receipts system renders with no console errors and print route works', asy
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
 
-  const pages = ['/admin/finance', '/admin/receipts', '/admin/parent-payments', '/admin/reclass', '/parent/pay', '/parent/payments'];
+  // /admin/receipts moved under the finance group → /admin/finance/receipts
+  const pages = ['/admin/finance', '/admin/finance/receipts', '/admin/parent-payments', '/admin/reclass', '/parent/pay', '/parent/payments'];
 
   for (const path of pages) {
     const resp = await page.goto(path, { waitUntil: 'networkidle' });

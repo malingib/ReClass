@@ -16,15 +16,20 @@
   };
 
   const modules = $derived(data.modules);
+  const locked = $derived(data.locked ?? []);
   const tenants = $derived(data.tenants ?? []);
+
+  const lockIcon =
+    'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z';
 </script>
 
 <DashboardContent title="Module Provisioning" subtitle="Enable or disable modules per tenant — changes apply on next navigation">
   <div class="mb-6 rounded-xl border border-border bg-white p-5 shadow-card">
     <p class="text-sm text-ink-600">
       Each row toggles whether a tenant can access that module's dashboard and sidebar.
-      <span class="font-medium text-ink-800">Platform</span> (settings &amp; integrations) is
-      infrastructure and is always available.
+      <span class="font-medium text-ink-800">SIS</span> and
+      <span class="font-medium text-ink-800">Platform</span> (settings &amp; integrations) are
+      infrastructure — always on, shown as locked badges below.
     </p>
     {#if form?.error}
       <p class="mt-3 text-sm font-medium text-danger">{form.error}</p>
@@ -64,6 +69,17 @@
                 <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform {on ? 'translate-x-6' : 'translate-x-1'}"></span>
               </button>
             </form>
+          {/each}
+        </div>
+        <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+          <span class="text-xs font-medium text-ink-400">Always on</span>
+          {#each locked as m (m.id)}
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-ink-50 px-2.5 py-1 text-xs font-medium text-ink-600" title={m.description}>
+              <svg class="h-3.5 w-3.5 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="{lockIcon}" />
+              </svg>
+              {m.name}
+            </span>
           {/each}
         </div>
       </div>

@@ -27,7 +27,10 @@ export default defineConfig({
     {
       name: 'chromium',
       dependencies: ['setup'],
-      testMatch: /frontend-review\.spec\.ts|nav-audit\.spec\.ts|receipts-smoke\.spec\.ts/,
+      // All specs share the session produced by the setup project. The login
+      // rate limiter (5/min per IP) makes per-test logins flaky, so specs must
+      // consume the storageState instead of re-authenticating.
+      testMatch: /frontend-review\.spec\.ts|nav-audit\.spec\.ts|receipts-smoke\.spec\.ts|app\.spec\.ts|role-auth\.spec\.ts|scope-check\.spec\.ts|finance-crud\.spec\.ts|walk-all\.spec\.ts/,
       use: { browserName: 'chromium' },
     },
   ],

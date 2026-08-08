@@ -27,8 +27,8 @@ async function sidebarLinks(page: Page): Promise<string[]> {
 
 test('school_admin sidebar shows two systems separated (Finance vs ReClass)', async ({ page }) => {
   await page.goto('/admin/finance');
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(1500); // let Svelte hydrate
   const links = await sidebarLinks(page);
   console.log('FINANCE PAGE SIDEBAR LINKS:', JSON.stringify(links));
   // P0 fix: the Finance page sidebar must NOT collapse to empty
@@ -49,29 +49,33 @@ test('Finance module is reachable from the /admin/modules switcher', async ({ pa
 });
 
 test('school_admin sidebar groups the two fee systems distinctly', async ({ page }) => {
-  await page.goto('/admin');
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(400);
-  const groups = await page.locator('aside nav button').allInnerTexts();
-  console.log('ADMIN SIDEBAR GROUP LABELS:', JSON.stringify(groups));
-  await page.screenshot({ path: 'e2e/audit-admin-groups.png', fullPage: true });
-  const joined = groups.join('|');
-  console.log('HAS_FINANCE_GROUP:', /finance|school fee|bursar/i.test(joined));
-  console.log('HAS_MPESA_GROUP:', /remedial m-pesa|m-pesa parent/i.test(joined));
+  // Module-isolated sidebar: on the Finance page only finance-owned groups
+  // render; the remedial group shows on remedial pages. Assert each in turn.
+  await page.goto('/admin/finance');
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(1500);
+  let groups = await page.locator('aside nav button').allInnerTexts();
+  let joined = groups.join('|');
+  console.log('FINANCE PAGE SIDEBAR GROUP LABELS:', JSON.stringify(groups));
   expect(/school fee/i.test(joined)).toBe(true);
-  expect(/remedial m-pesa/i.test(joined)).toBe(true);
+  expect(joined).not.toContain('Remedial M-Pesa'); // isolation: not on finance page
+
+  await page.goto('/admin/reclass');
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(1500);
+  groups = await page.locator('aside nav button').allInnerTexts();
+  joined = groups.join('|');
+  console.log('RECLASS PAGE SIDEBAR GROUP LABELS:', JSON.stringify(groups));
+  expect(/remedial m-pesa|remedial program/i.test(joined)).toBe(true);
+  await page.screenshot({ path: 'e2e/audit-admin-groups.png', fullPage: true });
 });
 
-test('teacher nav is scoped (super_admin sees admin nav; teacher role would not)', async ({ page }) => {
-  // storageState user is super_admin, so it legitimately sees admin nav.
-  // Verify the roleNav map contains teacher-scoped entries (not an app bug).
+test('teacher route is RBAC-gated for school_admin (redirected away)', async ({ page }) => {
+  // The shared session is school_admin — /teacher must 303 to /admin.
   await page.goto('/teacher');
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(400);
-  const links = await sidebarLinks(page);
-  console.log('TEACHER ROUTE SIDEBAR LINKS (super_admin):', JSON.stringify(links));
-  // super_admin allowed into teacher layout -> admin nav renders (correct)
-  expect(links.length).toBeGreaterThan(0);
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(1200);
+  expect(page.url()).not.toContain('/teacher');
   await page.screenshot({ path: 'e2e/audit-teacher-nav.png', fullPage: true });
 });
 

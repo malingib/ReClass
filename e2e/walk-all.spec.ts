@@ -1,7 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-const EMAIL = process.env.TEST_USER_EMAIL || 'admin@school.ac.ke';
-const PASSWORD = process.env.TEST_USER_PASSWORD || 'ReClass2026!';
+// Reuse the shared admin session — per-test logins trip the login rate limiter.
+test.use({ storageState: 'playwright/.auth/user.json' });
 
 const ADMIN_ROUTES = [
   '/admin', '/admin/modules', '/admin/sis', '/admin/sis/classes', '/admin/sis/admissions',
@@ -17,21 +17,12 @@ const ADMIN_ROUTES = [
 
 const CROSS_ROLE = ['/bursar', '/principal', '/teacher', '/parent', '/super-admin'];
 
-async function loginOnce(page: Page) {
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
-  await page.fill('input[type="email"], input[name="email"]', EMAIL);
-  await page.fill('input[type="password"]', PASSWORD);
-  await page.click('button[type="submit"]');
-  await page.waitForURL('**/admin', { timeout: 25000, waitUntil: 'domcontentloaded' });
-}
-
 test('walk every admin route on one session, then verify cross-role guards', async ({ page }, testInfo) => {
   testInfo.setTimeout(240000);
   const consoleErrors: string[] = [];
   page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
   page.on('pageerror', (e) => consoleErrors.push('PAGEERROR: ' + e.message));
 
-  await loginOnce(page);
   const results: string[] = [];
 
   for (const route of ADMIN_ROUTES) {

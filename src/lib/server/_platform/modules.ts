@@ -7,11 +7,9 @@ export const MODULE_LOOKUP_TIMEOUT_MS = 3000;
 // Module provisioning changes rarely (super-admin action). Caching avoids a
 // database round-trip on every single page navigation while staying fresh.
 const MODULE_CACHE_TTL_MS = 60_000; // 60 s
+// Keyed by tenant id alone — the query never depends on role (super_admin
+// short-circuits before the cache), so role-based keys were pure duplication.
 const moduleCache = new Map<string, { data: string[] | null; ts: number }>();
-
-function cacheKey(tenantId: string, role: string | null): string {
-  return `${tenantId}::${role ?? 'none'}`;
-}
 
 /** Purge stale entries every 5 minutes (lazy sweep on access). */
 let lastSweep = Date.now();
@@ -29,9 +27,12 @@ function maybeSweepCache() {
  *
  * Returns the list of enabled module ids for a tenant. Semantics:
  * - super_admin sees everything (platform-level role, no tenant scoping).
- * - A tenant with NO tenant_modules rows fails open to ALL modules (fresh
- *   tenants see everything until the super admin provisions them).
- * - Otherwise only modules with enabled=true are returned.
+ * - A tenant with NO tenant_modules rows at all fails open to ALL modules —
+ *   the safety net for a tenant that was never provisioned (new tenants are
+ *   seeded automatically by the DB trigger, so this is normally unreachable).
+ * - Rows present but nothing enabled = the super admin switched it all off.
+ *   That intent is honored: an empty list blocks everything (no implicit
+ *   fail-open). alwaysOn modules (sis/platform) are exempt in the guard.
  */
 export async function getEnabledModules(
   db: SupabaseClient<Database>,
@@ -42,8 +43,7 @@ export async function getEnabledModules(
 
   // Check cache first
   maybeSweepCache();
-  const key = cacheKey(tenantId, role);
-  const cached = moduleCache.get(key);
+  const cached = moduleCache.get(tenantId);
   if (cached && Date.now() - cached.ts < MODULE_CACHE_TTL_MS) {
     return cached.data;
   }
@@ -53,20 +53,28 @@ export async function getEnabledModules(
   try {
     const { data, error } = await db
       .from('tenant_modules')
-      .select('module_id')
+      .select('module_id, enabled')
       .eq('tenant_id', tenantId)
-      .eq('enabled', true)
       .is('deleted_at', null)
       .abortSignal(controller.signal);
 
     if (error) throw new Error('Module provisioning lookup failed');
 
-    const ids = (data ?? []).map((r) => r.module_id);
-    // A successful empty result means the tenant has not been provisioned yet.
-    const result = ids.length > 0 ? ids : null;
-
-    moduleCache.set(key, { data: result, ts: Date.now() });
-    return result;
+    const rows = data ?? [];
+    if (rows.length === 0) {
+      // Tenant was never provisioned (no rows at all) — fail open. Practically
+      // unreachable: the rename migration re-seeds existing tenants and the
+      // AFTER INSERT trigger seeds new ones. A cached null here self-corrects
+      // within the TTL (or on the next toggle invalidation).
+      moduleCache.set(tenantId, { data: null, ts: Date.now() });
+      return null;
+    }
+    // Rows exist — honor exactly what is enabled; an empty list is "nothing on".
+    // Legacy 'reclass' rows normalize to 'remedial' (see normalizeModuleId).
+    // Dedupe in case a tenant holds both ids (toggle mirror before migration).
+    const ids = [...new Set(rows.filter((r) => r.enabled).map((r) => normalizeModuleId(r.module_id)))];
+    moduleCache.set(tenantId, { data: ids, ts: Date.now() });
+    return ids;
   } finally {
     clearTimeout(timeout);
   }
@@ -75,12 +83,24 @@ export async function getEnabledModules(
 /** Invalidate cache after module provisioning changes (call from admin endpoints). */
 export function invalidateModuleCache(tenantId?: string) {
   if (tenantId) {
-    for (const k of moduleCache.keys()) {
-      if (k.startsWith(tenantId + '::')) moduleCache.delete(k);
-    }
+    // The cache key is the bare tenant id.
+    moduleCache.delete(tenantId);
   } else {
     moduleCache.clear();
   }
+}
+
+/**
+ * Normalize the legacy 'reclass' module id → 'remedial'.
+ *
+ * The rename migration (20260807000001_remedial_module_rename.sql) is still
+ * pending, so live tenants keep tenant_modules rows under the old id. Mapping
+ * here keeps the registry and the DB in agreement (sidebar, guard, module hub).
+ * Single source of truth for the bridge — when the migration lands, delete
+ * this helper and the call sites that use it.
+ */
+export function normalizeModuleId(id: string): string {
+  return id === 'reclass' ? 'remedial' : id;
 }
 
 /** True when a module id is in the enabled set (null set = all enabled). */

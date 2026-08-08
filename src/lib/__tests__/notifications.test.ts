@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { formatNotificationDate, normalizeNotification } from '../notifications';
+import { formatNotificationDate, normalizeNotification, shouldSurfaceToast, surfaceNotificationToast, type NotificationItem } from '../notifications';
+
+const baseNotification = (id: string, priority: 'high' | 'normal' | 'low', read: boolean): NotificationItem => ({
+  id,
+  title: 'Test notification',
+  created_at: '2026-07-15T10:00:00Z',
+  priority,
+  read,
+});
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -22,6 +30,35 @@ describe('notification delivery safety contract', () => {
   it('uses the atomic claim RPC and clears claims on completion', () => {
     expect(notificationWorker).toContain("rpc('claim_notifications'");
     expect(notificationWorker).toContain('claimed_at: null');
+  });
+});
+
+describe('toast surfacing (dedupe)', () => {
+  it('surfaces an unread high-priority notification exactly once per seen set', () => {
+    const seen = new Set<string>();
+    const n = baseNotification('n-1', 'high', false);
+    expect(surfaceNotificationToast(n, seen)).toBe(true);
+    // Second attempt in the same session must not re-toast.
+    expect(surfaceNotificationToast(n, seen)).toBe(false);
+    // A fresh seen set (e.g. a new tab) still dedupes via persisted storage
+    // in the browser, but in memory the id is re-checked the same way.
+    const otherSeen = new Set(['n-1']);
+    expect(surfaceNotificationToast(n, otherSeen)).toBe(false);
+  });
+
+  it('never surfaces read or non-high notifications', () => {
+    const seen = new Set<string>();
+    expect(surfaceNotificationToast(baseNotification('a', 'high', true), seen)).toBe(false);
+    expect(surfaceNotificationToast(baseNotification('b', 'normal', false), seen)).toBe(false);
+    expect(surfaceNotificationToast(baseNotification('c', 'low', false), seen)).toBe(false);
+    expect(seen.size).toBe(0);
+  });
+
+  it('shouldSurfaceToast mutates the seen set only when it fires', () => {
+    const seen = new Set<string>();
+    expect(shouldSurfaceToast({ id: 'x', priority: 'high' as const, read: false }, seen)).toBe(true);
+    expect(seen.has('x')).toBe(true);
+    expect(shouldSurfaceToast({ id: 'x', priority: 'high' as const, read: false }, seen)).toBe(false);
   });
 });
 

@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
+import { getSisStats } from '$lib/server/_sis/sis';
 
 // Short-lived cache for stable dashboard counts (students, teachers, sessions).
 // These change rarely and avoid 3 DB round-trips on every page load.
@@ -61,6 +62,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const attendanceRate = dueRes.count ? Math.round(((deliveredRes.count ?? 0) / dueRes.count) * 100) : 0;
 
+  // School-wide (SIS) overview — read-only; the principal portal is a shell over
+  // every domain (Section 2), so surface the SIS counts alongside remedial KPIs.
+  const sis = await getSisStats(db, tenantId);
+
   return {
     stats: {
       students: studentsRes.count ?? 0,
@@ -68,6 +73,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       attendanceRate,
       sessions: sessionsRes.count ?? 0,
     },
+    sis,
     pendingAttendance: pendingRes.data ?? [],
   };
 };

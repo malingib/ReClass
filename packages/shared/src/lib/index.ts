@@ -1,11 +1,34 @@
 export { ROUTE_LOGIN, ROUTE_NOT_PROVISIONED, PUBLIC_ROUTES, CONTENT_SECURITY_POLICY,
-  COOKIE_USER_TTL_SECONDS, COOKIE_USER_NAME, COOKIE_IMPERSONATE_NAME,
+  COOKIE_USER_TTL_SECONDS, COOKIE_USER_NAME, COOKIE_IMPERSONATE_NAME, COOKIE_ROLE_NAME,
   IMPERSONATION_TTL_MS, EXPORT_MAX_ROWS, EXPORT_BURSA_MAX_ROWS,
   PAGE_LIST_LARGE, PAGE_LIST_MEDIUM, PAGE_LIST_SMALL, PAGE_OVERVIEW,
   WAIVERS_LIST_LIMIT, WAIVERS_SEARCH_LIMIT, NOTIFICATION_RETRY_MAX } from './config.js';
 
-export { suiteModules, moduleIcons } from './modules.js';
-export type { SuiteModule, ModuleStatus, ModuleIconId } from './modules.js';
+export {
+  suiteModules,
+  moduleIcons,
+  MODULES,
+  MODULE_LIST,
+  KERNEL_MODULES,
+  KERNEL_ROUTES,
+  PUBLIC_SURFACE,
+  ROLE_SURFACE,
+  routeFor,
+  gatedModuleForPath,
+  isAlwaysOn,
+  isKernel,
+  canImport,
+} from './modules.js';
+export type {
+  SuiteModule,
+  ModuleStatus,
+  ModuleIconId,
+  ModuleId,
+  ModuleKind,
+  ModuleAccent,
+  ModuleDef,
+  ServerModuleKey,
+} from './modules.js';
 
 export { roleLabels, roleRoutes, isRole } from './auth.js';
 export type { Role } from './auth.js';
@@ -13,6 +36,7 @@ export type { Role } from './auth.js';
 export { formatNotificationDate, getStoredReadNotificationIds,
   markNotificationAsRead, markAllNotificationsRead, normalizeNotification,
   getNotificationToneClass, shouldSurfaceToast, dispatchNotificationToast,
+  getStoredSeenNotificationIds, markNotificationSeen, surfaceNotificationToast,
   dispatchToast } from './notifications.js';
 export type { NotificationItem, NotificationPriority } from './notifications.js';
 

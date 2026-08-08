@@ -1,6 +1,7 @@
 export const COOKIE_USER_TTL_SECONDS = 300;
 export const COOKIE_USER_NAME = 'x-reclass-user';
 export const COOKIE_IMPERSONATE_NAME = 'x-reclass-impersonate';
+export const COOKIE_ROLE_NAME = 'x-reclass-role';
 
 export const IMPERSONATION_TTL_MS = 60 * 60 * 1000;
 
@@ -19,7 +20,7 @@ export const NOTIFICATION_RETRY_MAX = 3;
 
 export const ROUTE_LOGIN = '/login';
 export const ROUTE_NOT_PROVISIONED = '/not-provisioned';
-export const PUBLIC_ROUTES = ['/account', '/notifications', '/api/logout'];
+export const PUBLIC_ROUTES = ['/account', '/notifications', '/api/logout', '/api/role/switch'];
 
 // Content-Security-Policy. SvelteKit hydration + Vite inline the runtime, so
 // 'unsafe-inline' is required for scripts/styles until nonce-based CSP is wired.

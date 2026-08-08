@@ -1,19 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-const EMAIL = process.env.TEST_USER_EMAIL || 'admin@school.ac.ke';
-const PASSWORD = process.env.TEST_USER_PASSWORD || 'ReClass2026!';
-
-async function loginOnce(page: Page) {
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
-  await page.fill('input[type="email"], input[name="email"]', EMAIL);
-  await page.fill('input[type="password"]', PASSWORD);
-  await page.click('button[type="submit"]');
-  await page.waitForURL('**/admin', { timeout: 25000, waitUntil: 'domcontentloaded' });
-}
+// Reuse the shared admin session — per-test logins trip the login rate limiter.
+test.use({ storageState: 'playwright/.auth/user.json' });
 
 test('module dashboards are scoped to their own domains', async ({ page }, testInfo) => {
   testInfo.setTimeout(120000);
-  await loginOnce(page);
 
   // Reclass = remedial domain: must reference remedial teachers / active sessions,
   // and must NOT surface a whole-school "Total Students" KPI (that is /admin + /admin/sis).
@@ -30,7 +21,10 @@ test('module dashboards are scoped to their own domains', async ({ page }, testI
   expect(sis).toMatch(/Total Students|Classes|Admissions/i);
 
   // Students nav lives under SIS group (not Front office) — verify sidebar shows Students inside SIS.
-  const sidebar = await page.locator('aside').first().textContent();
+  // Sidebar items render only after Svelte hydration; wait until they appear.
+  const aside = page.locator('aside').first();
+  await aside.getByText('Students').waitFor({ timeout: 10000 });
+  const sidebar = await aside.textContent();
   const sisIdx = (sidebar ?? '').indexOf('SIS');
   const foIdx = (sidebar ?? '').indexOf('Front office');
   const studentsIdx = (sidebar ?? '').indexOf('Students');

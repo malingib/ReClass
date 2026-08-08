@@ -6,9 +6,9 @@ import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/publi
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 import { verifyImpersonation } from './impersonation';
 import { createTenantClient } from '$lib/server/_platform/tenant-client';
-import { moduleForPath } from '$lib/route-modules';
+import { gatedModuleForPath, isAlwaysOn } from '$lib/modules';
 import {
-  COOKIE_USER_TTL_SECONDS, COOKIE_USER_NAME, COOKIE_IMPERSONATE_NAME,
+  COOKIE_USER_TTL_SECONDS, COOKIE_USER_NAME, COOKIE_IMPERSONATE_NAME, COOKIE_ROLE_NAME,
   ROUTE_LOGIN, ROUTE_NOT_PROVISIONED, PUBLIC_ROUTES, CONTENT_SECURITY_POLICY,
 } from '$lib/config';
 
@@ -21,8 +21,15 @@ const REQUIRED_ENV_VARS = [
 // ── In-memory cache for user role lookups ────────────────────────────────────
 // user_roles changes very rarely (admin action). Caching avoids a DB round-trip
 // on every single page navigation — the single biggest per-request cost.
+// The cache holds the FULL role set per user (multi-role users can switch); the
+// active role is chosen from the cookie on top of the cached list.
 const ROLE_CACHE_TTL_MS = 120_000; // 2 min
-const roleCache = new Map<string, { role: string | null; tenantId: string; ts: number }>();
+const roleCache = new Map<string, { rows: Array<{ role: Role; tenant_id: string }>; ts: number }>();
+
+/** Drop a user's cached role set (e.g. after an active-role switch). */
+export function invalidateRoleCache(userId: string): void {
+  roleCache.delete(userId);
+}
 
 export function validateEnv(): void {
   for (const [value, key, label] of REQUIRED_ENV_VARS) {
@@ -40,6 +47,7 @@ export function initClients(event: Parameters<Handle>[0]['event']): void {
   event.locals.session = null;
   event.locals.user = null;
   event.locals.role = null;
+  event.locals.roles = null;
   event.locals.tenantId = '';
   event.locals.impersonating = false;
   event.locals.enabledModules = null;
@@ -74,29 +82,34 @@ export async function resolveSession(event: Parameters<Handle>[0]['event']): Pro
     email: user.email ?? '',
   }), { maxAge: COOKIE_USER_TTL_SECONDS, path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
 
-  // Check role cache first
-  const cachedRole = roleCache.get(user.id);
-  if (cachedRole && Date.now() - cachedRole.ts < ROLE_CACHE_TTL_MS) {
-    if (cachedRole.role && isRole(cachedRole.role)) {
-      event.locals.role = cachedRole.role as Role;
-      event.locals.tenantId = cachedRole.tenantId;
-    }
+  // Resolve the user's FULL role set — multi-role users pick the active one via
+  // the role cookie, defaulting to their earliest-assigned role (created_at asc)
+  // so users who never touched the switcher behave exactly as before. Roles span
+  // tenants (e.g. super_admin + school_admin), so tenantId follows the active
+  // role rather than the first row.
+  const cookieRole = event.cookies.get(COOKIE_ROLE_NAME);
+  const cached = roleCache.get(user.id);
+  let rows: Array<{ role: Role; tenant_id: string }>;
+  if (cached && Date.now() - cached.ts < ROLE_CACHE_TTL_MS) {
+    rows = cached.rows;
   } else {
     const { data: roleRows } = await event.locals.supabase
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: true })
-      .limit(1);
-    const roleRow = roleRows?.[0];
-    if (roleRow && isRole(roleRow.role)) {
-      event.locals.role = roleRow.role as Role;
-      event.locals.tenantId = roleRow.tenant_id;
-      roleCache.set(user.id, { role: roleRow.role, tenantId: roleRow.tenant_id, ts: Date.now() });
-    } else {
-      roleCache.set(user.id, { role: null, tenantId: '', ts: Date.now() });
-    }
+      .order('created_at', { ascending: true });
+    rows = (roleRows ?? [])
+      .map((r: { role: string; tenant_id: string }) => ({ role: r.role, tenant_id: r.tenant_id }))
+      .filter((r): r is { role: Role; tenant_id: string } => isRole(r.role));
+    roleCache.set(user.id, { rows, ts: Date.now() });
   }
+
+  event.locals.roles = rows.map((r) => r.role);
+  const active = cookieRole && rows.some((r) => r.role === cookieRole)
+    ? rows.find((r) => r.role === cookieRole)!
+    : rows[0];
+  event.locals.role = active?.role ?? null;
+  event.locals.tenantId = active?.tenant_id ?? '';
 
   // Module provisioning — which modules this tenant may use (null = all).
   if (event.locals.role && event.locals.tenantId) {
@@ -190,9 +203,11 @@ export function routeGuard(event: Parameters<Handle>[0]['event']): void {
 
   // Hard 404 for routes of modules not provisioned for this tenant.
   // enabledModules === null → all modules allowed (super_admin / fresh tenant).
+  // gatedModuleForPath resolves module-owned routes only — portal shells are
+  // always-on ('' here) and alwaysOn modules (sis/platform/auth) never block.
   if (event.locals.enabledModules && !impersonating) {
-    const mod = moduleForPath(pathname);
-    if (mod && mod !== 'platform' && !event.locals.enabledModules.includes(mod)) {
+    const mod = gatedModuleForPath(pathname);
+    if (mod && !isAlwaysOn(mod) && !event.locals.enabledModules.includes(mod)) {
       error(404, 'This module is not enabled for your school.');
     }
   }

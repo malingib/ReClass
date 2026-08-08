@@ -1,15 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-const EMAIL = process.env.TEST_USER_EMAIL || 'admin@school.ac.ke';
-const PASSWORD = process.env.TEST_USER_PASSWORD || 'ReClass2026!';
-
-async function loginAsAdmin(page: Page) {
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
-  await page.fill('input[type="email"], input[name="email"]', EMAIL);
-  await page.fill('input[type="password"]', PASSWORD);
-  await page.click('button[type="submit"]');
-  await page.waitForURL('**/admin', { timeout: 25000, waitUntil: 'domcontentloaded' });
-}
+// Reuse the shared admin session — per-test logins trip the login rate limiter.
+test.use({ storageState: 'playwright/.auth/user.json' });
 
 test.describe('Finance income/expenses CRUD', () => {
   test('income: create, display, and delete an income record', async ({ page }) => {
@@ -18,7 +10,6 @@ test.describe('Finance income/expenses CRUD', () => {
     page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
     page.on('pageerror', (e) => consoleErrors.push('PAGEERROR: ' + e.message));
 
-    await loginAsAdmin(page);
     await page.goto('/admin/finance/income', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1500);
 
@@ -32,8 +23,9 @@ test.describe('Finance income/expenses CRUD', () => {
     const amountInput = page.locator('input[name="amount"]').first();
     const submitBtn = page.locator('button[type="submit"]').first();
 
+    const marker = `E2E income ${Date.now()}`;
     if (await descInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await descInput.fill('E2E test income');
+      await descInput.fill(marker);
       if (await amountInput.isVisible({ timeout: 2000 }).catch(() => false)) {
         await amountInput.fill('500');
       }
@@ -43,6 +35,21 @@ test.describe('Finance income/expenses CRUD', () => {
       // After submit, the page should still be stable (not crash)
       const postBody = await page.textContent('body');
       expect(postBody).not.toContain('Internal Server Error');
+
+      // Clean up the record we just created so re-runs don't accumulate data.
+      // The row appears in the table after submit — find and delete it.
+      const deleteBtn = page
+        .getByRole('row', { name: new RegExp(marker, 'i') })
+        .getByRole('button', { name: /delete|trash/i })
+        .first();
+      if (await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await deleteBtn.click();
+        const confirmBtn = page.getByRole('button', { name: /confirm|delete/i }).first();
+        if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await confirmBtn.click();
+        }
+        await page.waitForTimeout(1500);
+      }
     }
 
     const realErrors = consoleErrors.filter(
@@ -57,7 +64,6 @@ test.describe('Finance income/expenses CRUD', () => {
     page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
     page.on('pageerror', (e) => consoleErrors.push('PAGEERROR: ' + e.message));
 
-    await loginAsAdmin(page);
     await page.goto('/admin/finance/expenses', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1500);
 
@@ -68,8 +74,9 @@ test.describe('Finance income/expenses CRUD', () => {
     const amountInput = page.locator('input[name="amount"]').first();
     const submitBtn = page.locator('button[type="submit"]').first();
 
+    const marker = `E2E expense ${Date.now()}`;
     if (await descInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await descInput.fill('E2E test expense');
+      await descInput.fill(marker);
       if (await amountInput.isVisible({ timeout: 2000 }).catch(() => false)) {
         await amountInput.fill('200');
       }
@@ -78,6 +85,20 @@ test.describe('Finance income/expenses CRUD', () => {
 
       const postBody = await page.textContent('body');
       expect(postBody).not.toContain('Internal Server Error');
+
+      // Clean up the record we just created so re-runs don't accumulate data.
+      const deleteBtn = page
+        .getByRole('row', { name: new RegExp(marker, 'i') })
+        .getByRole('button', { name: /delete|trash/i })
+        .first();
+      if (await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await deleteBtn.click();
+        const confirmBtn = page.getByRole('button', { name: /confirm|delete/i }).first();
+        if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await confirmBtn.click();
+        }
+        await page.waitForTimeout(1500);
+      }
     }
 
     const realErrors = consoleErrors.filter(

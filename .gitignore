@@ -13,6 +13,12 @@ playwright-report
 playwright/.auth
 e2e/*.png
 
+# Generated audit/test artifacts (regenerated on every run)
+audit-screenshots/
+e2e/audit-screenshots/
+e2e/audit-findings.json
+e2e/audit-results.json
+
 # Python build artifacts
 __pycache__/
 *.pyc

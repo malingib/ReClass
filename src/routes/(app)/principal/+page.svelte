@@ -56,8 +56,35 @@
       </div>
     </div>
 
-    <!-- Pending Attendance Card -->
+    <!-- School at a glance (SIS, read-only) -->
     <div class="anim-card stagger-5">
+      <div class="overflow-hidden rounded-xl border border-slate-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+          <div>
+            <h2 class="text-base font-semibold text-slate-900">School at a glance</h2>
+            <p class="mt-1 text-sm text-slate-500">School-wide student information, read-only.</p>
+          </div>
+          <a href="/principal/school" class="text-sm font-medium text-primary hover:text-primary/80">Full overview →</a>
+        </div>
+        <div class="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div class="px-6 py-5">
+            <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Classes</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{data.sis?.classes ?? 0}</p>
+          </div>
+          <div class="px-6 py-5">
+            <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Admissions</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{data.sis?.admissions ?? 0}</p>
+          </div>
+          <div class="px-6 py-5">
+            <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Active enrollments</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{data.sis?.enrollments ?? 0}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Attendance Card -->
+    <div class="anim-card stagger-6">
       {#if loading}
         <div class="rounded-xl border border-slate-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]">
           <div class="border-b border-slate-100 bg-slate-50/50 p-6">

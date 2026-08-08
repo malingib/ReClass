@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getSupabase } from '$lib/supabase/client';
-  import { formatNotificationDate, getNotificationToneClass, getStoredReadNotificationIds, markAllNotificationsRead, markNotificationAsRead, normalizeNotification, shouldSurfaceToast, dispatchNotificationToast, type NotificationItem } from '$lib/notifications';
+  import { formatNotificationDate, getNotificationToneClass, getStoredReadNotificationIds, getStoredSeenNotificationIds, markAllNotificationsRead, markNotificationAsRead, normalizeNotification, surfaceNotificationToast, type NotificationItem } from '$lib/notifications';
 
   const { tenantId }: { tenantId: string } = $props();
 
@@ -9,7 +9,9 @@
   let open = $state(false);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
-  const seenToastIds = new Set<string>();
+  // Persisted so a high-priority notification only toasts once per browser
+  // instead of again on every page load / HMR remount.
+  const seenToastIds = getStoredSeenNotificationIds();
 
   const supabase = getSupabase();
 
@@ -39,9 +41,7 @@
       items = nextItems;
       count = nextItems.filter((n: NotificationItem) => !n.read).length;
 
-      nextItems
-        .filter((n: NotificationItem) => shouldSurfaceToast(n, seenToastIds))
-        .forEach((n: NotificationItem) => dispatchNotificationToast(n));
+      nextItems.forEach((n: NotificationItem) => surfaceNotificationToast(n, seenToastIds));
     } catch {
       error = 'We could not load notifications right now.';
     } finally {

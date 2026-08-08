@@ -3,8 +3,8 @@
   import { goto } from '$app/navigation';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
   import NotificationToaster from '$lib/components/NotificationToaster.svelte';
-  import { suiteModules, moduleIcons, type SuiteModule } from '$lib/modules';
-  import { ROUTE_MODULE } from '$lib/route-modules';
+  import { suiteModules, moduleIcons, routeFor, isAlwaysOn, type SuiteModule } from '$lib/modules';
+  import { roleLabels, roleRoutes, type Role } from '$lib/auth';
 
   const {
     title,
@@ -12,6 +12,7 @@
     headerActions,
     rightRail,
     role = 'school_admin',
+    roles = null,
     user = { name: 'eShule Admin', email: 'admin@eshule.app' },
     enabledModules = null,
     children,
@@ -21,6 +22,7 @@
     headerActions?: import('svelte').Snippet;
     rightRail?: import('svelte').Snippet;
     role?: string;
+    roles?: Role[] | null;
     user?: { name?: string; email?: string };
     enabledModules?: string[] | null;
     children?: import('svelte').Snippet;
@@ -90,9 +92,9 @@
       { label: 'Integrations', defaultOpen: false, items: [
         { label: 'Mobiwave & Daraja', href: '/admin/credentials', icon: 'bell' },
         { label: 'School settings', href: '/admin/settings', icon: 'dashboard' },
+        { label: 'Users', href: '/admin/users', icon: 'students' },
       ]},
       { label: 'Reporting', defaultOpen: false, items: [
-        { label: 'Users', href: '/admin/users', icon: 'students' },
         { label: 'Reports', href: '/admin/reports', icon: 'fees' },
       ]},
     ],
@@ -100,11 +102,13 @@
       { label: 'Teaching', defaultOpen: true, items: [
         { label: 'My dashboard', href: '/teacher', icon: 'dashboard' },
         { label: 'Remedial timetable', href: '/teacher/timetable', icon: 'calendar' },
+        { label: 'My classes', href: '/teacher/classes', icon: 'subjects' },
       ]},
     ],
     parent: [
       { label: 'My child', defaultOpen: true, items: [
         { label: 'Welcome', href: '/parent', icon: 'dashboard' },
+        { label: 'Child profile', href: '/parent/child', icon: 'students' },
         { label: 'Remedial timetable', href: '/parent/timetable', icon: 'calendar' },
         { label: 'Fee structure', href: '/parent/fees', icon: 'fees' },
         { label: 'Pay via M-Pesa', href: '/parent/pay', icon: 'invoices' },
@@ -115,6 +119,7 @@
       { label: 'Oversight', defaultOpen: true, items: [
         { label: 'Remedial overview', href: '/principal', icon: 'dashboard' },
         { label: 'Program effectiveness', href: '/principal/effectiveness', icon: 'teachers' },
+        { label: 'School overview', href: '/principal/school', icon: 'students' },
         { label: 'Reports', href: '/principal/reports', icon: 'fees' },
       ]},
     ],
@@ -134,21 +139,6 @@
     ],
   };
 
-  const navGroupModule: Record<string, string> = {
-    'Remedial program': 'reclass',
-    'School fees': 'finance',
-    'Remedial M-Pesa': 'reclass',
-    'SIS': 'sis',
-    'Communications': 'communications',
-    'Integrations': 'platform',
-    'Reporting': 'reports',
-    'Teaching': 'reclass',
-    'My child': 'reclass',
-    'Oversight': 'reclass',
-    'M-Pesa': 'finance',
-    'Platform': 'platform',
-  };
-
   const accentGradients: Record<string, string> = {
     emerald: 'from-emerald-500 to-emerald-600',
     blue: 'from-blue-500 to-blue-600',
@@ -164,16 +154,10 @@
     return href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
   }
 
-  // Ordered most-specific-first; first prefix match wins. Drives which nav
-  // groups show (module isolation) and the module switcher accent.
-  const activeModule = $derived.by(() => {
-    const p = $page.url.pathname;
-    if (p === '/admin' || p === '/admin/modules') return '';
-    for (const [prefix, mod] of ROUTE_MODULE) {
-      if (p.startsWith(prefix)) return mod;
-    }
-    return '';
-  });
+  // Route → module context from the canonical registry (first prefix match
+  // wins; '' on launcher/shared pages). Drives which nav groups show (module
+  // isolation) and the module switcher accent.
+  const activeModule = $derived(routeFor($page.url.pathname));
 
   const isModuleHub = $derived($page.url.pathname === '/admin' || $page.url.pathname === '/admin/modules');
 
@@ -194,17 +178,29 @@
   );
 
   // enabledModules === null → all modules provisioned (super_admin / fresh tenant).
+  // alwaysOn modules (sis/platform) can never be disabled — always allowed.
   const moduleAllowed = $derived.by(() => {
     const set = enabledModules ? new Set(enabledModules) : null;
-    return (mod: string | undefined) => !mod || !set || set.has(mod);
+    return (mod: string | undefined) => !mod || isAlwaysOn(mod) || !set || set.has(mod);
   });
 
+  // Per-item derivation (no group→module map): each link gates by its own
+  // owning module from the registry. The admin shell shows a group while the
+  // active module is present in it — so mixed groups (e.g. "Remedial program"
+  // holding the SIS-owned Subjects link) keep every allowed link visible from
+  // its nav home. Non-admin portals are shells that span modules (Section 2):
+  // they show every allowed item so disabling a module shrinks, never empties,
+  // them.
   const filteredNAV = $derived(
-    isModuleHub ? [] : NAV.filter((g) => {
-      const mod = navGroupModule[g.label];
-      if (!moduleAllowed(mod)) return false;          // module disabled for tenant
-      return activeModule ? mod === activeModule : true;
-    })
+    isModuleHub ? [] : NAV
+      .map((g) => {
+        const items = g.items.filter((it) => moduleAllowed(routeFor(it.href)));
+        if (items.length === 0) return null;
+        if (role === 'school_admin' && activeModule
+            && !items.some((it) => routeFor(it.href) === activeModule)) return null;
+        return { ...g, items };
+      })
+      .filter((g): g is NonNullable<typeof g> => g !== null)
   );
 
   const openGroups = $state<Record<string, boolean>>({});
@@ -219,6 +215,30 @@
   let profileOpen = $state(false);
   let moreDrawerOpen = $state(false);
   let bellReady = $state(false);
+  let roleOpen = $state(false);
+  let roleSwitching = $state(false);
+
+  const canSwitchRole = $derived(!!roles && roles.length > 1 && roles.some((r) => r === (role as Role)));
+
+  async function switchRole(next: Role) {
+    if (next === role || roleSwitching) return;
+    roleSwitching = true;
+    roleOpen = false;
+    try {
+      const res = await fetch('/api/role/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ role: next }).toString(),
+      });
+      if (res.redirected && res.url) {
+        await goto(res.url);
+      } else {
+        await goto(roleRoutes[next]);
+      }
+    } finally {
+      roleSwitching = false;
+    }
+  }
 
   // Defer NotificationBell mount until browser is idle so the query +
   // realtime subscription don't block first paint.
@@ -240,11 +260,12 @@
 
   $effect(() => {
     function handleClick(event: MouseEvent) {
-      if (profileOpen) {
-        const target = event.target as HTMLElement;
-        if (!target.closest('[data-profile-menu]')) {
-          profileOpen = false;
-        }
+      const target = event.target as HTMLElement;
+      if (profileOpen && !target.closest('[data-profile-menu]')) {
+        profileOpen = false;
+      }
+      if (roleOpen && !target.closest('[data-role-menu]')) {
+        roleOpen = false;
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -337,7 +358,44 @@
       {/each}
     </nav>
 
-    <div class="border-t border-slate-200 p-3">
+    <div class="border-t border-slate-200 p-3 space-y-1.5">
+      {#if canSwitchRole}
+        <div data-role-menu class="relative">
+          <button
+            onclick={() => roleOpen = !roleOpen}
+            aria-expanded={roleOpen}
+            class="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-slate-50 disabled:opacity-50"
+            disabled={roleSwitching}
+          >
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
+              {(roleLabels[role as Role] ?? role).slice(0, 1).toUpperCase()}
+            </div>
+            <div class="min-w-0 text-left">
+              <p class="text-[10px] font-medium uppercase tracking-wider text-slate-400">Acting as</p>
+              <p class="truncate text-sm font-medium text-slate-900">{roleLabels[role as Role] ?? role}</p>
+            </div>
+            <svg class="ml-auto h-4 w-4 text-slate-400 transition-transform {roleOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d={icons.chevron} />
+            </svg>
+          </button>
+          {#if roleOpen}
+            <div class="absolute bottom-full left-0 z-50 mb-1.5 w-full rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+              {#each (roles ?? []).filter((r): r is Role => r !== (role as Role)) as nextRole}
+                <button
+                  onclick={() => switchRole(nextRole)}
+                  disabled={roleSwitching}
+                  class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <span class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold text-slate-500">
+                    {roleLabels[nextRole].slice(0, 1).toUpperCase()}
+                  </span>
+                  {roleLabels[nextRole]}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
       <button
         onclick={() => profileOpen = !profileOpen}
         class="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-slate-50"

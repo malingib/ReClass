@@ -9,6 +9,7 @@ declare global {
       session: Session | null;
       user: User | null;
       role: Role | null;
+      roles: Role[] | null;
       tenantId: string;
       impersonating: boolean;
       enabledModules: string[] | null;
@@ -19,6 +20,7 @@ declare global {
     interface PageData {
       session?: Session | null;
       role?: Role | null;
+      roles?: Role[] | null;
       user?: User | null;
     }
   }

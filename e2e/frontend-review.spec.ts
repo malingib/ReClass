@@ -35,12 +35,11 @@ test.afterAll(() => {
   }
 });
 
-test('admin School Dashboard renders with real data', async ({ page }) => {
+test('admin lands on the Modules hub ( /admin is a launcher )', async ({ page }) => {
   await page.goto('/admin');
-  await expect(page.getByRole('heading', { name: 'School Dashboard' })).toBeVisible();
-  await expect(page.getByText('Students').first()).toBeVisible();
-  await expect(page.getByText('Teachers').first()).toBeVisible();
-  await expect(page.getByText('Outstanding').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Modules' })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Bursar & Finance').first()).toBeVisible();
+  await expect(page.getByText('Student Information').first()).toBeVisible();
   await page.screenshot({ path: 'e2e/review-admin-dashboard.png', fullPage: true });
 });
 
@@ -75,7 +74,7 @@ test('Finance dashboard shows KCB bank-payment entry form', async ({ page }) => 
   await page.goto('/admin/finance');
   await expect(page.getByRole('heading', { name: 'Bursar & Finance' })).toBeVisible();
   await expect(page.getByText('Record KCB / Buni Bank Payment')).toBeVisible();
-  await expect(page.locator('label[for="invoice_id"]')).toBeVisible();
+  await expect(page.locator('label[for="student_id"]')).toBeVisible();
   await expect(page.locator('label[for="amount"]')).toBeVisible();
   await expect(page.locator('label[for="bank_reference"]')).toBeVisible();
   await expect(page.locator('label[for="bank_name"]')).toBeVisible();
@@ -92,5 +91,6 @@ test('Teacher portal is scoped by teacher_type', async ({ page }) => {
 test('Parent Fees page is RBAC-protected (admin redirected away)', async ({ page }) => {
   await page.goto('/parent/fees');
   await expect(page).not.toHaveURL(/\/parent\/fees/);
-  await expect(page.getByRole('heading', { name: 'School Dashboard' })).toBeVisible();
+  // school_admin lands on the admin module hub after the 303 redirect
+  await expect(page.getByRole('heading', { name: 'Modules' })).toBeVisible({ timeout: 15000 });
 });

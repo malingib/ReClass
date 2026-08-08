@@ -26,7 +26,7 @@
     <div class="rounded-lg border border-slate-200 bg-white p-8 shadow-lg">
       <div class="anim-card stagger-2 mb-7 flex flex-col items-center">
         <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-base font-bold text-white">
-          R
+          e
         </div>
         <h1 class="mt-4 text-xl font-semibold text-slate-900">Sign in</h1>
         <p class="mt-1 text-sm text-slate-500">Use your school account to continue</p>

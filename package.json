@@ -20,7 +20,11 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
+    "test:e2e:dev": "playwright test --config=e2e.full-suite.config.ts",
+    "test:e2e:audit": "playwright test --config=e2e.comprehensive-audit.config.ts",
     "audit:sections": "node scripts/audit-sections.mjs",
+    "audit:nav": "node scripts/audit-nav-links.mjs",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

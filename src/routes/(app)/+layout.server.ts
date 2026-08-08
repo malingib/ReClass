@@ -5,6 +5,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   // JWT + user_roles. Source them from locals rather than re-deriving from URL.
   return {
     role: locals.role,
+    roles: locals.roles,
     tenantId: locals.tenantId,
     enabledModules: locals.enabledModules,
   };
