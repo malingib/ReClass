@@ -28,3 +28,6 @@ __pycache__/
 # Local caches / toolchains
 .npm-cache22/
 .tools/
+
+# Freebuff desktop state + audit artifacts (churn on every message — never commit or watch)
+.freebuff/

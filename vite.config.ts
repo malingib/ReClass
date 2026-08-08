@@ -7,4 +7,11 @@ export default defineConfig({
   ssr: {
     noExternal: ['@eshule/shared'],
   },
+  server: {
+    watch: {
+      // Freebuff's own desktop state files churn on every message — don't let
+      // them trigger SSR page reloads / HMR on the open page.
+      ignored: ['**/.freebuff/**'],
+    },
+  },
 });
