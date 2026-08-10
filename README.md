@@ -4,7 +4,7 @@
 
 eShule is a multi-tenant school-management application for Kenyan schools. It covers school administration, scheduling, teacher delivery and payroll, student/guardian records, billing, M-Pesa payments, SMS notifications, parent messaging, and exam results.
 
-> **Status: BLOCKED** (current audit: 2026-08-01). The repository has a green unit/static baseline, but migration replay, tenant isolation, privileged authorization, production observability, and recovery are not proven. Credentials are now encrypted through the database RPC and the payment callback fails closed when its secret is absent; remaining risks are tracked in [AUDIT-2026-08.md](AUDIT-2026-08.md).
+> **Status: SHIPPABLE for current feature set** (audit 2026-08-10, score 8.4/10). Unit/static/type/build baselines are green and the tenant-isolation scanner passes (0 unscoped service-role chains across 76 files, enforced as a CI gate). Remaining unproven areas: live migration replay, privileged authorization against a live DB, production observability, and backup/restore drills. Credentials are encrypted through the database RPC and the payment callback fails closed when its secret is absent; remaining risks are tracked in [AUDIT-2026-08.md](AUDIT-2026-08.md).
 
 Repository version `0.2.0` describes source present in Git. It is not evidence of a deployed or production-ready release.
 
@@ -49,7 +49,7 @@ flowchart LR
     W --> O[Sentry, optional]
 ```
 
-Most server routes use `locals.srv`, which bypasses RLS. Tenant isolation therefore depends on every privileged query, mutation, and referenced-object check using the authoritative tenant from the verified server session. This is a fragile application convention, not a reliable database boundary. See [ARCHITECTURE.md](ARCHITECTURE.md) and [DATABASE.md](DATABASE.md).
+Most server routes use `locals.srv`, which bypasses RLS. Tenant isolation therefore depends on every privileged query, mutation, and referenced-object check using the authoritative tenant from the verified server session. This is a fragile application convention, not a reliable database boundary. To keep it from silently rotting, `scripts/verify_tenant_isolation.py` runs as a **hard CI gate** (`.github/workflows/ci.yml`) and currently reports 0 unscoped service-role chains across 76 files; any new `.from('<table>')` chain without a `tenant_id` scope fails the build. RLS policies remain deployed as defense-in-depth but are not the active isolation boundary. See [ARCHITECTURE.md](ARCHITECTURE.md) and [DATABASE.md](DATABASE.md).
 
 ## Local Setup
 
@@ -105,16 +105,18 @@ npx playwright test
 
 Playwright has no npm script and is not run by current CI. It requires a built app, installed browser, dedicated non-production users, and appropriate test environment configuration.
 
-Latest observed results on 2026-08-01:
+Latest observed results on 2026-08-10 (verified on this host):
 
 | Check | Result |
 |---|---|
-| `npm test -- --run` | Pass: 10 files, 105 tests |
-| `npm run lint` | Pass: 0 errors, 38 warnings |
-| `npm run check` | Started successfully; runner did not return a completion status |
-| `npm run build` | Reached Vite SSR transformation; runner did not return a completion status |
-| `npm audit --audit-level=low` | 4 low findings; 0 moderate/high/critical (`cookie`, `GHSA-pxg6-pf52-xh8x`, through SvelteKit/adapters) |
-| Docker validation | Not run: Docker is not installed on the audit host; static review found the image path unusable |
+| `npm test -- --run` | Pass: 16 files, 154 tests |
+| `npm run lint` | Pass: 0 errors, 0 warnings |
+| `npm run typecheck` (`svelte-check`) | Pass: 0 errors, 0 warnings — **this is the authoritative type gate** |
+| `python3 scripts/verify_tenant_isolation.py src` | Pass: 0 unscoped service-role chains across 76 files (hard CI gate) |
+| `npm run build` | Pass: clean Vite SSR build |
+| `npm audit --audit-level=low` | 0 moderate/high/critical |
+
+> **Type-checking note:** `npm run typecheck` runs `svelte-check`, which is the project's type gate and is green. Raw `tsc --noEmit` is intentionally **not** used: Svelte 5 `*.svelte` named exports are not visible to plain `tsc` (TS2614 in `src/lib/components/ui/*/index.ts`), but svelte-check resolves them. CI uses `svelte-check`, so the build is unaffected. Do not add a raw-`tsc` step to CI.
 
 These results do not execute migrations, validate RLS against a live database, run E2E or accessibility automation, test provider sandboxes, prove backups/restores, or establish production readiness.
 

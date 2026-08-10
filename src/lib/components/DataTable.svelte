@@ -7,6 +7,7 @@
     label: string;
     sortable?: boolean;
     render?: (_item: T) => string;
+    cell?: Snippet<[T]>;
   }
 
   // When `server` is provided the table delegates search / sort / paging to the
@@ -114,11 +115,17 @@
     isServer
       ? filtered
       : [...filtered].sort((a, b) => {
-      if (!sortKey) return 0;
-      const aVal = String(a[sortKey] ?? '');
-      const bVal = String(b[sortKey] ?? '');
-      return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-    })
+          if (!sortKey) return 0;
+          const aValue = a[sortKey];
+          const bValue = b[sortKey];
+          const aNumber = typeof aValue === 'number' ? aValue : Number(aValue);
+          const bNumber = typeof bValue === 'number' ? bValue : Number(bValue);
+          const numeric = aValue !== '' && bValue !== '' && Number.isFinite(aNumber) && Number.isFinite(bNumber);
+          const comparison = numeric
+            ? aNumber - bNumber
+            : String(aValue ?? '').localeCompare(String(bValue ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+          return sortDir === 'asc' ? comparison : -comparison;
+        })
   );
 
   const totalRows = $derived(isServer ? (server?.total ?? 0) : sorted.length);
@@ -276,7 +283,13 @@
             <tr class="border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50">
               {#each columns as col}
                 <td class="px-4 py-3 text-slate-700">
-                  {col.render ? col.render(item) : item[col.key]}
+                  {#if col.cell}
+                    {@render col.cell(item)}
+                  {:else if col.render}
+                    {col.render(item)}
+                  {:else}
+                    {item[col.key]}
+                  {/if}
                 </td>
               {/each}
               {#if hasRowActions}
