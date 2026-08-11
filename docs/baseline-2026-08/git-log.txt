@@ -1,0 +1,8 @@
+c965c40 feat: reconcile design system + close audit action plan
+ae1aa0a feat: notification dedupe, module registry consolidation, role routes
+7d56afa fix: silence spurious SvelteKit dev fetch warning from Supabase calls
+1e49bfb perf: optimize loading across all pages and dashboards
+b9c6905 local commit 2
+7fc47fe chore: frontend redesign
+c7e01e7 chore: remove dark mode and language switcher
+eb5fda0 fix: resolve audit findings (scheduling conflicts, bank idempotency, reports, comms)
