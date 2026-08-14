@@ -20,14 +20,14 @@ export function createTenantClient(
           return addTenantFilter(qb, tenantId);
         };
       }
-      if (prop === 'rpc') {
-        return (fn: string, params?: Record<string, unknown>) => {
-          return (target as any).rpc(fn, {
-            ...params,
-            _tenant_id: tenantId,
-          });
-        };
-      }
+      // NOTE: We deliberately do NOT intercept `rpc`. Injecting a phantom
+      // `_tenant_id` param broke every RPC call, because PostgREST resolves a
+      // function by *exact* parameter names — the extra key made the lookup
+      // match no function (PGRST202 "could not find the function"). Tenant
+      // isolation for RPCs is the RPC's own responsibility: every tenant-scoped
+      // RPC takes `p_tenant_id` explicitly from the caller (single-tenant
+      // deployment: isolation here is the RPC's own filter, not the Proxy's).
+      // Keeping `rpc` a pass-through makes the call sites below behave as written.
       return Reflect.get(target, prop, receiver);
     },
   }) as SupabaseClient<Database>;
