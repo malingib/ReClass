@@ -15,6 +15,7 @@
     roles = null,
     user = { name: 'eShule Admin', email: 'admin@eshule.app' },
     enabledModules = null,
+    impersonating = false,
     children,
   }: {
     title: string;
@@ -25,6 +26,7 @@
     roles?: Role[] | null;
     user?: { name?: string; email?: string };
     enabledModules?: string[] | null;
+    impersonating?: boolean;
     children?: import('svelte').Snippet;
   } = $props();
 
@@ -440,6 +442,9 @@
             <span aria-hidden="true">›</span>
             <span class="font-medium text-slate-500">{currentModule.name}</span>
           </nav>
+        {/if}
+        {#if impersonating}
+          <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Impersonating</span>
         {/if}
         <p class="text-sm font-semibold text-slate-900">{currentModule?.name ?? 'eShule'}</p>
         <p class="text-xs text-slate-500">{title}</p>

@@ -8,5 +8,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     roles: locals.roles,
     tenantId: locals.tenantId,
     enabledModules: locals.enabledModules,
+    impersonating: locals.impersonating,
   };
 };

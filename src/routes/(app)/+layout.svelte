@@ -2,7 +2,7 @@
   import AppShell from '$lib/components/layout/AppShell.svelte';
   import { roleLabels, type Role } from '$lib/auth';
 
-  const { data, children }: { data: { role: Role | null; roles: Role[] | null; tenantId: string | null; enabledModules: string[] | null }; children?: import('svelte').Snippet } = $props();
+  const { data, children } = $props<import('./$types').LayoutData>();
 
   const role = $derived<Role>((data.role ?? 'school_admin') as Role);
 
@@ -29,6 +29,6 @@
     : 'School management');
 </script>
 
-<AppShell {title} {subtitle} {role} roles={data.roles} user={cookieUser} enabledModules={data.enabledModules}>
+<AppShell {title} {subtitle} {role} roles={data.roles} user={cookieUser} enabledModules={data.enabledModules} impersonating={data.impersonating}>
   {@render children?.()}
 </AppShell>
