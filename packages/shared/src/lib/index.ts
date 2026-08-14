@@ -44,6 +44,7 @@ export { default as KpiCard } from './components/KpiCard.svelte';
 export { default as EnhancedKpiCard } from './components/EnhancedKpiCard.svelte';
 export { default as RecentActivity } from './components/RecentActivity.svelte';
 export { default as LineChart } from './components/charts/LineChart.svelte';
+export { chartTheme } from './components/charts/theme';
 export { default as Button } from './components/ui/button.svelte';
 export { default as Card } from './components/ui/card.svelte';
 export { default as CardContent } from './components/ui/card-content.svelte';

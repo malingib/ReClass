@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { chartTheme } from './theme';
 
   const {
     data = [],
     height = 220,
-    color = '#039855',
+    color = chartTheme.brand,
     unit = '',
     format = (v: number) => v.toLocaleString(),
   }: {
@@ -57,7 +58,7 @@
   const padT = $derived(16);
   const padB = $derived(34); // room for x-axis labels
   const lineData = $derived(data);
-  const gradId = $derived(`lineFill-${color.replace('#', '')}`);
+  const gradId = $derived(`lineFill-${color.startsWith('#') ? color.slice(1) : 'custom'}`);
 
   const xScale = $derived(
     d3?.scalePoint<string>()
@@ -151,15 +152,15 @@
       <!-- y gridlines + axis labels -->
       {#each yTicks as t}
         {@const ty = yScale?.(t) ?? 0}
-        <line x1={padL} y1={ty} x2={w - padR} y2={ty} stroke="#ececec" stroke-width="1" />
-        <text x={padL - 8} y={ty + 3.5} text-anchor="end" fill="#9ca3af" font-size="10">
+        <line x1={padL} y1={ty} x2={w - padR} y2={ty} stroke={chartTheme.grid} stroke-width="1" />
+        <text x={padL - 8} y={ty + 3.5} text-anchor="end" fill={chartTheme.axisLabel} font-size="10">
           {format(t)}
         </text>
       {/each}
 
       <!-- axis lines -->
-      <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#d4d4d4" stroke-width="1" />
-      <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke="#d4d4d4" stroke-width="1" />
+      <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke={chartTheme.axis} stroke-width="1" />
+      <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke={chartTheme.axis} stroke-width="1" />
 
       <!-- area + line -->
       <path d={areaPath} fill="url(#{gradId})" />
@@ -182,7 +183,7 @@
             y={h - padB + 16}
             text-anchor={xLabelRotated ? 'end' : 'middle'}
             transform={xLabelRotated ? `rotate(-35 ${px} ${h - padB + 16})` : ''}
-            fill="#9ca3af"
+            fill={chartTheme.axisLabel}
             font-size="10"
           >
             {point.label}
@@ -200,13 +201,13 @@
             width="108"
             height="34"
             rx="6"
-            fill="#0f172a"
+            fill={chartTheme.tooltipBg}
             opacity="0.94"
           />
-          <text x={tipAnchor === 'end' ? -100 : 8} y="14" fill="#e2e8f0" font-size="10">
+          <text x={tipAnchor === 'end' ? -100 : 8} y="14" fill={chartTheme.tooltipText} font-size="10">
             {activePoint.label}
           </text>
-          <text x={tipAnchor === 'end' ? -100 : 8} y="27" fill="#fff" font-size="12" font-weight="600">
+          <text x={tipAnchor === 'end' ? -100 : 8} y="27" fill={chartTheme.tooltipValue} font-size="12" font-weight="600">
             {format(activePoint.value)}{unit ? ` ${unit}` : ''}
           </text>
         </g>

@@ -39,7 +39,7 @@
       <h3 class="text-sm font-semibold text-foreground">Attendance Rate Trend</h3>
       <p class="mt-1 text-xs text-muted-foreground">Daily teacher attendance rate over the selected period</p>
       <div class="mt-4">
-        <LineChart data={trend} format={(v: number) => `${v}%`} height={220} color="#039855" />
+        <LineChart data={trend} format={(v: number) => `${v}%`} height={220} />
       </div>
     </CardContent>
   </Card>
