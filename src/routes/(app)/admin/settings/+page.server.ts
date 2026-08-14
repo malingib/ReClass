@@ -1,6 +1,8 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { logError } from '$lib/server/_platform/log';
+import { getTerms, createTerm, setCurrentTerm, deleteTerm } from '$lib/server/_platform/terms';
+import { getCredentials, saveCredential, deleteCredential, testCredential } from '$lib/server/_platform/credentials';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const sb = locals.srv;
@@ -10,9 +12,12 @@ export const load: PageServerLoad = async ({ locals }) => {
   }
   const { data: tenant } = await sb
     .from('tenants')
-    .select('id, name, logo_url, brand_primary, mpesa_shortcode, mpesa_paybill, academic_year, timezone, currency, payroll_rate_per_session, settings, school_payment_channel, remedial_payment_channel, kcb_account_no, kcb_bank_name, buni_shortcode')
+    .select('id, name, logo_url, brand_primary, mpesa_shortcode, mpesa_paybill, academic_year, timezone, currency, payroll_rate_per_session, settings, school_payment_channel, remedial_payment_channel, kcb_account_no, kcb_bank_name, buni_shortcode, current_term_id')
     .eq('id', tid)
     .single();
+
+  const terms = await getTerms(sb, tid);
+  const credentials = await getCredentials(sb, tid);
 
   return {
     tenant: tenant ?? {
@@ -31,7 +36,10 @@ export const load: PageServerLoad = async ({ locals }) => {
       kcb_account_no: '',
       kcb_bank_name: 'KCB',
       buni_shortcode: '',
+      current_term_id: null,
     },
+    terms,
+    credentials,
   };
 };
 
@@ -59,11 +67,13 @@ export const actions: Actions = {
     const sms_attendance = form.get('sms_attendance') === 'on';
     const sms_payment_reminder = form.get('sms_payment_reminder') === 'on';
     const sms_payment_receipt = form.get('sms_payment_receipt') === 'on';
+    const sms_teacher_payout = form.get('sms_teacher_payout') === 'on';
 
     const settings = {
       sms_attendance,
       sms_payment_reminder,
       sms_payment_receipt,
+      sms_teacher_payout,
     };
 
     if (!name || name.trim().length === 0) {
@@ -105,5 +115,52 @@ export const actions: Actions = {
     }
 
     return { success: true };
+  },
+
+  'term-create': async ({ locals, request }) => {
+    if (!locals.tenantId) return fail(400, { error: 'No tenant association.' });
+    const fd = await request.formData();
+    return createTerm(locals.srv, locals.tenantId, {
+      name: String(fd.get('name') ?? ''),
+      start_date: String(fd.get('start_date') ?? '') || undefined,
+      end_date: String(fd.get('end_date') ?? '') || undefined,
+      make_current: fd.get('make_current') === 'on',
+    });
+  },
+
+  'term-set-current': async ({ locals, request }) => {
+    if (!locals.tenantId) return fail(400, { error: 'No tenant association.' });
+    const fd = await request.formData();
+    return setCurrentTerm(locals.srv, locals.tenantId, String(fd.get('id') ?? ''));
+  },
+
+  'term-delete': async ({ locals, request }) => {
+    if (!locals.tenantId) return fail(400, { error: 'No tenant association.' });
+    const fd = await request.formData();
+    return deleteTerm(locals.srv, locals.tenantId, String(fd.get('id') ?? ''));
+  },
+
+  'credential-save': async ({ locals, request }) => {
+    if (!locals.tenantId) return fail(400, { error: 'No tenant association.' });
+    const fd = await request.formData();
+    return saveCredential(locals.srv, locals.tenantId, {
+      id: String(fd.get('id') ?? ''),
+      provider: String(fd.get('provider') ?? ''),
+      environment: String(fd.get('environment') ?? ''),
+      label: String(fd.get('label') ?? ''),
+      encrypted_blob: String(fd.get('encrypted_blob') ?? ''),
+    });
+  },
+
+  'credential-delete': async ({ locals, request }) => {
+    if (!locals.tenantId) return fail(400, { error: 'No tenant association.' });
+    const fd = await request.formData();
+    return deleteCredential(locals.srv, locals.tenantId, String(fd.get('id') ?? ''));
+  },
+
+  'credential-test': async ({ locals, request }) => {
+    if (!locals.tenantId) return fail(400, { error: 'No tenant association.' });
+    const fd = await request.formData();
+    return testCredential(locals.srv, locals.tenantId, String(fd.get('id') ?? ''));
   },
 };

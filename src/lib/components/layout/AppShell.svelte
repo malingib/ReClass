@@ -90,7 +90,6 @@
         { label: 'Message Log', href: '/admin/notifications', icon: 'bell' },
       ]},
       { label: 'Integrations', defaultOpen: false, items: [
-        { label: 'Mobiwave & Daraja', href: '/admin/credentials', icon: 'bell' },
         { label: 'School settings', href: '/admin/settings', icon: 'dashboard' },
         { label: 'Users', href: '/admin/users', icon: 'students' },
       ]},
@@ -103,6 +102,7 @@
         { label: 'My dashboard', href: '/teacher', icon: 'dashboard' },
         { label: 'Remedial timetable', href: '/teacher/timetable', icon: 'calendar' },
         { label: 'My classes', href: '/teacher/classes', icon: 'subjects' },
+        { label: 'Committee', href: '/teacher/committee', icon: 'teachers' },
       ]},
     ],
     parent: [
@@ -135,6 +135,7 @@
         { label: 'Tenants', href: '/super-admin/tenants', icon: 'groups' },
         { label: 'Module provisioning', href: '/super-admin/modules', icon: 'dashboard' },
         { label: 'Audit', href: '/super-admin/audit', icon: 'bell' },
+        { label: 'Platform Settings', href: '/super-admin/settings', icon: 'settings' },
       ]},
     ],
   };

@@ -121,7 +121,6 @@ test.describe('Feature pages (admin)', () => {
     '/admin/parent-payments',
     '/admin/attendance',
     '/admin/scheduling',
-    '/admin/credentials',
   ];
 
   for (const path of adminPages) {
@@ -312,12 +311,11 @@ test.describe('CRUD form operations (admin)', () => {
     await expect(page.locator('dialog, [role="dialog"], [data-slot="dialog-content"]')).toBeVisible({ timeout: 8000 });
   });
 
-  test('credentials page has add action', async ({ page }) => {
-    await page.goto('/admin/credentials');
+  test('settings integrations tab manages credentials', async ({ page }) => {
+    await page.goto('/admin/settings');
     await waitForApp(page);
 
-    const content = await page.textContent('body');
-    expect(content).toContain('Credentials');
-    await expect(page.getByRole('button', { name: /Add Credential/i }).first()).toBeVisible();
+    await page.getByRole('tab', { name: /Integrations/i }).click();
+    await expect(page.getByRole('heading', { name: /Add Credential/i })).toBeVisible();
   });
 });

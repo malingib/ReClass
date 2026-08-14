@@ -1,6 +1,7 @@
 import { getServiceClient } from '../_shared/supabase.ts';
 import { verifyAuth } from '../_shared/auth.ts';
 import { json, badRequest, unauthorized, forbidden, notFound, handleOptions, internalError } from '../_shared/response.ts';
+import { getPlatformConfig } from '../_shared/platform-config.ts';
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
@@ -111,7 +112,12 @@ Deno.serve(async (req) => {
 
     const ts = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
     const pwd = btoa(`${secrets.passkey}${secrets.shortcode}${ts}`);
-    const callback = `${Deno.env.get('PUBLIC_URL')}/functions/v1/mpesa-callback`;
+    const { public_url } = await getPlatformConfig(supabase, ['public_url']);
+    if (!public_url) {
+      console.error('[stk] PUBLIC_URL not configured');
+      return internalError(req);
+    }
+    const callback = `${public_url}/functions/v1/mpesa-callback`;
 
     // Pre-insert checkout request BEFORE STK push so a crash after
     // provider acceptance still has local tracking for reconciliation.

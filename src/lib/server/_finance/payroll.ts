@@ -16,7 +16,7 @@ export async function getPayrollRuns(sb: App.Locals['srv'], tenantId: string, do
   const { data } = await sb
     .from('payroll_runs')
     .select(`
-      id, teacher_id, period_start, period_end, occurrences_count, rate_per_session, amount, status, paid_at, created_at, domain, salary_amount,
+      id, teacher_id, period_start, period_end, occurrences_count, rate_per_session, amount, status, paid_at, created_at, domain, salary_amount, last_error, b2c_status,
       teachers!inner(first_name, last_name)
     `)
     .eq('tenant_id', tenantId)
@@ -246,4 +246,67 @@ export async function markPayrollPaid(sb: App.Locals['srv'], tid: string, id: st
   }
 
   return { success: true as const };
+}
+
+/**
+ * Resolve a teacher's remedial committee hat (chairman/treasurer/member/none)
+ * from the tenant teacher record. `profile_id` must be tenant-owned.
+ * Returns undefined when the teacher row (or a matching profile) is absent.
+ */
+export async function getTeacherCommitteeRole(
+  sb: App.Locals['srv'],
+  tenantId: string,
+  profileId: string | undefined,
+): Promise<{ id: string; remedial_role: string; phone: string | null } | undefined> {
+  if (!profileId) return undefined;
+  const { data } = await sb
+    .from('teachers')
+    .select('id, remedial_role, phone')
+    .eq('tenant_id', tenantId)
+    .eq('profile_id', profileId)
+    .is('deleted_at', null)
+    .maybeSingle();
+  return data ?? undefined;
+}
+
+/**
+ * Initiate a real Daraja B2C payout for an approved remedial payroll run.
+ * The B2C edge function claims the run (approved→processing), runs the
+ * pre-flight checks, and calls Daraja. Idempotent: a run already processing/
+ * paid/failed is not re-pushed.
+ */
+export async function payPayrollRunB2C(
+  sb: App.Locals['srv'],
+  tenantId: string,
+  runId: string,
+  actorId: string | undefined,
+) {
+  if (!runId) return fail(400, { error: 'Payroll run ID is required' });
+
+  const { data: run } = await sb.from('payroll_runs').select('status').eq('id', runId).eq('tenant_id', tenantId).maybeSingle();
+  if (!run) return fail(404, { error: 'Payroll run not found.' });
+  if (run.status === 'paid') return fail(409, { error: 'This payroll run is already paid.' });
+  if (run.status === 'processing') return fail(409, { error: 'This payroll run is already being processed.' });
+  if (run.status !== 'approved') return fail(409, { error: `Only approved runs can be paid (current: ${run.status}).` });
+
+  let result: { data?: unknown; error?: { message?: string } };
+  try {
+    const resp = await sb.functions.invoke('b2c', {
+      body: { tenant_id: tenantId, run_id: runId, actor_id: actorId ?? null },
+    });
+    result = { data: resp?.data };
+  } catch (err) {
+    logError('payroll_b2c_invoke', err instanceof Error ? err : new Error(String(err)), { runId });
+    return fail(502, { error: 'Payout service unreachable. Please try again.' });
+  }
+
+  const status = (result?.data as { status?: string; error?: string; message?: string }) ?? {};
+  if (status.status === 'processing') {
+    return { success: true as const, message: 'Payout request sent to M-Pesa. Confirmation is pending.' };
+  }
+  if (status.status === 'rejected') {
+    return fail(502, { error: status.message ?? 'M-Pesa rejected the payout request.' });
+  }
+  // Idempotent re-submission or other terminal state.
+  return fail(409, { error: status.message ?? 'Payout could not be initiated.' });
 }

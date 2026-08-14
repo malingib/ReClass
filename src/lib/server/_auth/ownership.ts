@@ -31,7 +31,7 @@ export async function getTeacherOwnership(locals: App.Locals) {
   const { user, tenantId } = requireTenantRole(locals, 'teacher');
   const { data: teacher } = await locals.srv
     .from('teachers')
-    .select('id, first_name, last_name, teacher_type')
+    .select('id, first_name, last_name, teacher_type, remedial_role')
     .eq('tenant_id', tenantId)
     .eq('profile_id', user.id)
     .maybeSingle();

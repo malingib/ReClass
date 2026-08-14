@@ -9,7 +9,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
     '/admin', '/admin/modules', '/admin/sis', '/admin/students', '/admin/teachers',
     '/admin/parents', '/admin/subjects', '/admin/fees', '/admin/finance',
     '/admin/finance/income', '/admin/finance/expenses', '/admin/attendance',
-    '/admin/scheduling', '/admin/credentials', '/admin/reports', '/admin/payroll',
+    '/admin/scheduling', '/admin/reports', '/admin/payroll',
     '/admin/communications', '/admin/reclass', '/admin/settings',
     '/admin/users', '/admin/notifications',
   ],

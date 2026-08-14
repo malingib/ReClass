@@ -23,6 +23,7 @@ GLOBAL_TABLES = {
     "user_roles",  # scoped by user_id lookups in auth paths
     "checkout_requests",  # scoped by checkout_id (globally unique) in callbacks
     "tenant_modules",  # super-admin provisions modules across tenants (system table)
+    "platform_config",  # super-admin-only platform secrets (RLS: app.role=super_admin)
 }
 
 FROM_RE = re.compile(r"\.from\(\s*'([a-z_]+)'\s*\)")
@@ -49,6 +50,10 @@ def is_scoped(chain: str) -> bool:
     if re.search(r"\.eq\(\s*['\"]tenant_id['\"]", chain):
         return True
     if re.search(r"\.in\(\s*['\"]tenant_id['\"]", chain):
+        return True
+    # platform-scoped credential/config chains (super-admin) are scoped by
+    # scope='platform' + tenant_id IS NULL instead of a tenant_id predicate.
+    if re.search(r"\.eq\(\s*['\"]scope['\"],\s*['\"]platform['\"]", chain) and re.search(r"\.is\(\s*['\"]tenant_id['\"],\s*null\s*\)", chain):
         return True
     # insert/upsert payload containing tenant_id key
     if re.search(r"\btenant_id\s*[:=]", chain):

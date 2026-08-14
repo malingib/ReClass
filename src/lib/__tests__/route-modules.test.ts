@@ -26,7 +26,7 @@ describe('routeFor (module context)', () => {
   });
 
   it('maps platform routes to platform (always provisioned)', () => {
-    for (const p of ['/admin/settings', '/admin/users', '/admin/credentials', '/admin/notifications']) {
+    for (const p of ['/admin/settings', '/admin/users', '/admin/notifications', '/super-admin/settings']) {
       expect(routeFor(p)).toBe('platform');
     }
   });

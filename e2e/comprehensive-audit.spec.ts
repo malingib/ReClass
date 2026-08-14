@@ -43,7 +43,6 @@ const ADMIN_ROUTES: Array<{ path: string; label: string; group: string }> = [
   { path: '/admin/modules', label: 'Module Hub', group: 'core' },
   { path: '/admin/settings', label: 'Settings', group: 'core' },
   { path: '/admin/users', label: 'Users', group: 'core' },
-  { path: '/admin/credentials', label: 'Credentials', group: 'core' },
   { path: '/admin/reports', label: 'Reports', group: 'core' },
   { path: '/account', label: 'Account', group: 'core' },
   { path: '/notifications', label: 'Notifications', group: 'core' },
@@ -222,18 +221,15 @@ test.describe('Full Platform Audit', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('4.4 credentials: Add Credential inline form appears', async ({ page }) => {
-    await page.goto('/admin/credentials');
+  test('4.4 credentials: Add Credential form appears in Settings > Integrations', async ({ page }) => {
+    await page.goto('/admin/settings');
     await waitForApp(page);
     await waitForHydration(page);
-    // Credentials use an inline Card form (not a modal dialog) — click Add
-    // and assert the form fields render.
-    const opened = await openDialog(page, /Add Credential/i, 'input#cred-label, textarea#cred-blob, input[name="label"]');
-    expect(opened, 'Credential form fields should appear after Add').toBe(true);
+    // Credentials live in the Integrations tab of School Settings — assert the
+    // tab and its inline Add Credential form render.
+    await page.getByRole('tab', { name: /Integrations/i }).click();
+    await expect(page.getByRole('heading', { name: /Add Credential/i })).toBeVisible();
     await screenshot(page, '53-credentials-form');
-    // Cancel to restore list state
-    const cancel = page.getByRole('button', { name: /Cancel/i }).first();
-    if (await cancel.count() > 0) await cancel.click().catch(() => {});
   });
 
   test('4.5 students: search works', async ({ page }) => {

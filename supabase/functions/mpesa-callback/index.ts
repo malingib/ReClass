@@ -1,8 +1,8 @@
 import { getServiceClient } from '../_shared/supabase.ts';
 import { json, badRequest, notFound, unauthorized, internalError } from '../_shared/response.ts';
+import { getPlatformConfig } from '../_shared/platform-config.ts';
 
 const supabase = getServiceClient();
-const CALLBACK_SECRET = Deno.env.get('MPESA_CALLBACK_SECRET') ?? '';
 const MAX_BODY_BYTES = 10_240;
 
 Deno.serve(async (req) => {
@@ -11,13 +11,15 @@ Deno.serve(async (req) => {
       return json({ error: 'method_not_allowed' }, 405, req);
     }
 
-    // Enforce callback secret (fail closed when absent)
-    if (!CALLBACK_SECRET) {
+    // Enforce callback secret (fail closed when absent). Resolved from the
+    // platform admin's DB config, falling back to the env var.
+    const { mpesa_callback_secret: callbackSecret } = await getPlatformConfig(supabase, ['mpesa_callback_secret']);
+    if (!callbackSecret) {
       console.error('mpesa-callback: MPESA_CALLBACK_SECRET not configured');
       return internalError(req);
     }
     const actual = req.headers.get('x-callback-secret') ?? '';
-    if (actual !== CALLBACK_SECRET) {
+    if (actual !== callbackSecret) {
       return unauthorized(req);
     }
 

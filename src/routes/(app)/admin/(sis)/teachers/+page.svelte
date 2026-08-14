@@ -15,6 +15,9 @@
     last_name: string;
     employee_no: string | null;
     subjects: string[] | null;
+    phone: string | null;
+    id_number: string | null;
+    remedial_role: string;
   }
 
   interface ActionData extends Record<string, unknown> {
@@ -78,6 +81,9 @@
       last_name: t.last_name,
       employee_no: t.employee_no ?? '',
       subjects: t.subjects ? t.subjects.join(', ') : '',
+      phone: t.phone ?? '',
+      id_number: t.id_number ?? '',
+      remedial_role: t.remedial_role ?? 'none',
     };
     showCreate = true;
   }
@@ -100,6 +106,8 @@
       { key: 'first_name', label: 'Name', render: (t: any) => `${t.first_name} ${t.last_name}`, sortable: true },
       { key: 'employee_no', label: 'Employee No', sortable: true },
       { key: 'subjects', label: 'Subjects', render: (t: any) => t.subjects?.join(', ') ?? '—' },
+      { key: 'remedial_role', label: 'Committee', render: (t: any) => t.remedial_role ?? 'none' },
+      { key: 'phone', label: 'M-Pesa', render: (t: any) => t.phone ?? '—' },
     ]}
     emptyMessage="No teachers found"
     onEdit={openEdit}
@@ -142,6 +150,23 @@
         <label for="subjects" class="text-xs font-medium text-foreground">Subjects (comma separated)</label>
         <input id="subjects" name="subjects" type="text" bind:value={formData.subjects} class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none" placeholder="Math, English" />
         {#if errors.subjects}<p class="text-xs text-destructive">{errors.subjects?.[0]}</p>{/if}
+
+        <label for="phone" class="text-xs font-medium text-foreground">M-Pesa Phone (for payouts)</label>
+        <input id="phone" name="phone" type="text" bind:value={formData.phone} class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none" placeholder="07XX XXX XXX" />
+        {#if errors.phone}<p class="text-xs text-destructive">{errors.phone?.[0]}</p>{/if}
+
+        <label for="id_number" class="text-xs font-medium text-foreground">National ID Number</label>
+        <input id="id_number" name="id_number" type="text" bind:value={formData.id_number} class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none" placeholder="12345678" />
+        {#if errors.id_number}<p class="text-xs text-destructive">{errors.id_number?.[0]}</p>{/if}
+
+        <label for="remedial_role" class="text-xs font-medium text-foreground">Remedial Committee Role</label>
+        <select id="remedial_role" name="remedial_role" bind:value={formData.remedial_role} class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none">
+          <option value="none">No committee role</option>
+          <option value="chairman">Chairman</option>
+          <option value="treasurer">Treasurer</option>
+          <option value="member">Member</option>
+        </select>
+        {#if errors.remedial_role}<p class="text-xs text-destructive">{errors.remedial_role?.[0]}</p>{/if}
       </div>
 
       {#if msg}

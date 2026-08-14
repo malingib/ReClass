@@ -9,8 +9,10 @@ const callback = readFileSync(
 
 describe('M-Pesa callback safety contract', () => {
   it('fails closed when the callback secret is missing or wrong', () => {
-    expect(callback).toContain("if (!CALLBACK_SECRET)");
-    expect(callback).toContain("actual !== CALLBACK_SECRET");
+    // Secret resolved via platform config (DB), env fallback; still fail-closed.
+    expect(callback).toContain('getPlatformConfig');
+    expect(callback).toContain("if (!callbackSecret)");
+    expect(callback).toContain('actual !== callbackSecret');
   });
 
   it('rejects missing or mismatched phone numbers', () => {

@@ -11,8 +11,12 @@ export type Capability =
   | 'remedial:attendance_mark'
   | 'remedial:attendance_review'
   | 'remedial:fees'
+  | 'remedial:committee'   // attendance review (chairman) + payroll (treasurer)
   | 'finance:view'
   | 'sis:view';
+
+/** Remedial committee hats a teacher may wear (mirrors teachers.remedial_role). */
+export type RemedialRole = 'chairman' | 'treasurer' | 'member' | 'none';
 
 // Default capability sets by teacher_type. school_admin/principal retain all.
 const TEACHER_TYPE_CAPS: Record<string, Capability[]> = {
@@ -52,4 +56,29 @@ export function hasCapability(
     return teacherCapabilities(teacherType).includes(cap);
   }
   return false;
+}
+
+/**
+ * Whether a logged-in teacher may act as a remedial committee officer.
+ * Committee is modeled as a hat on the teacher row (teachers.remedial_role),
+ * so this must be resolved from the tenant teacher record, not the JWT.
+ */
+export function isRemedialOfficer(remRole: RemedialRole | string | null | undefined, hat: RemedialRole): boolean {
+  if (hat === 'member') return remRole === 'member';
+  return remRole === hat;
+}
+
+export function canApproveAttendance(remRole: RemedialRole | string | null | undefined): boolean {
+  // Chairman (or member) approves/rejects attendance for the committee.
+  return remRole === 'chairman' || remRole === 'member';
+}
+
+export function canRunPayroll(remRole: RemedialRole | string | null | undefined): boolean {
+  // Treasurer generates payroll + approves payment requests.
+  return remRole === 'treasurer';
+}
+
+export function canAuthorizePayout(remRole: RemedialRole | string | null | undefined): boolean {
+  // Chairman signs off on the actual B2C payout (after treasurer prepares it).
+  return remRole === 'chairman';
 }

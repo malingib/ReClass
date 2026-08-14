@@ -14,6 +14,44 @@
   const settings = $derived<Record<string, any>>((data.tenant?.settings ?? {}) as Record<string, any>);
 
   let saving = $state(false);
+  const terms = $derived((data.terms ?? []) as { id: string; name: string; start_date: string | null; end_date: string | null; is_current: boolean }[]);
+  const currentTermId = $derived(data.tenant?.current_term_id ?? null);
+  const credentials = $derived((data.credentials ?? []) as any[]);
+  let credEditId = $state<string | null>(null);
+  let credProvider = $state('mpesa');
+  let credEnv = $state('sandbox');
+  let credLabel = $state('');
+  let credBlob = $state('');
+  let credSaving = $state(false);
+  let credTesting = $state<string | null>(null);
+  let credTestResult = $state<{ id: string; ok: boolean; msg: string } | null>(null);
+
+  function openCredEdit(item: any) {
+    credEditId = item.id;
+    credProvider = item.provider;
+    credEnv = item.environment;
+    credLabel = item.label;
+    credBlob = '';
+  }
+
+  function cancelCredForm() {
+    credEditId = null;
+  }
+
+  async function runCredTest(id: string) {
+    credTesting = id;
+    credTestResult = null;
+    const formData = new FormData();
+    formData.set('id', id);
+    const res = await fetch('?/credential-test', { method: 'POST', body: formData });
+    const result = await res.json();
+    credTesting = null;
+    if (result?.success) {
+      credTestResult = { id, ok: result.testResult === 'ok', msg: result.message };
+    } else {
+      credTestResult = { id, ok: false, msg: result?.error ?? 'Test failed' };
+    }
+  }
 </script>
 
 <DashboardContent title="Settings" subtitle="School configuration and preferences">
@@ -222,6 +260,13 @@
                 <p class="text-xs text-muted-foreground">Send SMS receipt on successful M-Pesa payment</p>
               </div>
             </label>
+            <label class="flex items-center gap-3 rounded-lg border p-4 hover:bg-muted/50">
+              <input type="checkbox" name="sms_teacher_payout" checked={settings.sms_teacher_payout ?? true} class="h-4 w-4 rounded border-input text-primary focus:ring-ring" />
+              <div>
+                <p class="text-sm font-medium text-foreground">Teacher Payout SMS</p>
+                <p class="text-xs text-muted-foreground">Send SMS to a teacher when their remedial payout clears via M-Pesa B2C</p>
+              </div>
+            </label>
           </CardContent>
         </Card>
       </TabsContent>
@@ -241,4 +286,193 @@
       </Button>
     </div>
   </form>
+
+  <div class="mt-10">
+    <Tabs value="terms" class="space-y-6">
+      <TabsList class="grid w-full grid-cols-1 sm:grid-cols-3">
+        <TabsTrigger value="terms">Academic Terms</TabsTrigger>
+        <TabsTrigger value="roles">Remedial Committee Roles</TabsTrigger>
+        <TabsTrigger value="integrations">Integrations</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="terms">
+        <Card>
+          <CardContent class="space-y-5 pt-6">
+            <p class="text-sm text-muted-foreground">
+              Terms anchor remedial fees and payouts. The current term is used to compute parent obligations
+              and is referenced by payment reminders.
+            </p>
+
+            {#if terms.length === 0}
+              <p class="text-sm text-muted-foreground">No terms yet. Create the first term below.</p>
+            {/if}
+
+            <div class="space-y-2">
+              {#each terms as term (term.id)}
+                <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3">
+                  <div>
+                    <p class="text-sm font-medium text-foreground">
+                      {term.name}
+                      {#if term.id === currentTermId}
+                        <span class="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Current</span>
+                      {/if}
+                    </p>
+                    <p class="mt-0.5 text-xs text-muted-foreground">
+                      {term.start_date ?? '—'} – {term.end_date ?? '—'}
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    {#if term.id !== currentTermId}
+                      <form method="POST" action="?/term-set-current" class="inline">
+                        <input type="hidden" name="id" value={term.id} />
+                        <Button type="submit" variant="outline" size="sm">Set Current</Button>
+                      </form>
+                    {/if}
+                    <form method="POST" action="?/term-delete" class="inline">
+                      <input type="hidden" name="id" value={term.id} />
+                      <Button type="submit" variant="ghost" size="sm" class="text-destructive">Delete</Button>
+                    </form>
+                  </div>
+                </div>
+              {/each}
+            </div>
+
+            <Separator />
+
+            <form method="POST" action="?/term-create" class="space-y-4">
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div class="space-y-2">
+                  <Label for="term_name">Term Name</Label>
+                  <Input id="term_name" name="name" type="text" placeholder="e.g. Term 1, 2026" required />
+                </div>
+                <div class="space-y-2">
+                  <Label for="term_start">Start Date</Label>
+                  <Input id="term_start" name="start_date" type="date" />
+                </div>
+                <div class="space-y-2">
+                  <Label for="term_end">End Date</Label>
+                  <Input id="term_end" name="end_date" type="date" />
+                </div>
+              </div>
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="make_current" value="on" class="h-4 w-4 rounded border-input text-primary focus:ring-ring" />
+                Set as current term
+              </label>
+              <Button type="submit" size="sm">Create Term</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="integrations">
+        <Card>
+          <CardContent class="space-y-5 pt-6">
+            <p class="text-sm text-muted-foreground">
+              M-Pesa (Daraja) powers parent STK payments and teacher B2C payouts. Mobiwave powers SMS alerts.
+              Credentials are encrypted before storage and decrypted only at send time by the backend.
+            </p>
+
+            {#if credTestResult}
+              <Alert variant={credTestResult.ok ? 'default' : 'destructive'}>
+                <AlertTitle>{credTestResult.msg}</AlertTitle>
+              </Alert>
+            {/if}
+
+            {#each credentials as cred (cred.id)}
+              <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3">
+                <div>
+                  <p class="text-sm font-medium text-foreground">{cred.label || cred.provider}</p>
+                  <p class="mt-0.5 text-xs text-muted-foreground">
+                    {cred.provider === 'mpesa' ? 'M-Pesa (Daraja)' : 'Mobiwave SMS'} · {cred.environment} ·
+                    <span class="font-medium text-foreground/70">{cred.test_status ?? 'untested'}</span>
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Button size="sm" variant="secondary" onclick={() => runCredTest(cred.id)} disabled={credTesting === cred.id}>
+                    {#if credTesting === cred.id}
+                      <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    {:else}
+                      Test
+                    {/if}
+                  </Button>
+                  <Button size="sm" variant="outline" onclick={() => openCredEdit(cred)}>Edit</Button>
+                  <form method="POST" action="?/credential-delete" class="inline">
+                    <input type="hidden" name="id" value={cred.id} />
+                    <Button type="submit" size="sm" variant="ghost" class="text-destructive">Delete</Button>
+                  </form>
+                </div>
+              </div>
+            {:else}
+              <p class="text-sm text-muted-foreground">No credentials configured yet. Add the first one below.</p>
+            {/each}
+
+            <Separator />
+
+            <form method="POST" action="?/credential-save" use:enhance={() => {
+              credSaving = true;
+              return async () => { credSaving = false; };
+            }}>
+              <h3 class="mb-4 text-sm font-semibold text-foreground">{credEditId ? 'Edit Credential' : 'Add Credential'}</h3>
+              {#if credEditId}
+                <input type="hidden" name="id" value={credEditId} />
+              {/if}
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div class="space-y-2">
+                    <Label for="cred-provider">Provider</Label>
+                    <select
+                      id="cred-provider" name="provider" bind:value={credProvider}
+                      class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="mpesa">M-Pesa (Daraja)</option>
+                      <option value="mobiwave_sms">Mobiwave SMS</option>
+                    </select>
+                  </div>
+                  <div class="space-y-2">
+                    <Label for="cred-env">Environment</Label>
+                    <select
+                      id="cred-env" name="environment" bind:value={credEnv}
+                      class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="sandbox">Sandbox</option>
+                      <option value="production">Production</option>
+                    </select>
+                  </div>
+                  <div class="space-y-2">
+                    <Label for="cred-label">Label</Label>
+                    <Input id="cred-label" name="label" type="text" bind:value={credLabel} placeholder="e.g. Production Daraja" />
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <Label for="cred-blob">
+                    {credProvider === 'mpesa' ? 'JSON Blob (consumer_key, consumer_secret, passkey, shortcode, initiator_name, security_credential)' : 'API Token'}
+                  </Label>
+                  <textarea
+                    id="cred-blob" name="encrypted_blob" bind:value={credBlob} rows={4}
+                    class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono"
+                    placeholder={credProvider === 'mpesa' ? '{"consumer_key":"...","consumer_secret":"...","passkey":"...","shortcode":"...","initiator_name":"...","security_credential":"..."}' : '{"api_token":"..."}'}
+                    required
+                  ></textarea>
+                  <p class="text-xs text-muted-foreground">
+                    {credProvider === 'mpesa'
+                      ? 'B2C teacher payouts require initiator_name (Daraja initiator username) and security_credential (RSA-encrypted initiator password). Stored encrypted at rest.'
+                      : 'This data is encrypted before storage.'}
+                  </p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <Button type="submit" disabled={credSaving}>{credSaving ? 'Saving...' : credEditId ? 'Update Credential' : 'Save Credential'}</Button>
+                  {#if credEditId}
+                    <Button type="button" variant="outline" onclick={cancelCredForm}>Cancel</Button>
+                  {/if}
+                </div>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  </div>
 </DashboardContent>

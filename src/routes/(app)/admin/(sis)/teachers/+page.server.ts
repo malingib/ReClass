@@ -10,6 +10,9 @@ const teacherSchema = z.object({
   last_name: z.string().min(1, 'Last name is required').max(100),
   employee_no: z.string().max(50).optional(),
   subjects: z.string().max(500).optional(),
+  phone: z.string().max(20).optional(),
+  id_number: z.string().max(30).optional(),
+  remedial_role: z.enum(['chairman', 'treasurer', 'member', 'none']).optional(),
 });
 
 const deleteSchema = z.object({ id: z.string() });
@@ -20,7 +23,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const { data: teachers } = await sb
     .from('teachers')
-    .select('id, first_name, last_name, employee_no, subjects')
+    .select('id, first_name, last_name, employee_no, subjects, phone, id_number, remedial_role')
     .eq('tenant_id', tenantId)
     .is('deleted_at', null)
     .order('first_name');
@@ -41,6 +44,9 @@ export const actions = {
       last_name: v.data.last_name,
       employee_no: v.data.employee_no || null,
       subjects: subjects.length > 0 ? subjects : null,
+      phone: v.data.phone || null,
+      id_number: v.data.id_number || null,
+      remedial_role: v.data.remedial_role || 'none',
     });
     if (error) return fail(500, { message: `Failed: ${error.message}` });
     return { success: true, message: 'Teacher created successfully' };
@@ -59,6 +65,9 @@ export const actions = {
         last_name: v.data.last_name,
         employee_no: v.data.employee_no || null,
         subjects: subjects.length > 0 ? subjects : null,
+        phone: v.data.phone || null,
+        id_number: v.data.id_number || null,
+        remedial_role: v.data.remedial_role || 'none',
       })
       .eq('id', v.data.id)
       .eq('tenant_id', tenantId);

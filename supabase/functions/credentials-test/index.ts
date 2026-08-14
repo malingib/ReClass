@@ -39,12 +39,20 @@ Deno.serve(async (req) => {
       .select('tenant_id, scope')
       .eq('id', credential_id)
       .maybeSingle();
-    const { data: s, error } = credential?.scope === 'tenant'
-      ? await supabase.rpc('decrypt_tenant_credential', {
-          p_id: credential_id,
-          p_tenant: credential.tenant_id,
-        })
-      : await supabase.rpc('decrypt_credential', { p_id: credential_id });
+    let s;
+    let error;
+    if (credential?.scope === 'tenant') {
+      const r = await supabase.rpc('decrypt_tenant_credential', {
+        p_id: credential_id,
+        p_tenant: credential.tenant_id,
+      });
+      s = r.data; error = r.error;
+    } else {
+      // Platform-scope decrypt is service-role only and does not depend on
+      // session context (which never persists across PostgREST requests).
+      const r = await supabase.rpc('decrypt_platform_credential', { p_id: credential_id });
+      s = r.data; error = r.error;
+    }
     if (error || !s) return badRequest('decrypt', req);
 
     let ok = false, detail = '';

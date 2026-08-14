@@ -39,7 +39,6 @@ const ADMIN_ROUTES = [
   '/admin/communications/templates',
   '/admin/notifications',
   // Platform
-  '/admin/credentials',
   '/admin/settings',
   '/admin/users',
   '/admin/reports',

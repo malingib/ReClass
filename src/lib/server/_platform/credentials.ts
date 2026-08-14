@@ -2,6 +2,10 @@ import { fail } from '@sveltejs/kit';
 import { logError } from './log';
 
 const MPESA_KEYS = ['consumer_key', 'consumer_secret', 'passkey', 'shortcode'] as const;
+// B2C payouts (teacher disbursement) also require the Daraja initiator identity.
+// The security_credential is the base64 RSA-encrypted initiator password,
+// created once per environment with the Safaricom public certificate.
+const B2C_KEYS = ['initiator_name', 'security_credential'] as const;
 
 function validateProviderBlob(provider: string, blob: string): string | null {
   try {
@@ -10,6 +14,11 @@ function validateProviderBlob(provider: string, blob: string): string | null {
     if (provider === 'mpesa') {
       for (const key of MPESA_KEYS) {
         if (!parsed[key] || typeof parsed[key] !== 'string') return `Missing or invalid field: ${key}`;
+      }
+      // B2C initiator identity is required for teacher payouts. Enforce at save
+      // time so the payroll payout pre-flight never fails late.
+      for (const key of B2C_KEYS) {
+        if (!parsed[key] || typeof parsed[key] !== 'string') return `Missing or invalid field: ${key} (required for B2C teacher payouts)`;
       }
     } else if (provider === 'mobiwave_sms') {
       if (!parsed.api_token || typeof parsed.api_token !== 'string') return 'Missing or invalid field: api_token';
@@ -30,12 +39,74 @@ export async function getCredentials(sb: App.Locals['srv'], tenantId: string) {
   return data ?? [];
 }
 
+/**
+ * Platform-scoped credentials (scope='platform', purpose='platform_billing').
+ * These are the operator's OWN provider accounts for billing/ops; never a
+ * fallback for tenant sends. Managed only by the super-admin dashboard.
+ */
+export async function getPlatformCredentials(sb: App.Locals['srv']) {
+  const { data } = await sb
+    .from('credentials')
+    .select('id, label, provider, environment, test_status, is_active, created_at, updated_at')
+    .eq('scope', 'platform')
+    .eq('purpose', 'platform_billing')
+    .is('tenant_id', null)
+    .order('created_at', { ascending: false });
+  return data ?? [];
+}
+
 export async function saveCredential(
   sb: App.Locals['srv'],
   tenantId: string,
   formData: { id?: string; provider: string; environment: string; label: string; encrypted_blob: string },
 ) {
-  const { id, provider, environment, label, encrypted_blob } = formData;
+  return saveCredentialRaw(sb, {
+    id: formData.id,
+    provider: formData.provider,
+    environment: formData.environment,
+    label: formData.label,
+    encrypted_blob: formData.encrypted_blob,
+    tenantId,
+    scope: 'tenant' as const,
+    purpose: 'school_send' as const,
+  });
+}
+
+/**
+ * Platform-scoped credential save (super-admin only). Reuses the same
+ * encrypt-at-rest path; the row is scope='platform' / purpose='platform_billing'
+ * with a NULL tenant_id.
+ */
+export async function savePlatformCredential(
+  sb: App.Locals['srv'],
+  formData: { id?: string; provider: string; environment: string; label: string; encrypted_blob: string },
+) {
+  return saveCredentialRaw(sb, {
+    id: formData.id,
+    provider: formData.provider,
+    environment: formData.environment,
+    label: formData.label,
+    encrypted_blob: formData.encrypted_blob,
+    tenantId: null,
+    scope: 'platform' as const,
+    purpose: 'platform_billing' as const,
+  });
+}
+
+async function saveCredentialRaw(
+  sb: App.Locals['srv'],
+  formData: {
+    id?: string;
+    provider: string;
+    environment: string;
+    label: string;
+    encrypted_blob: string;
+    tenantId: string | null;
+    scope: 'tenant' | 'platform';
+    purpose: 'school_send' | 'platform_billing';
+  },
+) {
+  const { id, provider, environment, label, encrypted_blob, tenantId, scope, purpose } = formData;
 
   if (!provider || !encrypted_blob) {
     return fail(400, { error: 'Provider and credentials are required' });
@@ -57,8 +128,8 @@ export async function saveCredential(
 
   const payload = {
     tenant_id: tenantId,
-    scope: 'tenant' as const,
-    purpose: 'school_send' as const,
+    scope,
+    purpose,
     provider: provider === 'mpesa' ? 'mpesa' as const : 'mobiwave_sms' as const,
     environment: (environment === 'production' ? 'production' : 'sandbox') as 'sandbox' | 'production',
     label: label || provider,
@@ -68,12 +139,18 @@ export async function saveCredential(
   };
 
   if (id) {
-    const { error } = await sb
+    const query = sb
       .from('credentials')
       .update(payload)
       .eq('id', id)
-      .eq('tenant_id', tenantId)
-      .eq('scope', 'tenant');
+      .eq('scope', scope);
+    if (scope === 'tenant') {
+      if (tenantId == null) return fail(400, { error: 'Tenant context missing.' });
+      query.eq('tenant_id', tenantId);
+    } else {
+      query.is('tenant_id', null);
+    }
+    const { error } = await query;
 
     if (error) {
       logError('credential_update', error, { id });
@@ -157,6 +234,75 @@ export async function testCredential(sb: App.Locals['srv'], tenantId: string, id
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .eq('scope', 'tenant');
+
+  return {
+    success: true as const,
+    testResult: ok ? 'ok' : 'failed',
+    message: result?.message ?? (ok ? 'Credential verified successfully' : 'Credential verification failed'),
+  };
+}
+
+export async function deletePlatformCredential(sb: App.Locals['srv'], id: string) {
+  if (!id) return fail(400, { error: 'Credential ID is required' });
+
+  const { error } = await sb
+    .from('credentials')
+    .delete()
+    .eq('id', id)
+    .eq('scope', 'platform')
+    .is('tenant_id', null);
+
+  if (error) {
+    logError('credential_delete_platform', error, { id });
+    return fail(500, { error: 'Failed to delete credential.' });
+  }
+
+  return { success: true as const };
+}
+
+export async function testPlatformCredential(sb: App.Locals['srv'], id: string) {
+  if (!id) return fail(400, { error: 'Credential ID is required' });
+
+  const { data: credential } = await sb
+    .from('credentials')
+    .select('id')
+    .eq('id', id)
+    .eq('scope', 'platform')
+    .is('tenant_id', null)
+    .maybeSingle();
+  if (!credential) return fail(404, { error: 'Credential not found' });
+
+  await sb
+    .from('credentials')
+    .update({ test_status: 'untested' })
+    .eq('id', id)
+    .eq('scope', 'platform')
+    .is('tenant_id', null);
+
+  const { data: result, error: fnError } = await sb.functions.invoke('credentials-test', {
+    body: { credential_id: id },
+  });
+
+  if (fnError) {
+    await sb
+      .from('credentials')
+      .update({ test_status: 'failed', last_tested_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('scope', 'platform')
+      .is('tenant_id', null);
+    return fail(500, { error: `Test failed: ${fnError.message}` });
+  }
+
+  const ok = result?.ok === true;
+  await sb
+    .from('credentials')
+    .update({
+      test_status: ok ? 'ok' : 'failed',
+      last_tested_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('scope', 'platform')
+    .is('tenant_id', null);
 
   return {
     success: true as const,

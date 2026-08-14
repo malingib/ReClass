@@ -249,7 +249,7 @@ export type Database = {
           provider: string
           purpose: string
           scope: string
-          tenant_id: string
+          tenant_id: string | null
           test_status: string | null
           updated_at: string
         }
@@ -265,7 +265,7 @@ export type Database = {
           provider: string
           purpose: string
           scope: string
-          tenant_id: string
+          tenant_id?: string | null
           test_status?: string | null
           updated_at?: string
         }
@@ -281,7 +281,7 @@ export type Database = {
           provider?: string
           purpose?: string
           scope?: string
-          tenant_id?: string
+          tenant_id?: string | null
           test_status?: string | null
           updated_at?: string
         }
@@ -294,6 +294,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_config: {
+        Row: {
+          comment: string | null
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value_encrypted: string | null
+        }
+        Insert: {
+          comment?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value_encrypted?: string | null
+        }
+        Update: {
+          comment?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value_encrypted?: string | null
+        }
+        Relationships: []
       }
       expenses: {
         Row: {
@@ -825,14 +852,19 @@ export type Database = {
       payroll_runs: {
         Row: {
           amount: number
+          b2c_checkout_id: string | null
+          b2c_status: string | null
           created_at: string | null
           deleted_at: string | null
           domain: string
           id: string
+          last_error: string | null
+          mpesa_receipt: string | null
           occurrences_count: number
           paid_at: string | null
           period_end: string
           period_start: string
+          processing_at: string | null
           rate_per_session: number
           salary_amount: number | null
           status: string | null
@@ -842,14 +874,19 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          b2c_checkout_id?: string | null
+          b2c_status?: string | null
           created_at?: string | null
           deleted_at?: string | null
           domain?: string
           id?: string
+          last_error?: string | null
+          mpesa_receipt?: string | null
           occurrences_count?: number
           paid_at?: string | null
           period_end: string
           period_start: string
+          processing_at?: string | null
           rate_per_session?: number
           salary_amount?: number | null
           status?: string | null
@@ -859,14 +896,19 @@ export type Database = {
         }
         Update: {
           amount?: number
+          b2c_checkout_id?: string | null
+          b2c_status?: string | null
           created_at?: string | null
           deleted_at?: string | null
           domain?: string
           id?: string
+          last_error?: string | null
+          mpesa_receipt?: string | null
           occurrences_count?: number
           paid_at?: string | null
           period_end?: string
           period_start?: string
+          processing_at?: string | null
           rate_per_session?: number
           salary_amount?: number | null
           status?: string | null
@@ -1467,9 +1509,12 @@ export type Database = {
           employee_no: string | null
           first_name: string
           id: string
+          id_number: string | null
           last_name: string
+          phone: string | null
           profile_id: string | null
           remedial_rate_per_session: number | null
+          remedial_role: string
           salary_monthly: number | null
           subjects: string[] | null
           teacher_type: string
@@ -1481,9 +1526,12 @@ export type Database = {
           employee_no?: string | null
           first_name: string
           id?: string
+          id_number?: string | null
           last_name: string
+          phone?: string | null
           profile_id?: string | null
           remedial_rate_per_session?: number | null
+          remedial_role?: string
           salary_monthly?: number | null
           subjects?: string[] | null
           teacher_type?: string
@@ -1495,9 +1543,12 @@ export type Database = {
           employee_no?: string | null
           first_name?: string
           id?: string
+          id_number?: string | null
           last_name?: string
+          phone?: string | null
           profile_id?: string | null
           remedial_rate_per_session?: number | null
+          remedial_role?: string
           salary_monthly?: number | null
           subjects?: string[] | null
           teacher_type?: string
@@ -1513,6 +1564,50 @@ export type Database = {
           },
           {
             foreignKeyName: "teachers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      terms: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          end_date: string | null
+          id: string
+          is_current: boolean | null
+          name: string
+          start_date: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean | null
+          name: string
+          start_date?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean | null
+          name?: string
+          start_date?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terms_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1568,6 +1663,7 @@ export type Database = {
           buni_shortcode: string | null
           created_at: string | null
           currency: string | null
+          current_term_id: string | null
           deleted_at: string | null
           id: string
           kcb_account_no: string | null
@@ -1592,6 +1688,7 @@ export type Database = {
           buni_shortcode?: string | null
           created_at?: string | null
           currency?: string | null
+          current_term_id?: string | null
           deleted_at?: string | null
           id?: string
           kcb_account_no?: string | null
@@ -1616,6 +1713,7 @@ export type Database = {
           buni_shortcode?: string | null
           created_at?: string | null
           currency?: string | null
+          current_term_id?: string | null
           deleted_at?: string | null
           id?: string
           kcb_account_no?: string | null
@@ -1634,7 +1732,15 @@ export type Database = {
           timezone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_current_term_id_fkey"
+            columns: ["current_term_id"]
+            isOneToOne: false
+            referencedRelation: "terms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unmatched_payments: {
         Row: {
@@ -1770,11 +1876,13 @@ export type Database = {
         Returns: string
       }
       decrypt_credential: { Args: { p_id: string }; Returns: Json }
+      decrypt_platform_credential: { Args: { p_id: string }; Returns: Json }
       decrypt_tenant_credential: {
         Args: { p_id: string; p_tenant: string }
         Returns: Json
       }
       encrypt_credential: { Args: { p_json: Json }; Returns: string }
+      get_platform_config: { Args: never; Returns: Json }
       generate_future_session_occurrences: {
         Args: { p_through?: string }
         Returns: number
@@ -1845,6 +1953,31 @@ export type Database = {
         }
         Returns: string
       }
+      claim_payroll_run: {
+        Args: {
+          p_profile_id: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      finalize_payroll_b2c: {
+        Args: {
+          p_b2c_checkout_id: string
+          p_result_code: number
+          p_result_desc: string
+          p_receipt?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      set_current_term: {
+        Args: {
+          p_tenant_id: string
+          p_term_id: string
+        }
+        Returns: Json
+      }
       review_teacher_attendance: {
         Args: {
           p_attendance_id: string
@@ -1855,9 +1988,12 @@ export type Database = {
         }
         Returns: Json
       }
-      set_tenant_context:
-        | { Args: { p_role: string; p_tenant: string }; Returns: undefined }
+      set_tenant_context:        | { Args: { p_role: string; p_tenant: string }; Returns: undefined }
         | { Args: { p_tenant_id: string }; Returns: undefined }
+      set_platform_config: {
+        Args: { p_key: string; p_value: string; p_updated_by?: string | null }
+        Returns: Json
+      }
       tenant_setting_enabled: {
         Args: { p_key: string; p_tenant: string }
         Returns: boolean
