@@ -20,8 +20,6 @@
     <p class="mt-3 text-lg text-ink-500">
       {#if status === 404}
         The page you're looking for doesn't exist.
-      {:else if error?.code === 'module_not_enabled'}
-        {error.message}
       {:else if status === 403}
         You don't have permission to access this page.
       {:else}

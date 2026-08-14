@@ -1,9 +1,11 @@
 export const COOKIE_USER_TTL_SECONDS = 300;
 export const COOKIE_USER_NAME = 'x-reclass-user';
-export const COOKIE_IMPERSONATE_NAME = 'x-reclass-impersonate';
 export const COOKIE_ROLE_NAME = 'x-reclass-role';
 
-export const IMPERSONATION_TTL_MS = 60 * 60 * 1000;
+// Single-tenant deployment: this school is the only tenant. Kept as a constant
+// (not stripped from the schema) so every existing `tenant_id` filter still
+// matches. Re-tenanting later is a one-line change here, not a 47-file rewrite.
+export const TENANT_ID = '11111111-1111-1111-1111-111111111111';
 
 export const EXPORT_MAX_ROWS = 10_000;
 export const EXPORT_BURSA_MAX_ROWS = 5_000;
@@ -19,7 +21,6 @@ export const WAIVERS_SEARCH_LIMIT = 500;
 export const NOTIFICATION_RETRY_MAX = 3;
 
 export const ROUTE_LOGIN = '/login';
-export const ROUTE_NOT_PROVISIONED = '/not-provisioned';
 export const PUBLIC_ROUTES = ['/account', '/notifications', '/api/logout', '/api/role/switch'];
 
 // Content-Security-Policy. SvelteKit hydration + Vite inline the runtime, so

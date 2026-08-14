@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
   import NotificationToaster from '$lib/components/NotificationToaster.svelte';
-  import { suiteModules, moduleIcons, routeFor, isAlwaysOn, type SuiteModule } from '$lib/modules';
+  import { suiteModules, moduleIcons, routeFor, type SuiteModule } from '$lib/modules';
   import { roleLabels, roleRoutes, type Role } from '$lib/auth';
 
   const {
@@ -14,8 +14,6 @@
     role = 'school_admin',
     roles = null,
     user = { name: 'eShule Admin', email: 'admin@eshule.app' },
-    enabledModules = null,
-    impersonating = false,
     children,
   }: {
     title: string;
@@ -25,8 +23,6 @@
     role?: string;
     roles?: Role[] | null;
     user?: { name?: string; email?: string };
-    enabledModules?: string[] | null;
-    impersonating?: boolean;
     children?: import('svelte').Snippet;
   } = $props();
 
@@ -190,28 +186,14 @@
     }));
   });
 
-  // enabledModules === null → all modules provisioned (super_admin / fresh tenant).
-  // alwaysOn modules (sis/platform) can never be disabled — always allowed.
-  const moduleAllowed = $derived.by(() => {
-    const set = enabledModules ? new Set(enabledModules) : null;
-    return (mod: string | undefined) => !mod || isAlwaysOn(mod) || !set || set.has(mod);
-  });
-
-  // Per-item derivation (no group→module map): each link gates by its own
-  // owning module from the registry. The admin shell shows a group while the
-  // active module is present in it — so mixed groups (e.g. "Remedial program"
-  // holding the SIS-owned Subjects link) keep every allowed link visible from
-  // its nav home. Non-admin portals are shells that span modules (Section 2):
-  // they show every allowed item so disabling a module shrinks, never empties,
-  // them.
+  // Per-item derivation (no group→module map): the admin shell shows a group
+  // while the active module is present in it; non-admin portals show every item.
   const filteredNAV = $derived(
     isModuleHub ? [] : NAV
       .map((g) => {
-        const items = g.items.filter((it) => moduleAllowed(routeFor(it.href)));
-        if (items.length === 0) return null;
         if (role === 'school_admin' && activeModule
-            && !items.some((it) => routeFor(it.href) === activeModule)) return null;
-        return { ...g, items };
+            && !g.items.some((it) => routeFor(it.href) === activeModule)) return null;
+        return { ...g };
       })
       .filter((g): g is NonNullable<typeof g> => g !== null)
   );
@@ -442,9 +424,6 @@
             <span aria-hidden="true">›</span>
             <span class="font-medium text-slate-500">{currentModule.name}</span>
           </nav>
-        {/if}
-        {#if impersonating}
-          <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Impersonating</span>
         {/if}
         <p class="text-sm font-semibold text-slate-900">{currentModule?.name ?? 'eShule'}</p>
         <p class="text-xs text-slate-500">{title}</p>

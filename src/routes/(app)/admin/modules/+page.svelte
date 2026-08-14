@@ -17,14 +17,9 @@
   let mounted = $state(false);
   onMount(() => { requestAnimationFrame(() => { mounted = true; }); });
 
-  // Only modules the super admin has provisioned for this tenant.
-  const enabledModules = $derived.by<Set<string> | null>(() => {
-    const list = ($page.data as { enabledModules?: string[] | null }).enabledModules;
-    return list ? new Set(list) : null; // null = all modules
-  });
-
+  // All available modules are shown (single-tenant: nothing is provisioned per-tenant).
   const visibleModules = $derived(
-    suiteModules.filter(m => m.status === 'available' && (!enabledModules || enabledModules.has(m.id)))
+    suiteModules.filter(m => m.status === 'available')
   );
 </script>
 

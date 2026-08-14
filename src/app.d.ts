@@ -15,8 +15,6 @@ declare global {
       role: Role | null;
       roles: Role[] | null;
       tenantId: string;
-      impersonating: boolean;
-      enabledModules: string[] | null;
       srv: SupabaseClient<Database>;
       adminSrv: SupabaseClient<Database>;
       requestId: string;

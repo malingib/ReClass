@@ -29,6 +29,6 @@
     : 'School management');
 </script>
 
-<AppShell {title} {subtitle} {role} roles={data.roles} user={cookieUser} enabledModules={data.enabledModules} impersonating={data.impersonating}>
+<AppShell {title} {subtitle} {role} roles={data.roles} user={cookieUser}>
   {@render children?.()}
 </AppShell>
