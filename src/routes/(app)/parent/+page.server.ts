@@ -33,7 +33,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   return {
     parent,
     students: students ?? [],
-    payments: (payments ?? []).map((p: any) => ({
+    payments: (payments ?? []).map((p: { id: string; amount?: number | null; domain?: string; fee_types?: { name?: string | null } | null; created_at?: string | null }) => ({
       ...p,
       fee_type: p.fee_types?.name ?? '—',
     })),
