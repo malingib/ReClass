@@ -13,7 +13,7 @@
   interface Fee { id: string; name: string; amount: number; due_date: string | null; term: string | null }
   interface ActionData extends Record<string, unknown> { message?: string; errors?: Record<string, string[]> }
 
-  let { title, subtitle, emptyMessage, fees }: {
+  const { title, subtitle, emptyMessage, fees }: {
     title: string; subtitle: string; emptyMessage: string; fees: Fee[];
   } = $props();
 

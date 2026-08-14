@@ -1,6 +1,6 @@
 <script>
   import { LineChart } from '@eshule/shared';
-  let props = $props();
+  const props = $props();
 </script>
 
 <LineChart {...props} />

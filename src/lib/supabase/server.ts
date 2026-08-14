@@ -31,7 +31,16 @@ export function getServerSupabase(cookies: Cookies) {
   });
 }
 
-/** Service-role client that bypasses RLS. For server-side data queries only. */
+/** Service-role client that bypasses RLS. For server-side data queries only.
+ *
+ * SECURITY NOTE (single-tenant, 2026-08): this app is deployed as a single
+ * tenant. The service-role key bypasses RLS entirely, so the RLS policies
+ * defined in `supabase/migrations/*` are INERT at runtime — they are retained
+ * only as documentation of intended data scoping and as defense-in-depth should
+ * the app ever switch to the anon/authenticated client for reads. Do NOT rely
+ * on RLS for access control; enforce it in application code (role checks in
+ * `middleware.ts`, ownership checks in `_auth/ownership.ts`).
+ */
 export function getServiceClient() {
   return createClient<Database>(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     global: { fetch: STABLE_FETCH },

@@ -1,6 +1,6 @@
 <script>
   import { KpiCard } from '@eshule/shared';
-  let props = $props();
+  const props = $props();
 </script>
 
 <KpiCard {...props} />

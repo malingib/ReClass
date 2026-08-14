@@ -8,19 +8,16 @@
   let isLoading = $state(true);
   let error = $state<string | null>(null);
   let selected = $state<Set<string>>(new Set());
+  // null = no confirm open; otherwise the pending deletion to confirm.
+  let confirmDelete = $state<{ mode: 'selected' } | { mode: 'one'; id: string } | null>(null);
   const supabase = getSupabase();
   const tenantId = $derived(data.tenantId);
-
-  async function ensureContext() {
-    if (tenantId) await (supabase.rpc as any)('set_tenant_context', { p_tenant_id: tenantId });
-  }
 
   $effect(() => {
     async function load() {
       isLoading = true;
       error = null;
       try {
-        await ensureContext();
         let q = supabase
           .from('notifications')
           .select('id, body, created_at, channel, template, status, related_type, related_id')
@@ -59,29 +56,46 @@
     selected = next;
   }
 
-  async function deleteSelected() {
-    if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} notification${selected.size !== 1 ? 's' : ''}?`)) return;
+  async function performDelete() {
+    const target = confirmDelete;
+    if (!target) return;
+    let ids: string[] = [];
+    if (target.mode === 'selected') ids = [...selected];
+    else ids = [target.id];
+    if (ids.length === 0) { confirmDelete = null; return; }
+
     const { error: delError } = await supabase
       .from('notifications')
       .delete()
-      .in('id', [...selected]);
+      .in('id', ids);
     if (delError) {
       error = 'Failed to delete notifications. Please try again.';
+      confirmDelete = null;
       return;
     }
-    items = items.filter((n) => !selected.has(n.id));
+    items = items.filter((n) => !ids.includes(n.id));
     selected = new Set();
-  }
-
-  async function deleteOne(id: string) {
-    const { error: delError } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('id', id);
-    if (!delError) items = items.filter((n) => n.id !== id);
+    confirmDelete = null;
   }
 </script>
+
+<!-- Confirm-delete modal (replaces native confirm()) -->
+{#if confirmDelete}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4" role="dialog" aria-modal="true" aria-label="Confirm delete">
+    <div class="w-full max-w-sm rounded-xl border border-border bg-white p-6 shadow-card">
+      <h2 class="text-base font-semibold text-ink-900">Delete notification{confirmDelete.mode === 'selected' ? 's' : ''}?</h2>
+      <p class="mt-2 text-sm text-ink-600">
+        {confirmDelete.mode === 'selected'
+          ? `Delete ${selected.size} selected notification${selected.size !== 1 ? 's' : ''}? This cannot be undone.`
+          : 'Delete this notification? This cannot be undone.'}
+      </p>
+      <div class="mt-5 flex justify-end gap-3">
+        <button type="button" onclick={() => (confirmDelete = null)} class="rounded-md border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+        <button type="button" onclick={performDelete} class="rounded-md bg-danger px-3.5 py-2 text-sm font-medium text-white hover:bg-danger/90">Delete</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <div class="rounded-xl border border-border bg-white shadow-card">
   <div class="flex items-center justify-between border-b border-border px-6 py-5">
@@ -94,7 +108,7 @@
     </div>
     <div class="flex items-center gap-3">
       {#if selected.size > 0}
-        <button onclick={deleteSelected} class="text-sm font-medium text-danger hover:text-danger/80">
+        <button onclick={() => (confirmDelete = { mode: 'selected' })} class="text-sm font-medium text-danger hover:text-danger/80">
           Delete ({selected.size})
         </button>
       {/if}
@@ -143,7 +157,7 @@
               </span>
             </button>
             <button
-              onclick={() => deleteOne(item.id)}
+              onclick={() => (confirmDelete = { mode: 'one', id: item.id })}
               class="shrink-0 text-xs font-medium text-ink-400 hover:text-danger"
               title="Delete"
             >

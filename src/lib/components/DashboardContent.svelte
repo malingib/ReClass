@@ -1,6 +1,6 @@
 <script>
   import { DashboardContent } from '@eshule/shared';
-  let props = $props();
+  const props = $props();
 </script>
 
 <DashboardContent {...props} />

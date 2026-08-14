@@ -1,6 +1,6 @@
 <script>
   import { LoadingButton } from '@eshule/shared';
-  let props = $props();
+  const props = $props();
 </script>
 
 <LoadingButton {...props} />

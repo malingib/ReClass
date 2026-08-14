@@ -2,7 +2,7 @@
   import { enhance } from '$app/forms';
   import type { Snippet } from 'svelte';
 
-  let {
+  const {
     action,
     message,
     label = 'Delete',

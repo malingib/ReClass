@@ -1,5 +1,5 @@
 import { getServiceClient } from '../_shared/supabase.ts';
-import { json, badRequest, notFound, unauthorized, internalError } from '../_shared/response.ts';
+import { json, badRequest, unauthorized, internalError } from '../_shared/response.ts';
 import { getPlatformConfig } from '../_shared/platform-config.ts';
 
 const supabase = getServiceClient();

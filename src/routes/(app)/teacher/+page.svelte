@@ -1,13 +1,11 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
-  import type { Capability } from '$lib/server/_auth/capabilities';
   import { EnhancedKpiCard, Skeleton } from '@eshule/shared';
 
   const { data } = $props();
   const stats = $derived(data.stats);
   const today = new Date().toISOString().slice(0, 10);
   const occurrences = $derived(data.occurrences.filter((occurrence: any) => occurrence.occurs_on <= today));
-  const caps = $derived((data.capabilities ?? []) as Capability[]);
   const announcements = $derived(data.announcements);
   const loading = $derived(!stats);
   const teacherTypeLabel = $derived(

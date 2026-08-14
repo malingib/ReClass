@@ -1,6 +1,6 @@
 <script>
   import { CardContent } from '$lib/components/ui/card/index.js';
-  let props = $props();
+  const props = $props();
 </script>
 
 <CardContent {...props} />

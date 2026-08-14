@@ -1,8 +1,9 @@
 <script lang="ts">
   import { getSupabase } from '$lib/supabase/client';
   import DashboardContent from '$lib/components/DashboardContent.svelte';
+  import type { PageData } from './$types';
 
-  const { data } = $props();
+  const { data }: { data: PageData } = $props();
 
   let selectedStudentId = $state('');
   let selectedFeeTypeId = $state('');
@@ -12,10 +13,10 @@
   let error = $state<string | null>(null);
 
   const selectedStudent = $derived(
-    data.students.find((s: any) => s.id === selectedStudentId) ?? null
+    data.students.find((s) => s.id === selectedStudentId) ?? null
   );
   const selectedFee = $derived(
-    data.feeTypes.find((f: any) => f.id === selectedFeeTypeId) ?? null
+    data.feeTypes.find((f) => f.id === selectedFeeTypeId) ?? null
   );
   // Channel for the SELECTED fee's domain (one per domain, set by the school).
   const selectedDomain = $derived(selectedFee?.domain === 'school' ? 'school' : 'remedial');
@@ -23,8 +24,8 @@
     selectedDomain === 'school' ? data.channels.school : data.channels.remedial
   );
   const feeTypesByDomain = $derived({
-    school: data.feeTypes.filter((f: any) => f.domain === 'school'),
-    remedial: data.feeTypes.filter((f: any) => f.domain === 'remedial'),
+    school: data.feeTypes.filter((f) => f.domain === 'school'),
+    remedial: data.feeTypes.filter((f) => f.domain === 'remedial'),
   });
 
   let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -63,7 +64,7 @@
 
   async function handlePay(e: Event) {
     e.preventDefault();
-    if (!selectedStudentId || !selectedFeeTypeId) return;
+    if (!selectedStudentId || !selectedFeeTypeId || loading || polling) return;
     error = null;
     success = null;
     loading = true;
@@ -73,11 +74,14 @@
         body: { student_id: selectedStudentId, fee_type_id: selectedFeeTypeId },
       });
       if (fnErr) throw fnErr;
+      // Hand off to polling WITHOUT a gap where the button is re-enabled.
+      polling = true;
       loading = false;
       startPolling(selectedStudentId, selectedFeeTypeId);
-    } catch {
+    } catch (err) {
       loading = false;
-      error = 'Payment request failed. Please try again or contact the school.';
+      const msg = err instanceof Error ? err.message : String(err);
+      error = `Payment request failed${msg ? ` (${msg})` : ''}. Please try again or contact the school.`;
     }
   }
 </script>

@@ -1,6 +1,6 @@
 <script>
   import { RecentActivity } from '@eshule/shared';
-  let props = $props();
+  const props = $props();
 </script>
 
 <RecentActivity {...props} />
