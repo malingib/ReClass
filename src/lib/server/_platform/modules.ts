@@ -70,9 +70,7 @@ export async function getEnabledModules(
       return null;
     }
     // Rows exist — honor exactly what is enabled; an empty list is "nothing on".
-    // Legacy 'reclass' rows normalize to 'remedial' (see normalizeModuleId).
-    // Dedupe in case a tenant holds both ids (toggle mirror before migration).
-    const ids = [...new Set(rows.filter((r) => r.enabled).map((r) => normalizeModuleId(r.module_id)))];
+    const ids = [...new Set(rows.filter((r) => r.enabled).map((r) => r.module_id))];
     moduleCache.set(tenantId, { data: ids, ts: Date.now() });
     return ids;
   } finally {
@@ -88,19 +86,6 @@ export function invalidateModuleCache(tenantId?: string) {
   } else {
     moduleCache.clear();
   }
-}
-
-/**
- * Normalize the legacy 'reclass' module id → 'remedial'.
- *
- * The rename migration (20260807000001_remedial_module_rename.sql) is still
- * pending, so live tenants keep tenant_modules rows under the old id. Mapping
- * here keeps the registry and the DB in agreement (sidebar, guard, module hub).
- * Single source of truth for the bridge — when the migration lands, delete
- * this helper and the call sites that use it.
- */
-export function normalizeModuleId(id: string): string {
-  return id === 'reclass' ? 'remedial' : id;
 }
 
 /** True when a module id is in the enabled set (null set = all enabled). */

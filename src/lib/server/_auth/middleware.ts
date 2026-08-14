@@ -208,7 +208,7 @@ export function routeGuard(event: Parameters<Handle>[0]['event']): void {
   if (event.locals.enabledModules && !impersonating) {
     const mod = gatedModuleForPath(pathname);
     if (mod && !isAlwaysOn(mod) && !event.locals.enabledModules.includes(mod)) {
-      error(404, 'This module is not enabled for your school.');
+      error(403, { message: `The "${mod}" module is not enabled for your school. Contact your administrator to turn it on.`, code: 'module_not_enabled' });
     }
   }
 }

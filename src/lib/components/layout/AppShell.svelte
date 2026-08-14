@@ -61,7 +61,7 @@
         { label: 'Subjects', href: '/admin/subjects', icon: 'subjects' },
         { label: 'Scheduling', href: '/admin/scheduling', icon: 'calendar' },
         { label: 'Teacher attendance', href: '/admin/attendance', icon: 'calendar' },
-        { label: 'Teacher payroll', href: '/admin/payroll', icon: 'invoices' },
+        { label: 'Remedial teacher payroll', href: '/admin/payroll', icon: 'invoices' },
         { label: 'Student ledger', href: '/admin/reclass/students', icon: 'students' },
       ]},
       { label: 'School fees', defaultOpen: true, items: [
@@ -170,13 +170,23 @@
     suiteModules.find(m => m.id === activeModule) ?? (activeModule === 'platform' ? platformModule : undefined)
   );
 
-  const NAV = $derived(
-    (roleNav[role] ?? roleNav.school_admin).map((g) => ({
+  // Resolve the role's nav config. A missing key is a real config mistake (roles
+  // are a closed enum in @eshule/shared) — fail visible with an empty nav + a
+  // notice rather than silently rendering the admin's links.
+  const roleNavConfig = $derived(roleNav[role] ?? null);
+  let navMisconfigured = $state(false);
+  const NAV = $derived.by(() => {
+    if (!roleNavConfig) {
+      navMisconfigured = true;
+      return [] as typeof roleNav.school_admin;
+    }
+    navMisconfigured = false;
+    return roleNavConfig.map((g) => ({
       ...g,
       label: g.label,
       items: g.items.map((it) => ({ ...it, label: it.label })),
-    }))
-  );
+    }));
+  });
 
   // enabledModules === null → all modules provisioned (super_admin / fresh tenant).
   // alwaysOn modules (sis/platform) can never be disabled — always allowed.
@@ -325,6 +335,11 @@
     {/if}
 
     <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+      {#if navMisconfigured}
+        <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          Navigation for the "{role}" role is not configured. Contact your administrator.
+        </div>
+      {/if}
       {#each filteredNAV as group}
         <div>
           <button
@@ -419,6 +434,13 @@
   <div class="flex min-w-0 flex-1 flex-col">
     <header class="flex h-14 shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-4 lg:px-6">
       <div class="min-w-0">
+        {#if !isModuleHub && currentModule}
+          <nav class="mb-0.5 flex items-center gap-1 text-xs text-slate-400" aria-label="Breadcrumb">
+            <a href="/admin/modules" class="hover:text-slate-600 hover:underline">All modules</a>
+            <span aria-hidden="true">›</span>
+            <span class="font-medium text-slate-500">{currentModule.name}</span>
+          </nav>
+        {/if}
         <p class="text-sm font-semibold text-slate-900">{currentModule?.name ?? 'eShule'}</p>
         <p class="text-xs text-slate-500">{title}</p>
       </div>

@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
 import { suiteModules, MODULE_LIST, type SuiteModule } from '$lib/modules';
-import { invalidateModuleCache, normalizeModuleId } from '$lib/server/_platform/modules';
+import { invalidateModuleCache } from '$lib/server/_platform/modules';
 
 // Super admin provisions which modules each tenant can use.
 // System-level table — no tenant filter (super admin only).
@@ -38,10 +38,9 @@ export const load: PageServerLoad = async ({ locals }) => {
   ];
 
   // Count enabled provisionable modules only (alwaysOn rows like sis are inert).
-  // Legacy 'reclass' rows count as 'remedial' until the rename migration lands.
   const enabledMap = new Map<string, Set<string>>();
   for (const r of rows ?? []) {
-    const id = normalizeModuleId(r.module_id);
+    const id = r.module_id;
     if (!r.enabled || !provisionableIds.has(id)) continue;
     if (!enabledMap.has(r.tenant_id)) enabledMap.set(r.tenant_id, new Set());
     enabledMap.get(r.tenant_id)!.add(id);
@@ -79,27 +78,6 @@ export const actions: Actions = {
     );
 
     if (error) return { error: error.message };
-
-    // Mirror the toggle onto a legacy 'reclass' row — but only if one still
-    // exists. Once the rename migration lands there is no legacy row, so the
-    // bridge never resurrects one; before it lands, a stale reclass=true would
-    // otherwise keep the module enabled through the read-time normalization.
-    if (moduleId === 'remedial') {
-      const { data: legacy } = await locals.srv
-        .from('tenant_modules')
-        .select('module_id')
-        .eq('tenant_id', tenantId)
-        .eq('module_id', 'reclass')
-        .is('deleted_at', null)
-        .maybeSingle();
-      if (legacy) {
-        const { error: mirrorError } = await locals.srv.from('tenant_modules').upsert(
-          { tenant_id: tenantId, module_id: 'reclass', enabled },
-          { onConflict: 'tenant_id,module_id' },
-        );
-        if (mirrorError) return { error: mirrorError.message };
-      }
-    }
 
     // Bust the in-memory module cache so the tenant's next page load sees
     // the updated provisioning immediately.

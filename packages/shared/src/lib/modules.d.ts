@@ -62,11 +62,6 @@ export const MODULE_LIST: readonly ModuleDef[];
 
 export const KERNEL_MODULES: readonly ServerModuleKey[];
 
-/** Ungated kernel pages, classified as platform for reporting/audits. */
-export const KERNEL_ROUTES: readonly string[];
-
-export const PUBLIC_SURFACE: readonly string[];
-
 export const ROLE_SURFACE: ReadonlyArray<readonly [string, ModuleId]>;
 
 export const suiteModules: readonly SuiteModule[];

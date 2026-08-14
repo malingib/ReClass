@@ -53,19 +53,22 @@ describe('getEnabledModules (Phase 3 semantics)', () => {
     await expect(getEnabledModules(db, 't1', 'school_admin')).resolves.toEqual(['remedial', 'reports', 'sis']);
   });
 
-  it('normalizes legacy reclass rows to remedial until the rename migration lands', async () => {
+  it('returns module ids verbatim (no legacy reclass→remedial normalization)', async () => {
+    // The rename migration (20260807000001) has been applied and live
+    // tenant_modules holds only canonical ids ('remedial', not 'reclass').
+    // getEnabledModules must therefore pass ids through unchanged — the DB is
+    // the single source of truth. A legacy 'reclass' row would surface as-is,
+    // which is exactly why the migration must stay applied.
     const { db } = fakeDb([
-      { module_id: 'reclass', enabled: true },
+      { module_id: 'remedial', enabled: true },
       { module_id: 'finance', enabled: true },
     ]);
-    // Live tenants still hold the old id — the read layer must bridge it so
-    // the registry, sidebar, and route guard all agree on 'remedial'.
     await expect(getEnabledModules(db, 't1', 'school_admin')).resolves.toEqual(['remedial', 'finance']);
 
-    // Disabled legacy rows stay filtered out.
+    // Disabled rows stay filtered out.
     const second = fakeDb([
-      { module_id: 'reclass', enabled: false },
       { module_id: 'remedial', enabled: false },
+      { module_id: 'finance', enabled: false },
     ]);
     await expect(getEnabledModules(second.db, 't2', 'school_admin')).resolves.toEqual([]);
   });

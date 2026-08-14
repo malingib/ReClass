@@ -4,6 +4,10 @@ import type { Database } from '$lib/supabase/database.types';
 
 declare global {
   namespace App {
+    interface Error {
+      message: string;
+      code?: string;
+    }
     interface Locals {
       supabase: SupabaseClient<Database>;
       session: Session | null;

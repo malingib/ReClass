@@ -5,7 +5,7 @@
  *   - `suiteModules` / `moduleIcons`   → module hub cards, sidebar switcher, launcher
  *   - `routeFor()`                     → route → module context (switcher + audits)
  *   - `gatedModuleForPath()`           → route → owning module for the guard
- *   - `canImport()` / `PUBLIC_SURFACE` → server import-boundary enforcement
+ *   - `canImport()`                    → server import-boundary enforcement
  *   - provisioning semantics           → `provisionable` / `alwaysOn`
  *
  * Conventions:
@@ -17,14 +17,8 @@
  *     the legacy 'reclass' in Phase 3); URL routes still use '/admin/reclass'.
  */
 
-/** Files that are always "public surface" for cross-module server imports. */
-export const PUBLIC_SURFACE = ['index.ts', 'contracts.ts', 'api.ts'];
-
 /** Server folders that every module may import freely. */
 export const KERNEL_MODULES = ['_auth', '_platform'];
-
-/** Ungated kernel pages, classified as platform for reporting/audits. */
-export const KERNEL_ROUTES = ['/account', '/notifications'];
 
 /**
  * Role-surface prefixes → module context for the switcher/accent. Context only:

@@ -4,8 +4,6 @@ export {
   MODULES,
   MODULE_LIST,
   KERNEL_MODULES,
-  KERNEL_ROUTES,
-  PUBLIC_SURFACE,
   ROLE_SURFACE,
   routeFor,
   gatedModuleForPath,

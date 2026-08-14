@@ -1,12 +1,36 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { getSupabase } from '$lib/supabase/client';
 
   const userInfo = $derived({
     name: $page.data?.user?.user_metadata?.full_name ?? $page.data?.user?.email ?? 'User',
     email: $page.data?.user?.email ?? '',
     role: $page.data?.role ?? '',
-    tenant: $page.data?.role ?? '',
   });
+
+  let pwNew = $state('');
+  let pwStatus = $state<'idle' | 'saving' | 'done' | 'error'>('idle');
+  let pwMessage = $state('');
+
+  async function changePassword(e: SubmitEvent) {
+    e.preventDefault();
+    if (pwNew.length < 8) {
+      pwStatus = 'error';
+      pwMessage = 'New password must be at least 8 characters.';
+      return;
+    }
+    pwStatus = 'saving';
+    pwMessage = '';
+    const { error } = await getSupabase().auth.updateUser({ password: pwNew });
+    if (error) {
+      pwStatus = 'error';
+      pwMessage = error.message;
+      return;
+    }
+    pwStatus = 'done';
+    pwMessage = 'Password updated.';
+    pwNew = '';
+  }
 </script>
 
 <div class="space-y-6">
@@ -33,19 +57,32 @@
     </div>
     <div class="rounded-xl border border-border bg-white p-6 shadow-card">
       <h3 class="text-sm font-semibold text-ink-900">Security</h3>
-      <p class="mt-1 text-sm text-ink-500">Password and security settings are managed through your Supabase Auth account.</p>
-      <div class="mt-4">
-        <a
-          href="https://supabase.com/dashboard"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-50"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-          </svg>
-          Manage in Supabase
-        </a>
-      </div>
+      <p class="mt-1 text-sm text-ink-500">Change your password. Use at least 8 characters.</p>
+      <form class="mt-4 space-y-3" onsubmit={changePassword}>
+        <div>
+          <label for="pw-new" class="text-xs font-medium uppercase tracking-wider text-ink-400">New password</label>
+          <input
+            id="pw-new"
+            type="password"
+            autocomplete="new-password"
+            bind:value={pwNew}
+            class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-ink-900 outline-none focus:border-primary"
+          />
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={pwStatus === 'saving'}
+            class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            {pwStatus === 'saving' ? 'Updating…' : 'Update password'}
+          </button>
+          {#if pwStatus === 'done'}
+            <span class="text-sm text-emerald-600">{pwMessage}</span>
+          {:else if pwStatus === 'error'}
+            <span class="text-sm text-red-600">{pwMessage}</span>
+          {/if}
+        </div>
+      </form>
     </div>
   </div>
