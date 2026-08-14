@@ -7,7 +7,7 @@
   import DataTable from '$lib/components/DataTable.svelte';
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import RecentActivity from '$lib/components/dashboard/RecentActivity.svelte';
-  import { cn } from '$lib/utils';
+  import { cn } from '@eshule/shared';
 
   const { data } = $props();
   const stat = $derived(data.stat);
