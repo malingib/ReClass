@@ -10,6 +10,13 @@ Historical planning and specification entries are retained in [`docs/CHANGELOG.m
 
 ### Added
 
+- Parent provisioning: no self-signup. Staff create parents in the SIS with a National ID; the app auto-creates the login (`parents.national_id` + phone as password, internal `parent.<id>@eshule.co.ke` auth email), links the profile, and SMSes the parent their login details + portal link. Login page gained a Parent tab (National ID + phone). Parents can be re-provisioned and login details re-sent from the SIS Parents page (migration `20260815000001`, `src/lib/server/_sis/provisioning.ts`).
+- `parents.national_id` (unique per tenant), `parents.auth_email`, `profiles.national_id`, and notification scoping via `notifications.recipient_user_id` + `notifications.priority`. Notifications inbox and bell now only surface the user's own (or broadcast) in-app notifications (migration `20260815000001`).
+- `sms_provision_parent` tenant toggle (Settings > SMS) controlling the parent-onboarding SMS; `app_url` platform config key (super-admin Platform Settings) used to build deep links in SMS messages.
+- Attendance alerts now target principals only: in-app high-priority notification + SMS when a teacher is marked absent/late, gated on `sms_attendance` (migration `20260815000001`).
+- `notify_unmatched_deposit` trigger alerts the bursar when an unmatched M-Pesa deposit is parked; `mpesa-callback` now stamps `tenant_id` on parked unmatched deposits so the trigger fires (migration `20260815000001`).
+- Payment receipt SMS for bank transfers and manually-matched payments via shared `enqueuePaymentReceiptSms` helper, deduplicated per payment and gated on `sms_payment_receipt` (`src/lib/server/_finance/notify.ts`).
+- Parent fee ledger: dashboard and Fees page now show per-child obligation/paid/balance (school + remedial) with a total, served by `getParentLedger`.
 - Platform Settings page in the super-admin area (`/super-admin/settings`): platform admin owners manage the operator's own M-Pesa/Mobiwave credentials (`scope='platform'`, `platform_billing`) and platform-wide config.
 - `platform_config` table storing `mpesa_callback_secret` and `public_url` encrypted at rest, managed by super-admins, with `get_platform_config`/`set_platform_config` RPCs (service-role only) and a dedicated `decrypt_platform_credential` RPC for platform-scope decrypt that does not depend on session context (migration `20260812000005`).
 - Edge functions `mpesa-callback`, `b2c-result`, `stk`, and `b2c` now resolve `MPESA_CALLBACK_SECRET`/`PUBLIC_URL` from platform config with Deno env fallback (env wins when present); `b2c` and `stk` fail closed when the base URL is missing.
@@ -25,12 +32,17 @@ Historical planning and specification entries are retained in [`docs/CHANGELOG.m
 
 ### Changed
 
+- Payment reminders rewritten per parent (one SMS per family covering all children and both fee domains, with a `/parent/pay` deep link), replacing the per-student remedial-only reminder; cron `reclass-payment-reminders` runs daily 07:00 (migration `20260815000001`).
+- Removed the dead `trg_notify_invoice` trigger and its `notify_invoice_created` function (migration `20260815000001`).
+- The `notify` edge function now marks delivered in-app notifications as `sent` instead of `failed`, so in-app-only rows are not retried as SMS.
+- The bank-payment record path now returns the inserted payment row and enqueues a receipt SMS to the student's primary guardian.
 - `review_teacher_attendance` now accepts the committee chairman (or member) alongside the principal.
 - B2C pre-flight rejects payout requests that lack a resolvable credential, initiator identity, valid teacher phone/ID, or a positive amount — failures are persisted as `status='failed'` + `last_error` rather than silently rolled back.
 - M-Pesa party identification unified: both STK and B2C use the credential blob `shortcode`; `tenants.mpesa_paybill` remains a display-only settings field.
 
 ### Security
 
+- RLS on `notifications` scopes reads to the user's own `recipient_user_id` or broadcast rows, so parents cannot see other families' in-app notifications.
 - Credential save-time validation now requires `initiator_name` + `security_credential` for M-Pesa blobs, so B2C never fails late on missing initiator identity; blobs remain encrypted via `encrypt_credential` RPC.
 - New RPCs (`claim_payroll_run`, `finalize_payroll_b2c`, `set_current_term`) are revoked from anon/authenticated and granted only to `service_role`; payroll claims are gated on treasurer/school_admin role inside the RPC.
 - B2C result callback fails closed when `MPESA_CALLBACK_SECRET` is unset.

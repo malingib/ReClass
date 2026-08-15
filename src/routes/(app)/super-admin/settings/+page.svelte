@@ -15,6 +15,7 @@
 
   let mpesaSecretValue = $state('');
   let publicUrlValue = $state('');
+  let appUrlValue = $state('');
   let savingKey = $state<string | null>(null);
   let removingKey = $state<string | null>(null);
 
@@ -37,6 +38,7 @@
     savingKey = null;
     if (key === 'mpesa_callback_secret') mpesaSecretValue = '';
     if (key === 'public_url') publicUrlValue = '';
+    if (key === 'app_url') appUrlValue = '';
   }
 
   async function removeConfig(key: string) {
@@ -78,7 +80,7 @@
 
 <DashboardContent title="Platform Settings" subtitle="Operator-owned secrets for the whole platform (platform admin only)">
   <div class="space-y-6">
-    {#if mpesaSecretValue || publicUrlValue}
+    {#if mpesaSecretValue || publicUrlValue || appUrlValue}
     <p class="text-sm text-muted-foreground">Config values are encrypted at rest and only the platform admin can read them.</p>
     {/if}
 
@@ -159,6 +161,39 @@
                 <Button size="sm" variant="ghost" class="text-destructive"
                   disabled={removingKey === 'public_url'}
                   onclick={() => removeConfig('public_url')}>Clear</Button>
+              {/if}
+            </div>
+          </div>
+        </div>
+
+        <!-- APP_URL -->
+        <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div class="flex-1">
+              <Label for="cfg-appurl">App base URL</Label>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                {configuredKeys.includes('app_url')
+                  ? `Set — deep links and parent login links are built from ${config.app_url}.`
+                  : 'Not set — falls back to the default app URL when building SMS links.'}
+                Used to build deep links (e.g. /parent/pay) inside SMS messages.
+              </p>
+            </div>
+            <div class="flex w-full items-end gap-2 sm:w-auto">
+              <Input
+                id="cfg-appurl"
+                type="text"
+                bind:value={appUrlValue}
+                placeholder="e.g. https://app.eshule.co.ke"
+                class="sm:w-96"
+              />
+              <Button size="sm" disabled={savingKey === 'app_url' || !appUrlValue}
+                onclick={() => submitConfig('app_url', appUrlValue)}>
+                {savingKey === 'app_url' ? 'Saving...' : 'Save'}
+              </Button>
+              {#if configuredKeys.includes('app_url')}
+                <Button size="sm" variant="ghost" class="text-destructive"
+                  disabled={removingKey === 'app_url'}
+                  onclick={() => removeConfig('app_url')}>Clear</Button>
               {/if}
             </div>
           </div>

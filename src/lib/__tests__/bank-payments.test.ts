@@ -10,7 +10,12 @@ import { fail } from '@sveltejs/kit';
  */
 function makeSb(opts: { feeDomain?: string; feeFound?: boolean; insertError?: { code?: string; message: string } } = {}) {
   let inserted: Record<string, unknown> | null = null;
+  let receiptSmsQueued = false;
   const sb: any = {
+    rpc(name: string) {
+      if (name === 'tenant_setting_enabled') return { data: true, error: null };
+      return { data: null, error: null };
+    },
     from(table: string) {
       if (table === 'fee_types') {
         const chain: any = {
@@ -28,7 +33,14 @@ function makeSb(opts: { feeDomain?: string; feeFound?: boolean; insertError?: { 
         return {
           insert: (row: Record<string, unknown>) => {
             inserted = row;
-            return { error: opts.insertError ?? null };
+            return {
+              select: () => ({
+                single: async () =>
+                  opts.insertError
+                    ? { data: null, error: opts.insertError }
+                    : { data: { id: 'p1' }, error: null },
+              }),
+            };
           },
         };
       }
@@ -40,9 +52,29 @@ function makeSb(opts: { feeDomain?: string; feeFound?: boolean; insertError?: { 
         };
         return { select: () => chain };
       }
+      if (table === 'guardians_link') {
+        const chain: any = {
+          eq: () => chain,
+          order: () => chain,
+          limit: () => chain,
+          maybeSingle: async () => ({ data: { parents: { phone: '+254711223344', sms_consent: true } }, error: null }),
+        };
+        return { select: () => chain };
+      }
+      if (table === 'notifications') {
+        return {
+          select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
+          insert: (row: Record<string, unknown>) => {
+            const extId = row.external_id as string | undefined;
+            if (row.channel === 'sms' && extId?.startsWith('payment-receipt:')) receiptSmsQueued = true;
+            return { error: null };
+          },
+        };
+      }
       return { select: () => ({ eq: () => ({ is: () => ({ single: async () => ({ data: null, error: null }) }) }) }), insert: () => ({ error: null }) };
     },
     __inserted: () => inserted,
+    __receiptSmsQueued: () => receiptSmsQueued,
   };
   return sb;
 }

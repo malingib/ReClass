@@ -20,10 +20,15 @@
       try {
         let q = supabase
           .from('notifications')
-          .select('id, body, created_at, channel, template, status, related_type, related_id')
+          .select('id, body, created_at, channel, template, status, priority, recipient_user_id, related_type, related_id')
+          .eq('channel', 'inapp')
           .order('created_at', { ascending: false })
           .limit(50);
         if (tenantId) q = q.eq('tenant_id', tenantId);
+        // Only this user's in-app alerts (or broadcast rows) — never SMS/email
+        // rows or other users' alerts.
+        const { data: me } = await supabase.auth.getUser();
+        if (me?.user?.id) q = q.or(`recipient_user_id.is.null,recipient_user_id.eq.${me.user.id}`);
 
         const { data: rows, error: fetchError } = await q;
         if (fetchError) throw fetchError;

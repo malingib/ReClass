@@ -4,15 +4,17 @@ import type { PageServerLoad, Actions } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
 import { parseForm } from '$lib/server/_platform/validation';
 import { paginatedQuery } from '$lib/server/_platform/query';
+import { provisionParent } from '$lib/server/_sis/provisioning';
 import { PAGE_LIST_MEDIUM } from '$lib/config';
 
-const PARENT_SORT_COLUMNS = new Set(['full_name', 'phone', 'email', 'created_at']);
-const PARENT_SEARCH_COLUMNS = ['full_name', 'phone', 'email'];
+const PARENT_SORT_COLUMNS = new Set(['full_name', 'phone', 'national_id', 'email', 'created_at']);
+const PARENT_SEARCH_COLUMNS = ['full_name', 'phone', 'email', 'national_id'];
 
 const parentSchema = z.object({
   id: z.string().optional(),
   full_name: z.string().min(1, 'Full name is required').max(200),
   phone: z.string().min(1, 'Phone is required').max(20),
+  national_id: z.string().max(30).optional(),
   email: z.string().max(254).optional(),
   sms_consent: z.coerce.boolean().optional(),
 });
@@ -30,7 +32,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const sortDir: 'asc' | 'desc' = url.searchParams.get('dir') === 'desc' ? 'desc' : 'asc';
 
   const paged = await paginatedQuery<Record<string, unknown>>(db, 'parents', tenantId, {
-    select: 'id, full_name, phone, email, sms_consent, created_at',
+    select: 'id, full_name, phone, national_id, email, sms_consent, profile_id, created_at',
     order: { column: sortKey, ascending: sortDir === 'asc' },
     page,
     pageSize: PAGE_LIST_MEDIUM,
@@ -78,15 +80,31 @@ export const actions = {
     const fd = await request.formData();
     const v = parseForm(parentSchema, fd);
     if (!v.success) return fail(400, { errors: v.errors });
-    const { error } = await locals.srv.from('parents').insert({
+    const nationalId = v.data.national_id?.trim() || null;
+    if (!nationalId) return fail(400, { message: 'National ID is required to create a parent portal login.' });
+
+    const { data: inserted, error } = await locals.srv.from('parents').insert({
       tenant_id: tenantId,
       full_name: v.data.full_name,
       phone: v.data.phone,
+      national_id: nationalId,
       email: v.data.email || null,
       sms_consent: v.data.sms_consent ?? true,
-    });
-    if (error) return fail(500, { message: `Failed: ${error.message}` });
-    return { success: true, message: 'Parent created successfully' };
+    }).select('id').single();
+    if (error) {
+      if (error.code === '23505') return fail(409, { message: 'Another parent already uses this National ID in your school.' });
+      return fail(500, { message: `Failed: ${error.message}` });
+    }
+
+    const provisioned = await provisionParent(locals.srv, tenantId, inserted.id);
+    if (!provisioned.ok) return fail(400, { message: provisioned.message });
+
+    return {
+      success: true,
+      message: provisioned.smsSent
+        ? 'Parent created and login credentials sent by SMS.'
+        : 'Parent created, but the login SMS was not sent. Review the parent-provision SMS toggle.',
+    };
   },
 
   update: async ({ locals, request }) => {
@@ -96,17 +114,51 @@ export const actions = {
     if (!v.success) return fail(400, { errors: v.errors });
     if (!v.data.id) return fail(400, { message: 'ID required' });
 
+    const nationalId = v.data.national_id?.trim() || null;
     const { error } = await locals.srv.from('parents')
       .update({
         full_name: v.data.full_name,
         phone: v.data.phone,
+        national_id: nationalId,
         email: v.data.email || null,
         sms_consent: v.data.sms_consent ?? true,
       })
       .eq('id', v.data.id)
       .eq('tenant_id', tenantId);
-    if (error) return fail(500, { message: `Failed: ${error.message}` });
-    return { success: true, message: 'Parent updated successfully' };
+    if (error) {
+      if (error.code === '23505') return fail(409, { message: 'Another parent already uses this National ID in your school.' });
+      return fail(500, { message: `Failed: ${error.message}` });
+    }
+
+    // Re-provision when the parent has login credentials, so a phone edit keeps
+    // the account password + SMS in sync. Legacy parents without a National ID
+    // stay un-provisioned until one is added.
+    if (nationalId) {
+      const provisioned = await provisionParent(locals.srv, tenantId, v.data.id, { resend: true });
+      if (!provisioned.ok) return fail(400, { message: provisioned.message });
+    }
+
+    return {
+      success: true,
+      message: 'Parent updated successfully',
+    };
+  },
+
+  resend: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
+    const fd = await request.formData();
+    const v = parseForm(deleteSchema, fd);
+    if (!v.success) return fail(400, { errors: v.errors });
+
+    const provisioned = await provisionParent(locals.srv, tenantId, v.data.id, { resend: true });
+    if (!provisioned.ok) return fail(400, { message: provisioned.message });
+
+    return {
+      success: true,
+      message: provisioned.smsSent
+        ? 'Login credentials re-sent by SMS.'
+        : 'Login updated. SMS not sent (check SMS consent or the parent-provision SMS toggle).',
+    };
   },
 
   delete: async ({ locals, request }) => {

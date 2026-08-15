@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { logError } from '../_platform/log';
+import { enqueuePaymentReceiptSms } from './notify';
 
 // Payment Platform v2 helpers — student ledger, unmatched queue, manual edits.
 
@@ -84,9 +85,56 @@ export async function getStudentTransactions(
   }));
 }
 
+/**
+ * Parent-facing ledger: for a parent's set of children (multi-student case —
+ * one parent, several students), compute each child's total obligation (school
+ * + remedial fee types) and what has been paid, so the portal can show a
+ * balance. Payments are receipts, so balance = obligation − paid.
+ */
+export async function getParentLedger(
+  srv: App.Locals['srv'],
+  tenantId: string,
+  studentIds: string[],
+) {
+  if (studentIds.length === 0) return [];
+
+  const [{ data: students }, { data: feeTypes }, { data: payments }] = await Promise.all([
+    srv.from('students')
+      .select('id, admission_no, first_name, last_name, grade, status')
+      .eq('tenant_id', tenantId)
+      .in('id', studentIds)
+      .order('first_name'),
+    srv.from('fee_types')
+      .select('amount, domain')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null),
+    srv.from('payments')
+      .select('student_id, amount')
+      .eq('tenant_id', tenantId)
+      .in('student_id', studentIds)
+      .eq('status', 'paid'),
+  ]);
+
+  const obligation = (feeTypes ?? []).reduce((s, f) => s + Number(f.amount ?? 0), 0);
+  const paidByStudent = new Map<string, number>();
+  for (const p of payments ?? []) {
+    if (!p.student_id) continue;
+    paidByStudent.set(p.student_id, (paidByStudent.get(p.student_id) ?? 0) + Number(p.amount ?? 0));
+  }
+
+  return (students ?? []).map((s) => {
+    const paid = paidByStudent.get(s.id) ?? 0;
+    return {
+      ...s,
+      obligation,
+      paid,
+      balance: Math.max(0, obligation - paid),
+    };
+  });
+}
+
 /** Open (unmatched) manual deposits — the admin/bursar matching queue. */
-export async function getUnmatchedPayments(srv: App.Locals['srv'], tenantId: string) {
-  const { data } = await srv
+export async function getUnmatchedPayments(srv: App.Locals['srv'], tenantId: string) {  const { data } = await srv
     .from('unmatched_payments')
     .select('id, checkout_id, mpesa_receipt, amount, phone, bill_ref, created_at')
     .is('matched_at', null)
@@ -153,6 +201,12 @@ export async function matchUnmatchedPayment(
     .eq('id', unmatchedId)
     .eq('tenant_id', tenantId);
   if (mErr) logError('unmatched_match_stamp', mErr, { unmatchedId });
+
+  // A manual match is a payment that landed silently — notify the payer's phone
+  // with a receipt now that a payments row exists.
+  if (u.phone) {
+    await enqueuePaymentReceiptSms(srv, tenantId, payment.id, u.phone, u.amount);
+  }
 
   await srv.from('audit_log').insert({
     tenant_id: tenantId,

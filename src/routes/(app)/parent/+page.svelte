@@ -7,7 +7,9 @@
   const students = $derived(data.students);
   const payments = $derived(data.payments);
   const announcements = $derived(data.announcements);
+  const ledger = $derived(data.ledger ?? []);
   const loading = $derived(!students && !payments);
+  const totalBalance = $derived(ledger.reduce((sum, row: any) => sum + Number(row.balance ?? 0), 0));
 </script>
 
 <DashboardContent title="Welcome back" subtitle="Your child's remedial schedule and M-Pesa payments">
@@ -85,6 +87,41 @@
         </div>
       {/if}
     </div>
+
+    <!-- Fees balance -->
+    {#if ledger.length > 0}
+      <div class="anim-card stagger-3 overflow-hidden rounded-xl border border-slate-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base font-semibold text-slate-900">Fees balance</h3>
+              <p class="text-xs text-slate-500">Outstanding across all enrolled children (school + remedial fees)</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-xs font-medium text-slate-500">Total outstanding</p>
+            <p class="text-xl font-semibold {totalBalance > 0 ? 'text-amber-600' : 'text-emerald-600'}">KES {totalBalance.toLocaleString()}</p>
+          </div>
+        </div>
+        <div class="p-0">
+          <DataTable data={ledger} columns={[
+            { key: 'first_name', label: 'Child', render: (s: any) => `${s.first_name} ${s.last_name} (${s.admission_no ?? ''})` },
+            { key: 'grade', label: 'Cohort' },
+            { key: 'obligation', label: 'Total fees', render: (s: any) => `KES ${Number(s.obligation).toLocaleString()}` },
+            { key: 'paid', label: 'Paid', render: (s: any) => `KES ${Number(s.paid).toLocaleString()}` },
+            { key: 'balance', label: 'Balance', render: (s: any) => `KES ${Number(s.balance).toLocaleString()}` },
+          ]} emptyMessage="No fee balances" />
+          <div class="border-t border-slate-100 px-6 py-3">
+            <a href="/parent/fees" class="text-sm font-medium text-primary hover:underline">View fee details and pay →</a>
+          </div>
+        </div>
+      </div>
+    {/if}
 
     <!-- Announcements -->
     {#if announcements.length > 0}

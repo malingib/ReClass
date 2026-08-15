@@ -1,13 +1,14 @@
 import type { PageServerLoad } from './$types';
 import { getParentOwnership } from '$lib/server/_auth/ownership';
+import { getParentLedger } from '$lib/server/_finance/payments';
 import { PAGE_OVERVIEW } from '$lib/config';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId, parent, studentIds } = await getParentOwnership(locals);
 
-  if (studentIds.length === 0) return { parent, students: [], payments: [], announcements: [] };
+  if (studentIds.length === 0) return { parent, students: [], payments: [], announcements: [], ledger: [] };
 
-  const [{ data: students }, { data: payments }, { data: announcements }] = await Promise.all([
+  const [{ data: students }, { data: payments }, { data: announcements }, ledger] = await Promise.all([
     locals.srv
       .from('students')
       .select('id, admission_no, first_name, last_name, grade, status')
@@ -28,6 +29,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       .or('audience.eq.all,audience.eq.parents')
       .order('published_at', { ascending: false })
       .limit(10),
+    getParentLedger(locals.srv, tenantId, studentIds),
   ]);
 
   return {
@@ -38,5 +40,6 @@ export const load: PageServerLoad = async ({ locals }) => {
       fee_type: p.fee_types?.name ?? '—',
     })),
     announcements: announcements ?? [],
+    ledger,
   };
 };

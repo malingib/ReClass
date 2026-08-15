@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod/v3';
 import { parseForm } from '$lib/server/_platform/validation';
+import { enqueuePaymentReceiptSms, getStudentPayerPhone } from './notify';
 
 /**
  * Record a school-fee payment made via KCB / Buni bank transfer.
@@ -58,7 +59,7 @@ export async function recordBankPayment(
   if (studentError || !student) return fail(404, { message: 'Student not found in this school.' });
 
   const amount = Number(v.data.amount);
-  const { error: payErr } = await sb.from('payments').insert({
+  const { data: payment, error: payErr } = await sb.from('payments').insert({
     tenant_id: tenantId,
     student_id: v.data.student_id,
     fee_type_id: v.data.fee_type_id,
@@ -73,13 +74,20 @@ export async function recordBankPayment(
     cashier_id: userId ?? null,
     deposited_by: userId ?? null,
     reconciled_at: new Date().toISOString(),
-  });
+  }).select('id').single();
   if (payErr) {
     // (tenant_id, bank_reference) is unique — a retry of the same bank slip is a no-op.
     if (payErr.code === '23505') {
       return fail(409, { message: 'This bank reference has already been recorded for your school.' });
     }
     return fail(500, { message: `Failed to record payment: ${payErr.message}` });
+  }
+
+  // School-fee receipt SMS: unlike M-Pesa there is no callback carrying the
+  // payer's number, so notify the linked parent (primary guardian).
+  const payerPhone = await getStudentPayerPhone(sb, tenantId, v.data.student_id);
+  if (payerPhone) {
+    await enqueuePaymentReceiptSms(sb, tenantId, payment.id, payerPhone, amount);
   }
 
   return { success: true as const, message: 'Bank payment recorded successfully' };

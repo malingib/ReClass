@@ -146,9 +146,13 @@ Deno.serve(async (req) => {
       }
       // Unknown admission number → cannot attribute a tenant. Park the deposit
       // in the unmatched queue so the school can match it from the M-Pesa
-      // statement (admin/bursar UI), without losing the money.
+      // statement (admin/bursar UI), without losing the money. In this
+      // single-tenant deployment the tenant is the active school, so stamp it
+      // for attribution + the unmatched-deposit alert trigger.
       const mpesaReceipt = String(getMeta('MpesaReceiptNumber') ?? '');
+      const { data: activeTenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
       await supabase.from('unmatched_payments').insert({
+        tenant_id: activeTenant?.id ?? null,
         checkout_id: CheckoutRequestID, mpesa_receipt: mpesaReceipt || null,
         amount, phone, bill_ref: billRef || null,
       }).then((r) => {

@@ -68,12 +68,14 @@ export const actions: Actions = {
     const sms_payment_reminder = form.get('sms_payment_reminder') === 'on';
     const sms_payment_receipt = form.get('sms_payment_receipt') === 'on';
     const sms_teacher_payout = form.get('sms_teacher_payout') === 'on';
+    const sms_provision_parent = form.get('sms_provision_parent') === 'on';
 
     const settings = {
       sms_attendance,
       sms_payment_reminder,
       sms_payment_receipt,
       sms_teacher_payout,
+      sms_provision_parent,
     };
 
     if (!name || name.trim().length === 0) {

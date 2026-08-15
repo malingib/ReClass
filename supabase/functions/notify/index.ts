@@ -24,7 +24,16 @@ Deno.serve(async (req) => {
   let sent = 0, failed = 0;
   const now = new Date().toISOString();
   for (const n of batch) {
+    if (n.channel === 'inapp') {
+      // In-app alerts are "delivered" the moment the row exists — the inbox
+      // reads live (not via this worker). Mark sent so they leave the queue
+      // without ever being attempted over SMS.
+      await supabase.from('notifications').update({ status: 'sent', claimed_at: null, attempts: n.attempts + 1, sent_at: now }).eq('id', n.id);
+      sent++; continue;
+    }
     if (n.channel !== 'sms') {
+      // Email delivery is not wired yet; leaving the row failed keeps it out
+      // of the SMS queue and visible as unsupported in the ops dashboard.
       await supabase.from('notifications').update({ status: 'failed', claimed_at: null, last_error: 'unsupported_channel' }).eq('id', n.id);
       failed++; continue;
     }

@@ -242,22 +242,29 @@
             <label class="flex items-center gap-3 rounded-lg border p-4 hover:bg-muted/50">
               <input type="checkbox" name="sms_attendance" checked={settings.sms_attendance ?? true} class="h-4 w-4 rounded border-input text-primary focus:ring-ring" />
               <div>
-                <p class="text-sm font-medium text-foreground">Teacher Attendance SMS</p>
-                <p class="text-xs text-muted-foreground">In-app alert when a teacher is marked absent/late for a remedial session</p>
+                <p class="text-sm font-medium text-foreground">Teacher Attendance Alerts</p>
+                <p class="text-xs text-muted-foreground">In-app + SMS alerts to the principal and SMS of session assignments &amp; 2-hour session reminders to teachers</p>
               </div>
             </label>
             <label class="flex items-center gap-3 rounded-lg border p-4 hover:bg-muted/50">
               <input type="checkbox" name="sms_payment_reminder" checked={settings.sms_payment_reminder ?? true} class="h-4 w-4 rounded border-input text-primary focus:ring-ring" />
               <div>
                 <p class="text-sm font-medium text-foreground">Payment Reminder SMS</p>
-                <p class="text-xs text-muted-foreground">Send SMS reminders before due dates</p>
+                <p class="text-xs text-muted-foreground">Daily fee-balance reminder to parents (one SMS per family, all children, with a pay link)</p>
               </div>
             </label>
             <label class="flex items-center gap-3 rounded-lg border p-4 hover:bg-muted/50">
               <input type="checkbox" name="sms_payment_receipt" checked={settings.sms_payment_receipt ?? true} class="h-4 w-4 rounded border-input text-primary focus:ring-ring" />
               <div>
                 <p class="text-sm font-medium text-foreground">Payment Receipt SMS</p>
-                <p class="text-xs text-muted-foreground">Send SMS receipt on successful M-Pesa payment</p>
+                <p class="text-xs text-muted-foreground">Send SMS receipt on M-Pesa, bank and manually-matched payments</p>
+              </div>
+            </label>
+            <label class="flex items-center gap-3 rounded-lg border p-4 hover:bg-muted/50">
+              <input type="checkbox" name="sms_provision_parent" checked={settings.sms_provision_parent ?? true} class="h-4 w-4 rounded border-input text-primary focus:ring-ring" />
+              <div>
+                <p class="text-sm font-medium text-foreground">Parent Onboarding SMS</p>
+                <p class="text-xs text-muted-foreground">Send login details (National ID + phone) and portal link to parents when they are added in the SIS</p>
               </div>
             </label>
             <label class="flex items-center gap-3 rounded-lg border p-4 hover:bg-muted/50">

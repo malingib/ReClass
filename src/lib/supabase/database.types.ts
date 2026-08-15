@@ -579,7 +579,9 @@ export type Database = {
           id: string
           last_error: string | null
           next_retry_at: string | null
+          priority: string | null
           recipient: string | null
+          recipient_user_id: string | null
           related_id: string | null
           related_type: string | null
           sent_at: string | null
@@ -597,7 +599,9 @@ export type Database = {
           id?: string
           last_error?: string | null
           next_retry_at?: string | null
+          priority?: string | null
           recipient?: string | null
+          recipient_user_id?: string | null
           related_id?: string | null
           related_type?: string | null
           sent_at?: string | null
@@ -615,7 +619,9 @@ export type Database = {
           id?: string
           last_error?: string | null
           next_retry_at?: string | null
+          priority?: string | null
           recipient?: string | null
+          recipient_user_id?: string | null
           related_id?: string | null
           related_type?: string | null
           sent_at?: string | null
@@ -692,12 +698,14 @@ export type Database = {
       }
       parents: {
         Row: {
+          auth_email: string | null
           created_at: string | null
           deleted_at: string | null
           email: string | null
           full_name: string
           id: string
           locale: string | null
+          national_id: string | null
           phone: string
           profile_id: string | null
           sms_consent: boolean | null
@@ -705,12 +713,14 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          auth_email?: string | null
           created_at?: string | null
           deleted_at?: string | null
           email?: string | null
           full_name: string
           id?: string
           locale?: string | null
+          national_id?: string | null
           phone: string
           profile_id?: string | null
           sms_consent?: boolean | null
@@ -718,12 +728,14 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          auth_email?: string | null
           created_at?: string | null
           deleted_at?: string | null
           email?: string | null
           full_name?: string
           id?: string
           locale?: string | null
+          national_id?: string | null
           phone?: string
           profile_id?: string | null
           sms_consent?: boolean | null
@@ -940,6 +952,7 @@ export type Database = {
           full_name: string
           id: string
           locale: string | null
+          national_id: string | null
           phone: string | null
           tenant_id: string
           updated_at: string | null
@@ -950,6 +963,7 @@ export type Database = {
           full_name: string
           id: string
           locale?: string | null
+          national_id?: string | null
           phone?: string | null
           tenant_id: string
           updated_at?: string | null
@@ -960,6 +974,7 @@ export type Database = {
           full_name?: string
           id?: string
           locale?: string | null
+          national_id?: string | null
           phone?: string | null
           tenant_id?: string
           updated_at?: string | null

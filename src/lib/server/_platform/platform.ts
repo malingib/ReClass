@@ -6,7 +6,7 @@ import { logError } from './log';
  * encrypted in `platform_config` and read by edge functions at call time.
  * Never tenant-scoped and never exposed to tenant users.
  */
-export const PLATFORM_CONFIG_KEYS = ['mpesa_callback_secret', 'public_url'] as const;
+export const PLATFORM_CONFIG_KEYS = ['mpesa_callback_secret', 'public_url', 'app_url'] as const;
 export type PlatformConfigKey = (typeof PLATFORM_CONFIG_KEYS)[number];
 
 export async function getPlatformConfig(sb: App.Locals['srv']): Promise<Record<string, string>> {

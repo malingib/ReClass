@@ -20,17 +20,28 @@
     await (supabase.rpc as any)('set_tenant_context', { p_tenant_id: tenantId });
   }
 
+  // Own-user filter: the inbox only shows in-app alerts addressed to the
+  // signed-in user (or broadcast rows with no recipient). SMS/email rows are
+  // never surfaced. This complements the RLS + recipient scoping.
+  async function ownUserFilter() {
+    const { data } = await supabase.auth.getUser();
+    return data?.user?.id ?? null;
+  }
+
   async function loadNotifications() {
     isLoading = true;
     error = null;
     try {
       await ensureTenantContext();
+      const uid = await ownUserFilter();
       let q = supabase
         .from('notifications')
-        .select('id, body, created_at, channel, template, status, related_type, related_id')
+        .select('id, body, created_at, channel, template, status, priority, recipient_user_id, related_type, related_id')
+        .eq('channel', 'inapp')
         .order('created_at', { ascending: false })
         .limit(10);
       if (tenantId) q = q.eq('tenant_id', tenantId);
+      if (uid) q = q.or(`recipient_user_id.is.null,recipient_user_id.eq.${uid}`);
 
       const { data, error: fetchError } = await q;
 

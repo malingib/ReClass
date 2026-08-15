@@ -13,8 +13,10 @@
     id: string;
     full_name: string;
     phone: string;
+    national_id: string | null;
     email: string | null;
     sms_consent: boolean;
+    profile_id: string | null;
     created_at: string;
     students?: Array<{ id: string; first_name: string; last_name: string; admission_no: string; grade: string | null }>;
   }
@@ -78,6 +80,7 @@
       id: parent.id,
       full_name: parent.full_name,
       phone: parent.phone,
+      national_id: parent.national_id ?? '',
       email: parent.email ?? '',
       sms_consent: parent.sms_consent ?? true,
     };
@@ -101,6 +104,16 @@
     if (!parent.students || parent.students.length === 0) return '—';
     return parent.students.map((s: any) => `${s.first_name} ${s.last_name} (${s.admission_no ?? ''})`).join(', ');
   }
+
+  function handleResend() {
+    return async ({ result }: { result: ActionResult<ActionData, ActionData> }) => {
+      if (result.type === 'failure' && result.data?.message) {
+        dispatchToast('Error', result.data.message);
+      } else if (result.type === 'success') {
+        dispatchToast('Login Sent', result.data?.message ?? 'Login credentials sent by SMS.');
+      }
+    };
+  }
 </script>
 
 <DashboardContent title="Parents" subtitle="Parent and guardian contacts">
@@ -115,6 +128,7 @@
     columns={[
       { key: 'full_name', label: 'Name', sortable: true },
       { key: 'phone', label: 'Phone' },
+      { key: 'national_id', label: 'National ID' },
       { key: 'email', label: 'Email' },
       { key: 'students', label: 'Linked Students', render: (p: any) => formatStudents(p) },
     ]}
@@ -129,7 +143,33 @@
       sortKey: data.pagination.sortKey,
       sortDir: data.pagination.sortDir,
     }}
-  />
+  >
+    {#snippet rowExtra(p: any)}
+      {#if p.profile_id}
+        <span
+          class="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success"
+          title="This parent has portal login access"
+        >
+          Login active
+        </span>
+      {:else}
+        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+          No login
+        </span>
+      {/if}
+      <form method="POST" action="?/resend" use:enhance={handleResend} class="inline-flex">
+        <input type="hidden" name="id" value={p.id} />
+        <button
+          type="submit"
+          class="text-xs font-medium text-primary hover:underline disabled:opacity-40"
+          disabled={!p.national_id}
+          title={p.national_id ? 'Re-send login credentials by SMS' : 'Add a National ID to enable parent login'}
+        >
+          Resend login
+        </button>
+      </form>
+    {/snippet}
+  </DataTable>
 </DashboardContent>
 
 <!-- Create/Edit Modal -->
@@ -178,6 +218,23 @@
         />
         {#if errors.phone}
           <p class="text-xs text-destructive">{errors.phone?.[0]}</p>
+        {/if}
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="national_id" class="text-xs font-medium text-foreground">National ID</label>
+        <input
+          id="national_id"
+          name="national_id"
+          type="text"
+          value={formData.national_id}
+          autocomplete="off"
+          class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+          placeholder="National ID (used for parent login)"
+        />
+        <p class="text-xs text-muted-foreground">The parent signs in with this ID and their phone number. Required for portal login.</p>
+        {#if errors.national_id}
+          <p class="text-xs text-destructive">{errors.national_id?.[0]}</p>
         {/if}
       </div>
 

@@ -172,13 +172,8 @@
   // are a closed enum in @eshule/shared) — fail visible with an empty nav + a
   // notice rather than silently rendering the admin's links.
   const roleNavConfig = $derived(roleNav[role] ?? null);
-  let navMisconfigured = $state(false);
   const NAV = $derived.by(() => {
-    if (!roleNavConfig) {
-      navMisconfigured = true;
-      return [] as typeof roleNav.school_admin;
-    }
-    navMisconfigured = false;
+    if (!roleNavConfig) return [] as typeof roleNav.school_admin;
     return roleNavConfig.map((g) => ({
       ...g,
       label: g.label,
@@ -189,22 +184,30 @@
   // Per-item derivation (no group→module map): the admin shell shows a group
   // while the active module is present in it; non-admin portals show every item.
   const filteredNAV = $derived(
-    isModuleHub ? [] : NAV
-      .map((g) => {
-        if (role === 'school_admin' && activeModule
-            && !g.items.some((it) => routeFor(it.href) === activeModule)) return null;
-        return { ...g };
-      })
-      .filter((g): g is NonNullable<typeof g> => g !== null)
+    isModuleHub
+      ? []
+      : NAV.map((g) => {
+          if (role === 'school_admin' && activeModule) {
+            const hasActiveModule = g.items.some((it) => routeFor(it.href) === activeModule);
+            const isCrossCutting = ['platform', 'settings', 'users', 'reports'].includes(activeModule);
+            if (!hasActiveModule && !isCrossCutting) return null;
+          }
+          return { ...g };
+        }).filter((g): g is NonNullable<typeof g> => g !== null)
   );
 
-  const openGroups = $state<Record<string, boolean>>({});
-
+  // Compute which groups should be open based on current route and defaults
+  // Initialize lazily with filteredNAV data, then update reactively
+  let openGroups = $state<Record<string, boolean>>({});
+  
+  // Initialize openGroups from filteredNAV on mount and update when filteredNAV changes
   $effect(() => {
-    const initial = Object.fromEntries(filteredNAV.map(g => [g.label, g.defaultOpen ?? false]));
-    Object.keys(initial).forEach(k => {
-      if (!(k in openGroups)) openGroups[k] = initial[k as keyof typeof initial];
+    const nextGroups: Record<string, boolean> = {};
+    filteredNAV.forEach((g) => {
+      const matchesRoute = g.items.some((it) => $page.url.pathname.startsWith(it.href));
+      nextGroups[g.label] = g.defaultOpen || matchesRoute;
     });
+    openGroups = nextGroups;
   });
 
   let profileOpen = $state(false);
@@ -319,11 +322,6 @@
     {/if}
 
     <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-      {#if navMisconfigured}
-        <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          Navigation for the "{role}" role is not configured. Contact your administrator.
-        </div>
-      {/if}
       {#each filteredNAV as group}
         <div>
           <button
