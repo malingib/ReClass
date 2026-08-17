@@ -1,6 +1,7 @@
 import { getServiceClient } from '../_shared/supabase.ts';
 import { json, badRequest, unauthorized, internalError } from '../_shared/response.ts';
 import { getPlatformConfig } from '../_shared/platform-config.ts';
+import { verifySecret } from '../_shared/auth.ts';
 
 const supabase = getServiceClient();
 const MAX_BODY_BYTES = 10_240;
@@ -33,14 +34,20 @@ Deno.serve(async (req) => {
       return internalError(req);
     }
     const actual = req.headers.get('x-callback-secret') ?? '';
-    if (actual !== callbackSecret) {
+    if (!(await verifySecret(actual, callbackSecret))) {
       return unauthorized(req);
     }
 
     const cl = parseInt(req.headers.get('content-length') ?? '0', 10);
     if (cl > MAX_BODY_BYTES) return badRequest('body_too_large', req);
 
-    const body = await req.json();
+    const raw = await req.text().catch(() => null);
+    if (raw === null) return badRequest('missing_originator', req);
+    if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
+      return badRequest('body_too_large', req);
+    }
+
+    const body = JSON.parse(raw);
     const result = body?.Result ?? {};
     const OriginatorConversationID = result.OriginatorConversationID ?? body?.OriginatorConversationID;
     if (typeof OriginatorConversationID !== 'string' || !OriginatorConversationID) {

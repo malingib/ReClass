@@ -119,6 +119,10 @@ BEGIN
     b2c_checkout_id = v_checkout
   WHERE id = p_run_id AND tenant_id = p_tenant_id AND status = 'approved';
 
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'not_claimable');
+  END IF;
+
   RETURN jsonb_build_object(
     'status', 'claimed',
     'run_id', v_run.id,

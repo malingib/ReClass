@@ -2,8 +2,6 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
-  import { Card, CardContent } from '$lib/components/ui/card/index.js';
-  import { Separator } from '$lib/components/ui/separator/index.js';
 
   const { data } = $props();
   const s = $derived(data.stats);

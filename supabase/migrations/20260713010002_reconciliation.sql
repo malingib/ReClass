@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_recon_tenant_week ON public.payment_reconciliatio
 ALTER TABLE public.payment_reconciliations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS recon_isolation ON public.payment_reconciliations;
 CREATE POLICY recon_isolation ON public.payment_reconciliations
-  USING (tenant_id = current_setting('app.tenant_id')::uuid);
+  USING (tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid));
 
 -- updated_at
 DROP TRIGGER IF EXISTS trg_payment_reconciliations_updated ON public.payment_reconciliations;

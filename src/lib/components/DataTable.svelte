@@ -7,6 +7,9 @@
     label: string;
     sortable?: boolean;
     render?: (_item: T) => string;
+    /** When true, the `render` output is injected as raw HTML (use only for
+     *  trusted, server-controlled markup like print links with UUID ids). */
+    html?: boolean;
     cell?: Snippet<[T]>;
   }
 
@@ -82,8 +85,16 @@
     goto(`${url.pathname}?${p.toString()}`, { keepFocus: true, noScroll: true });
   }
 
-  // Debounced server search.
+  // Optimistic search with debouncing for better UX
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
+  function handleSearch(e: Event) {
+    const query = (e.target as HTMLInputElement).value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      serverNavigate({ search: query, page: 1 });
+    }, 300);
+  }
+
   function onSearchInput(value: string) {
     searchQuery = value;
     if (!isServer) return;
@@ -210,7 +221,7 @@
             type="text"
             placeholder="Search\u2026"
             value={searchQuery}
-            oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
+            oninput={handleSearch}
             aria-label="Search table data"
             class="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
@@ -281,39 +292,43 @@
         <tbody>
           {#each paginated as item (item.id)}
             <tr class="border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50">
-              {#each columns as col}
-                <td class="px-4 py-3 text-slate-700">
-                  {#if col.cell}
-                    {@render col.cell(item)}
-                  {:else if col.render}
-                    {col.render(item)}
-                  {:else}
-                    {item[col.key]}
-                  {/if}
-                </td>
-              {/each}
-              {#if hasRowActions}
-                <td class="px-4 py-3 text-right">
-                  <div class="inline-flex items-center gap-3">
-                    {#if onEdit}
-                      <button onclick={() => onEdit(item)} class="text-xs font-medium text-primary hover:underline">{typeof editLabel === 'function' ? editLabel(item) : editLabel ?? 'Edit'}</button>
-                    {/if}
-                    {#if onDelete}
-                      <button onclick={() => confirmDelete(item)} class="text-xs font-medium text-slate-400 hover:text-red-600">{deleteLabel}</button>
-                    {/if}
-                  </div>
-                </td>
+        {#each columns as col}
+          <td class="border-b border-gray-200 p-2">
+            {#if col.cell}
+              {@render col.cell(item)}
+            {:else if col.render}
+              {#if col.html}
+                {@html col.render(item)}
+              {:else}
+                {col.render(item)}
               {/if}
-              {#if rowExtra}
-                <td class="px-4 py-3 text-right">
-                  {@render rowExtra(item)}
-                </td>
-              {/if}
-            </tr>
+            {:else}
+              {item[col.key] ?? '—'}
+            {/if}
+           </td>
           {/each}
-        </tbody>
-      </table>
-    </div>
+          {#if hasRowActions}
+            <td class="px-4 py-3 text-right">
+              <div class="inline-flex items-center gap-3">
+                {#if onEdit}
+                  <button onclick={() => onEdit(item)} class="text-xs font-medium text-primary hover:underline">{typeof editLabel === 'function' ? editLabel(item) : editLabel ?? 'Edit'}</button>
+                {/if}
+                {#if onDelete}
+                  <button onclick={() => confirmDelete(item)} class="text-xs font-medium text-slate-400 hover:text-red-600">{deleteLabel}</button>
+                {/if}
+              </div>
+            </td>
+          {/if}
+          {#if rowExtra}
+            <td class="px-4 py-3 text-right">
+              {@render rowExtra(item)}
+            </td>
+          {/if}
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
     <!-- Pagination -->
     {#if totalPages > 1}
       <div class="flex items-center justify-between border-t border-slate-200 px-4 py-3">

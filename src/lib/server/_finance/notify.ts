@@ -27,6 +27,7 @@ export async function enqueuePaymentReceiptSms(
     const { data: existing } = await sb
       .from('notifications')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('channel', 'sms')
       .eq('external_id', externalId)
       .maybeSingle();

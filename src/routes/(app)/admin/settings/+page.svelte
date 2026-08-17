@@ -25,6 +25,8 @@
   let credSaving = $state(false);
   let credTesting = $state<string | null>(null);
   let credTestResult = $state<{ id: string; ok: boolean; msg: string } | null>(null);
+  let confirmDeleteTermId = $state<string | null>(null);
+  let confirmDeleteCredId = $state<string | null>(null);
 
   function openCredEdit(item: any) {
     credEditId = item.id;
@@ -328,18 +330,15 @@
                       {term.start_date ?? '—'} – {term.end_date ?? '—'}
                     </p>
                   </div>
-                  <div class="flex items-center gap-2">
-                    {#if term.id !== currentTermId}
-                      <form method="POST" action="?/term-set-current" class="inline">
-                        <input type="hidden" name="id" value={term.id} />
-                        <Button type="submit" variant="outline" size="sm">Set Current</Button>
-                      </form>
-                    {/if}
-                    <form method="POST" action="?/term-delete" class="inline">
-                      <input type="hidden" name="id" value={term.id} />
-                      <Button type="submit" variant="ghost" size="sm" class="text-destructive">Delete</Button>
-                    </form>
-                  </div>
+                   <div class="flex items-center gap-2">
+                     {#if term.id !== currentTermId}
+                       <form method="POST" action="?/term-set-current" class="inline">
+                         <input type="hidden" name="id" value={term.id} />
+                         <Button type="submit" variant="outline" size="sm">Set Current</Button>
+                       </form>
+                     {/if}
+                     <Button type="button" variant="ghost" size="sm" class="text-destructive" onclick={() => confirmDeleteTermId = term.id}>Delete</Button>
+                   </div>
                 </div>
               {/each}
             </div>
@@ -395,21 +394,18 @@
                   </p>
                 </div>
                 <div class="flex items-center gap-2">
-                  <Button size="sm" variant="secondary" onclick={() => runCredTest(cred.id)} disabled={credTesting === cred.id}>
-                    {#if credTesting === cred.id}
-                      <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                    {:else}
-                      Test
-                    {/if}
-                  </Button>
-                  <Button size="sm" variant="outline" onclick={() => openCredEdit(cred)}>Edit</Button>
-                  <form method="POST" action="?/credential-delete" class="inline">
-                    <input type="hidden" name="id" value={cred.id} />
-                    <Button type="submit" size="sm" variant="ghost" class="text-destructive">Delete</Button>
-                  </form>
+                   <Button size="sm" variant="secondary" onclick={() => runCredTest(cred.id)} disabled={credTesting === cred.id}>
+                     {#if credTesting === cred.id}
+                       <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                       </svg>
+                     {:else}
+                       Test
+                     {/if}
+                   </Button>
+                   <Button size="sm" variant="outline" onclick={() => openCredEdit(cred)}>Edit</Button>
+                   <Button type="button" size="sm" variant="ghost" class="text-destructive" onclick={() => confirmDeleteCredId = cred.id}>Delete</Button>
                 </div>
               </div>
             {:else}
@@ -475,11 +471,44 @@
                     <Button type="button" variant="outline" onclick={cancelCredForm}>Cancel</Button>
                   {/if}
                 </div>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
-  </div>
+               </div>
+             </form>
+           </CardContent>
+         </Card>
+       </TabsContent>
+     </Tabs>
+   </div>
+
+  <!-- Confirmation Dialogs -->
+  {#if confirmDeleteTermId}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div class="rounded-lg border bg-white p-6 max-w-sm">
+        <h3 class="text-lg font-semibold">Delete Term</h3>
+        <p class="mt-2 text-sm text-muted-foreground">Are you sure you want to delete this term? This action cannot be undone.</p>
+        <div class="mt-4 flex gap-2">
+          <form method="POST" action="?/term-delete" class="flex-1">
+            <input type="hidden" name="id" value={confirmDeleteTermId} />
+            <Button type="submit" variant="destructive" class="w-full">Delete</Button>
+          </form>
+          <Button type="button" variant="outline" class="flex-1" onclick={() => confirmDeleteTermId = null}>Cancel</Button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if confirmDeleteCredId}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div class="rounded-lg border bg-white p-6 max-w-sm">
+        <h3 class="text-lg font-semibold">Delete Credential</h3>
+        <p class="mt-2 text-sm text-muted-foreground">Are you sure you want to delete this credential? This will remove all associated API keys and configuration.</p>
+        <div class="mt-4 flex gap-2">
+          <form method="POST" action="?/credential-delete" class="flex-1">
+            <input type="hidden" name="id" value={confirmDeleteCredId} />
+            <Button type="submit" variant="destructive" class="w-full">Delete</Button>
+          </form>
+          <Button type="button" variant="outline" class="flex-1" onclick={() => confirmDeleteCredId = null}>Cancel</Button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </DashboardContent>

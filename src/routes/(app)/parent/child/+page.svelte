@@ -20,8 +20,10 @@
     const map = new Map<string, any[]>();
     for (const s of students) map.set(s.id, []);
     for (const p of payments) {
-      const list = map.get(p.student_id);
-      if (list) list.push(p);
+      if (p.student_id) {
+        const list = map.get(p.student_id);
+        if (list) list.push(p);
+      }
     }
     return map;
   });

@@ -1,7 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
 import { getSisClasses } from '$lib/server/_sis/sis';
-import { countRecords } from '$lib/server/_platform/query';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');

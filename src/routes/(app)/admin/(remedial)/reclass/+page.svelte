@@ -1,9 +1,7 @@
 <script lang="ts">
   import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card/index.js';
-  import { Badge } from '$lib/components/ui/badge/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Alert, AlertTitle, AlertDescription } from '$lib/components/ui/alert/index.js';
-  import { Separator } from '$lib/components/ui/separator/index.js';
   import DataTable from '$lib/components/DataTable.svelte';
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import RecentActivity from '$lib/components/dashboard/RecentActivity.svelte';

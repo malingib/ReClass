@@ -8,7 +8,7 @@ type AttendanceRow = {
 };
 type PaymentRow = {
   id: string; student_name?: string; fee_type?: string; amount?: number | null;
-  method?: string; created_at?: string | null; domain?: string;
+  method?: string | null; created_at?: string | null; domain?: string;
 };
 type ActivityItem = {
   id: string; name: string; detail: string; time: string;

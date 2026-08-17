@@ -64,9 +64,9 @@ describe('platform config security contract', () => {
 
   it('callback functions resolve the shared secret via platform config and fail closed', () => {
     expect(callbackFn).toContain("getPlatformConfig(supabase, ['mpesa_callback_secret'])");
-    expect(callbackFn).toContain('actual !== callbackSecret');
+    expect(callbackFn).toContain('verifySecret');
     expect(b2cResultFn).toContain("getPlatformConfig(supabase, ['mpesa_callback_secret'])");
-    expect(b2cResultFn).toContain('actual !== callbackSecret');
+    expect(b2cResultFn).toContain('verifySecret');
   });
 
   it('credentials-test decrypts platform creds without transacting session config', () => {

@@ -54,8 +54,7 @@ CREATE INDEX IF NOT EXISTS idx_unmatched_payments_open
 ALTER TABLE public.unmatched_payments ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON public.unmatched_payments
-  USING (tenant_id = current_setting('app.tenant_id', true)::uuid
-         OR matched_at IS NULL);
+  USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
 
 DROP TRIGGER IF EXISTS trg_unmatched_payments_updated ON public.unmatched_payments;
 CREATE TRIGGER trg_unmatched_payments_updated BEFORE UPDATE ON public.unmatched_payments

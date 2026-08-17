@@ -6,7 +6,6 @@ import { test, expect, type Page } from '@playwright/test';
  * remedial=ReClass/M-Pesa) is reflected in the sidebar, and that no page orphans
  * its nav. Captures evidence screenshots.
  */
-const ADMIN = { email: 'admin@school.ac.ke', password: 'ReClass2026!' };
 const authFile = 'playwright/.auth/user.json';
 
 test.use({ storageState: authFile });

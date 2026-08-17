@@ -39,7 +39,8 @@ export async function getStudentLedger(
       .select('student_id, amount')
       .eq('tenant_id', tenantId)
       .eq('domain', domain)
-      .eq('status', 'paid'),
+      .eq('status', 'paid')
+      .limit(10000),
   ]);
 
   const obligation = (feeTypes ?? []).reduce((s, f) => s + Number(f.amount ?? 0), 0);
@@ -112,7 +113,8 @@ export async function getParentLedger(
       .select('student_id, amount')
       .eq('tenant_id', tenantId)
       .in('student_id', studentIds)
-      .eq('status', 'paid'),
+      .eq('status', 'paid')
+      .limit(10000),
   ]);
 
   const obligation = (feeTypes ?? []).reduce((s, f) => s + Number(f.amount ?? 0), 0);
@@ -149,6 +151,11 @@ export async function getUnmatchedPayments(srv: App.Locals['srv'], tenantId: str
  * Manually match an unmatched deposit to a student+fee. Creates a `payments`
  * receipt (method=mpesa, domain inferred from the fee type) and stamps the
  * queue row. Every step is audit-logged.
+ *
+ * Race-safe: the unmatched row is claimed with a conditional UPDATE
+ * (`matched_at IS NULL`) AFTER the payment insert. If a concurrent request
+ * already claimed it, our just-inserted duplicate receipt is deleted and we
+ * return a 409 — so only one payment is ever created for a deposit.
  */
 export async function matchUnmatchedPayment(
   srv: App.Locals['srv'],
@@ -173,6 +180,8 @@ export async function matchUnmatchedPayment(
     domain = ft?.domain === 'school' ? 'school' : 'remedial';
   }
 
+  const receiptNo = `RCP-${tenantId.slice(0, 6).toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${u.checkout_id.slice(0, 5).toUpperCase()}`;
+
   const { data: payment, error: pErr } = await srv
     .from('payments')
     .insert({
@@ -186,7 +195,7 @@ export async function matchUnmatchedPayment(
       mpesa_checkout_id: u.checkout_id,
       status: 'paid',
       reconciled_at: new Date().toISOString(),
-      receipt_no: `RCP-${tenantId.slice(0, 6).toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${u.checkout_id.slice(0, 5).toUpperCase()}`,
+      receipt_no: receiptNo,
     })
     .select('id')
     .single();
@@ -195,12 +204,24 @@ export async function matchUnmatchedPayment(
     return fail(500, { error: 'Failed to create the payment receipt.' });
   }
 
-  const { error: mErr } = await srv
+  // Atomically claim the unmatched row. The conditional `matched_at IS NULL`
+  // guarantees only one concurrent request can succeed; the loser rolls back
+  // its just-created payment to avoid duplicate receipts for one deposit.
+  const { data: claimed, error: mErr } = await srv
     .from('unmatched_payments')
     .update({ matched_to: payment.id, matched_by: actorId ?? null, matched_at: new Date().toISOString() })
     .eq('id', unmatchedId)
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .is('matched_at', null)
+    .select('id')
+    .maybeSingle();
   if (mErr) logError('unmatched_match_stamp', mErr, { unmatchedId });
+  if (!claimed) {
+    // A concurrent request already matched this deposit — remove our
+    // duplicate receipt and report the conflict to the caller.
+    await srv.from('payments').delete().eq('id', payment.id).eq('tenant_id', tenantId);
+    return fail(409, { error: 'This deposit was already matched by another action.' });
+  }
 
   // A manual match is a payment that landed silently — notify the payer's phone
   // with a receipt now that a payments row exists.

@@ -34,12 +34,13 @@ CREATE TABLE IF NOT EXISTS public.expenses (
 ALTER TABLE public.other_income ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
--- RLS: tenant-scoped access
+-- RLS: tenant-scoped access. Fail closed: when app.tenant_id is unset the
+-- comparison is against NULL and the policy denies, never a no-op fallback.
 CREATE POLICY tenant_isolation ON public.other_income
-  USING (tenant_id = coalesce(nullif(current_setting('app.tenant_id', true), '')::uuid, tenant_id));
+  USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
 
 CREATE POLICY tenant_isolation ON public.expenses
-  USING (tenant_id = coalesce(nullif(current_setting('app.tenant_id', true), '')::uuid, tenant_id));
+  USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
 
 -- Fix nullable tenant_id on credentials
 ALTER TABLE public.credentials

@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { logError } from '$lib/server/_platform/log';
+import { logError, sanitizeError } from '$lib/server/_platform/log';
 
 function mapSessionError(err: { message?: string; code?: string } | null) {
   const msg = err?.message ?? '';
@@ -101,7 +101,7 @@ export async function softDeleteSession(sb: App.Locals['srv'], tenantId: string,
     .update({ active: false, deleted_at: new Date().toISOString() })
     .eq('id', id)
     .eq('tenant_id', tenantId);
-  if (error) return fail(500, { error: error.message });
+  if (error) return fail(500, { error: sanitizeError(error, 'Failed to delete session') });
   return { success: true as const };
 }
 
@@ -112,6 +112,6 @@ export async function toggleSessionActive(sb: App.Locals['srv'], tenantId: strin
     .update({ active })
     .eq('id', id)
     .eq('tenant_id', tenantId);
-  if (error) return fail(500, { error: error.message });
+  if (error) return fail(500, { error: sanitizeError(error, 'Failed to update session') });
   return { success: true as const };
 }

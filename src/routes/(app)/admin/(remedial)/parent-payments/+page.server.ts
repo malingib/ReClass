@@ -5,8 +5,6 @@ import { EXPORT_BURSA_MAX_ROWS } from '$lib/config';
 export const load: PageServerLoad = async ({ locals }) => {
   requireTenantRole(locals, 'school_admin', 'super_admin');
 
-  const yearStart = new Date(Date.now() - 365 * 864e5).toISOString();
-
   const [
     paymentsRes,
     studentsRes,
@@ -45,7 +43,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const payments = paymentsRes.data;
   const totalStudents = studentsRes.count;
 
-  const paymentData = (payments ?? []).map((p: any) => ({
+  const paymentData = (payments ?? []).map((p) => ({
     ...p,
     student_name: p.students ? `${p.students.first_name} ${p.students.last_name}` : '—',
     admission_no: p.students?.admission_no ?? '—',

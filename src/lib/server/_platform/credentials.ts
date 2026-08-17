@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { logError } from './log';
+import { logError, sanitizeError } from './log';
 
 const MPESA_KEYS = ['consumer_key', 'consumer_secret', 'passkey', 'shortcode'] as const;
 // B2C payouts (teacher disbursement) also require the Daraja initiator identity.
@@ -118,12 +118,19 @@ async function saveCredentialRaw(
   }
 
   // Encrypt the blob server-side before storing
-  const { data: encrypted, error: encError } = await sb.rpc('encrypt_credential', {
-    p_json: JSON.parse(encrypted_blob),
-  });
-  if (encError || !encrypted) {
-    logError('credential_encrypt', encError ?? new Error('encryption returned null'));
-    return fail(500, { error: 'Failed to encrypt credential. Please try again.' });
+  let encrypted: string;
+  try {
+    const { data: encryptedData, error: encError } = await sb.rpc('encrypt_credential', {
+      p_json: JSON.parse(encrypted_blob),
+    });
+    if (encError || !encryptedData) {
+      logError('credential_encrypt', encError ?? new Error('encryption returned null'));
+      return fail(500, { error: 'Failed to encrypt credential. Please try again.' });
+    }
+    encrypted = encryptedData as string;
+  } catch (e) {
+    logError('credential_encrypt_parse', e);
+    return fail(400, { error: 'Invalid credential format. Please check your JSON.' });
   }
 
   const payload = {
@@ -203,12 +210,18 @@ export async function testCredential(sb: App.Locals['srv'], tenantId: string, id
     .maybeSingle();
   if (!credential) return fail(404, { error: 'Credential not found' });
 
-  await sb
+  // Update test status in a single query to reduce DB roundtrips
+  const { error: updateError } = await sb
     .from('credentials')
-    .update({ test_status: 'untested' })
+    .update({ test_status: 'untested', last_tested_at: new Date().toISOString() })
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .eq('scope', 'tenant');
+
+  if (updateError) {
+    logError('credential_test_update', updateError, { id });
+    return fail(500, { error: 'Failed to prepare credential test.' });
+  }
 
   const { data: result, error: fnError } = await sb.functions.invoke('credentials-test', {
     body: { credential_id: id },
@@ -221,7 +234,7 @@ export async function testCredential(sb: App.Locals['srv'], tenantId: string, id
       .eq('id', id)
       .eq('tenant_id', tenantId)
       .eq('scope', 'tenant');
-    return fail(500, { error: `Test failed: ${fnError.message}` });
+    return fail(500, { error: `Test failed: ${sanitizeError(fnError, 'Connection test failed')}` });
   }
 
   const ok = result?.ok === true;
@@ -290,7 +303,7 @@ export async function testPlatformCredential(sb: App.Locals['srv'], id: string) 
       .eq('id', id)
       .eq('scope', 'platform')
       .is('tenant_id', null);
-    return fail(500, { error: `Test failed: ${fnError.message}` });
+    return fail(500, { error: `Test failed: ${sanitizeError(fnError, 'Connection test failed')}` });
   }
 
   const ok = result?.ok === true;

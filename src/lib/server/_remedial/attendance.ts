@@ -47,7 +47,7 @@ export async function getAttendanceForEffectiveness(
     .from('teacher_attendance')
     .select('id, status, marked_at, occurrence_id, teacher_id')
     .eq('tenant_id', tenantId)
-    .limit(limit);
+    .limit(Math.min(limit, 10000));
   return data ?? [];
 }
 

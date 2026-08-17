@@ -38,4 +38,17 @@ export default [
       'prefer-const': 'warn',
     },
   },
+  {
+    // Tests use permissive mocks — `any` in fixtures is idiomatic.
+    files: ['**/__tests__/**/*.ts'],
+    languageOptions: {
+      parser: tsParser,
+    },
+    plugins: {
+      '@typescript-eslint': ts,
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ];

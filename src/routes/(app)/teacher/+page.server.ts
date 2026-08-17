@@ -5,7 +5,7 @@ import { hasCapability } from '$lib/server/_auth/capabilities';
 import type { Capability } from '$lib/server/_auth/capabilities';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const { user, tenantId, teacher } = await getTeacherOwnership(locals);
+  const { tenantId, teacher } = await getTeacherOwnership(locals);
   const caps = (locals as App.Locals & { capabilities?: Capability[] })['capabilities'] ?? [];
 
   const canRemedial = hasCapability(locals.role, teacher.teacher_type, 'remedial:view');
@@ -58,7 +58,11 @@ export const load: PageServerLoad = async ({ locals }) => {
     ...occurrence,
     subject: (occurrence['sessions'] as { subjects?: { name?: string } } | undefined)?.subjects?.name ?? '',
     attendance: (occurrence['teacher_attendance'] as Record<string, unknown>[] | undefined)?.[0] ?? null,
-  })) as unknown as Array<Record<string, any>>;
+  })) as Array<{
+    id: string; occurs_on: string; class: string | null; start_time: string; end_time: string;
+    room: string | null; status: string; subject: string;
+    attendance: { id: string; status: string; marked_at: string | null; approval_status: string; review_note: string | null } | null;
+  }>;
 
   return {
     capabilities: caps,

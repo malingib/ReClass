@@ -1,6 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
-import { existsSync } from 'node:fs';
+import { test, expect } from '@playwright/test';
 
 /**
  * Frontend / UX-UI review against this session's changes.
@@ -11,7 +9,6 @@ import { existsSync } from 'node:fs';
  * Auth is performed ONCE (setup project) and reused via storageState so the
  * 7-login burst doesn't trip the server's login rate limit (5/min).
  */
-const ADMIN = { email: 'admin@school.ac.ke', password: 'ReClass2026!' };
 const authFile = 'playwright/.auth/user.json';
 
 // All review tests reuse the authenticated session produced by _auth-setup.spec.ts.

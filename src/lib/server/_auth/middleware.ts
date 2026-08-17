@@ -52,16 +52,27 @@ export async function resolveSession(event: Parameters<Handle>[0]['event']): Pro
   let user = null;
   try {
     const { data: { user: u }, error } = await event.locals.supabase.auth.getUser();
-    if (!error) user = u;
+    if (!error && u) user = u;
   } catch (e) {
     if (e instanceof TypeError || e instanceof Error) {
       console.warn('[auth] stale session:', e.message);
     }
+    // Treat any error as no user to ensure stale sessions are cleared
+    user = null;
   }
 
   if (!user) {
     event.locals.user = null;
     event.cookies.delete(COOKIE_USER_NAME, { path: '/' });
+    event.cookies.delete(COOKIE_ROLE_NAME, { path: '/' });
+    // Also clear Supabase auth session cookie if present
+    event.locals.supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        event.locals.supabase.auth.signOut();
+      }
+    }).catch(() => {
+      // Ignore errors during cleanup
+    });
     return;
   }
 

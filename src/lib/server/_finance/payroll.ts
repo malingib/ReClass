@@ -211,7 +211,7 @@ export async function approvePayrollRun(sb: App.Locals['srv'], tid: string, id: 
   if (!run) return fail(404, { error: 'Payroll run not found.' });
   if (run.status !== 'draft') return fail(400, { error: 'Only draft runs can be approved.' });
 
-  const { error } = await sb
+  const { error, count } = await sb
     .from('payroll_runs')
     .update({ status: 'approved' })
     .eq('id', id)
@@ -221,6 +221,9 @@ export async function approvePayrollRun(sb: App.Locals['srv'], tid: string, id: 
   if (error) {
     logError('payroll_approve', error, { id });
     return fail(500, { error: 'Failed to approve payroll run.' });
+  }
+  if (count === 0) {
+    return fail(400, { error: 'Payroll run status changed or was already updated.' });
   }
 
   return { success: true as const };
@@ -233,7 +236,7 @@ export async function markPayrollPaid(sb: App.Locals['srv'], tid: string, id: st
   if (!run) return fail(404, { error: 'Payroll run not found.' });
   if (run.status !== 'approved') return fail(400, { error: 'Only approved runs can be marked paid.' });
 
-  const { error } = await sb
+  const { error, count } = await sb
     .from('payroll_runs')
     .update({ status: 'paid', paid_at: new Date().toISOString() })
     .eq('id', id)
@@ -243,6 +246,9 @@ export async function markPayrollPaid(sb: App.Locals['srv'], tid: string, id: st
   if (error) {
     logError('payroll_pay', error, { id });
     return fail(500, { error: 'Failed to mark payroll as paid.' });
+  }
+  if (count === 0) {
+    return fail(400, { error: 'Payroll run status changed or was already updated.' });
   }
 
   return { success: true as const };
@@ -302,6 +308,8 @@ export async function payPayrollRunB2C(
 
   const status = (result?.data as { status?: string; error?: string; message?: string }) ?? {};
   if (status.status === 'processing') {
+    // Update run status to processing immediately to prevent duplicate submissions
+    await sb.from('payroll_runs').update({ status: 'processing' }).eq('id', runId).eq('tenant_id', tenantId);
     return { success: true as const, message: 'Payout request sent to M-Pesa. Confirmation is pending.' };
   }
   if (status.status === 'rejected') {

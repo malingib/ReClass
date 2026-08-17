@@ -87,11 +87,21 @@ Deno.serve(async (req) => {
     }
 
     const tenant_id = parent.tenant_id;
-    const phone = parent.phone.replace(/[\s\-\()\.\+]/g, '');
+    // Normalize to international 254 format: strip separators, then convert a
+    // leading 0 (0712… → 254712…) or bare 7xx (712… → 254712…) so phone numbers
+    // stored in local formats still pass the Daraja phone validation.
+    const digits = parent.phone.replace(/[\s\-\()\.\+]/g, '');
+    const normalizedPhone = /^0/.test(digits)
+      ? `254${digits.slice(1)}`
+      : /^7/.test(digits)
+        ? `254${digits}`
+        : digits;
+    const validPhone = /^254[17]\d{8}$/.test(normalizedPhone);
     const amount = Number(feeType.amount);
-    if (amount <= 0 || !/^254[17]\d{8}$/.test(phone)) {
+    if (amount <= 0 || !validPhone) {
       return badRequest('INVALID_PAYMENT_DETAILS', req);
     }
+    const payPhone = normalizedPhone;
 
     const { data: cred_id } = await supabase.rpc('resolve_credential',
       { p_tenant: tenant_id, p_provider: 'mpesa', p_allow_sandbox: false });
@@ -105,10 +115,19 @@ Deno.serve(async (req) => {
       ? 'https://sandbox.safaricom.co.ke' : 'https://api.safaricom.co.ke';
 
     const auth = btoa(`${secrets.consumer_key}:${secrets.consumer_secret}`);
-    const { access_token } = await fetchWithRetry(
+    const oauthRes = await fetchWithRetry(
       `${base}/oauth/v1/generate?grant_type=client_credentials`,
       { headers: { Authorization: `Bearer ${auth}` } },
-    ).then(r => r.json());
+    );
+    if (!oauthRes.ok) {
+      console.error(`[stk] OAuth token request failed with ${oauthRes.status}`);
+      return internalError(req);
+    }
+    const { access_token } = await oauthRes.json();
+    if (!access_token) {
+      console.error('[stk] OAuth token response missing access_token');
+      return internalError(req);
+    }
 
     const ts = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
     const pwd = btoa(`${secrets.passkey}${secrets.shortcode}${ts}`);
@@ -137,17 +156,27 @@ Deno.serve(async (req) => {
       return internalError(req);
     }
 
-    const stk = await fetchWithRetry(`${base}/mpesa/stkpush/v1/processrequest`, {
+    const stkRes = await fetchWithRetry(`${base}/mpesa/stkpush/v1/processrequest`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         BusinessShortCode: secrets.shortcode, Password: pwd, Timestamp: ts,
         TransactionType: 'CustomerPayBillOnline', Amount: amount,
-        PartyA: phone, PartyB: secrets.shortcode, PhoneNumber: phone,
+        PartyA: payPhone, PartyB: secrets.shortcode, PhoneNumber: payPhone,
         CallBackURL: callback, AccountReference: accountRef,
         TransactionDesc: `eShule ${domain === 'school' ? 'fees' : 'remedial'} payment`,
       }),
-    }).then(r => r.json());
+    });
+    let stk: { ResponseCode?: string; ResponseDescription?: string; CheckoutRequestID?: string };
+    try {
+      stk = await stkRes.json();
+    } catch {
+      console.error(`[stk] non-JSON STK response (${stkRes.status})`);
+      await supabase.from('checkout_requests')
+        .update({ status: 'failed', reason: `UPSTREAM_HTTP_${stkRes.status}` })
+        .eq('checkout_id', checkoutId);
+      return internalError(req);
+    }
 
     if (stk.ResponseCode !== '0') {
       await supabase.from('checkout_requests')
@@ -160,7 +189,8 @@ Deno.serve(async (req) => {
     }
 
     return json(stk, 200, req);
-  } catch {
+  } catch (err) {
+    console.error('[stk] unexpected error:', (err as Error).message ?? String(err));
     return internalError(req);
   }
 });

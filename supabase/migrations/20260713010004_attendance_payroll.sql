@@ -56,8 +56,8 @@ CREATE INDEX IF NOT EXISTS idx_payroll_tenant_period ON public.payroll_runs(tena
 -- RLS: tenant isolation
 ALTER TABLE public.teacher_attendance ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON public.teacher_attendance
-  USING (tenant_id = current_setting('app.tenant_id')::uuid);
+  USING (tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid));
 
 ALTER TABLE public.payroll_runs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON public.payroll_runs
-  USING (tenant_id = current_setting('app.tenant_id')::uuid);
+  USING (tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid));

@@ -12,7 +12,7 @@ describe('M-Pesa callback safety contract', () => {
     // Secret resolved via platform config (DB), env fallback; still fail-closed.
     expect(callback).toContain('getPlatformConfig');
     expect(callback).toContain("if (!callbackSecret)");
-    expect(callback).toContain('actual !== callbackSecret');
+    expect(callback).toContain('verifySecret');
   });
 
   it('rejects missing or mismatched phone numbers', () => {

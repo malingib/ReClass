@@ -26,7 +26,7 @@ export const GET: RequestHandler = async ({ locals, params }) => {
   const cents = Math.round((Number(p.amount) - shillings) * 100);
   const numberWords = numberToWords(shillings);
   const studentName = `${p.students?.first_name ?? ''} ${p.students?.last_name ?? ''}`.trim() || '—';
-  const feeName = (p.fee_types as any)?.name ?? '—';
+  const feeName = (p.fee_types as { name?: string } | null)?.name ?? '—';
   const channel = p.domain === 'remedial' ? 'M-Pesa Paybill' : (p.method === 'bank' ? `${esc(p.bank_name ?? 'Bank')}` : 'Bank');
   const reference = p.method === 'bank' ? (p.bank_reference ?? '—') : (p.mpesa_receipt ?? p.phone ?? '—');
 

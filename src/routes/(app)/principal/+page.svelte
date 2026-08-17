@@ -1,6 +1,5 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
-  import { Card, CardContent, CardHeader } from '$lib/components/ui/card/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { EnhancedKpiCard, Skeleton } from '@eshule/shared';
 

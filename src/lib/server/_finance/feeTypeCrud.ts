@@ -3,6 +3,7 @@ import { fail } from '@sveltejs/kit';
 import { z } from 'zod/v3';
 import { requireTenantRole } from '$lib/server/_auth/auth';
 import { parseForm } from '$lib/server/_platform/validation';
+import { sanitizeError } from '$lib/server/_platform/log';
 
 const feeSchema = z.object({
   id: z.string().optional(),
@@ -40,7 +41,7 @@ export function feeTypeCrud(domain: 'school' | 'remedial', label: string) {
         domain,
       });
       return error
-        ? fail(500, { message: `Failed: ${error.message}` })
+        ? fail(500, { message: `Failed: ${sanitizeError(error, 'Fee creation failed')}` })
         : { success: true, message: `${label} fee created successfully` };
     },
     update: async ({ locals, request }) => {
@@ -54,7 +55,7 @@ export function feeTypeCrud(domain: 'school' | 'remedial', label: string) {
         .eq('id', v.data.id)
         .eq('tenant_id', tenantId);
       return error
-        ? fail(500, { message: `Failed: ${error.message}` })
+        ? fail(500, { message: `Failed: ${sanitizeError(error, 'Fee update failed')}` })
         : { success: true, message: `${label} fee updated successfully` };
     },
     delete: async ({ locals, request }) => {
@@ -63,7 +64,7 @@ export function feeTypeCrud(domain: 'school' | 'remedial', label: string) {
       if (!v.success) return fail(400, { errors: v.errors });
       const { error } = await locals.srv.from('fee_types').delete().eq('id', v.data.id).eq('tenant_id', tenantId);
       return error
-        ? fail(500, { message: `Failed: ${error.message}` })
+        ? fail(500, { message: `Failed: ${sanitizeError(error, 'Fee deletion failed')}` })
         : { success: true, message: `${label} fee deleted successfully` };
     },
   };

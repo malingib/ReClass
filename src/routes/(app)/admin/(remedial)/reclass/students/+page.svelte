@@ -57,7 +57,7 @@
           const b = Number(r.balance ?? 0);
           return `<span class="${b > 0 ? 'text-danger font-medium' : 'text-success'}">KES ${b.toLocaleString()}</span>`;
         } },
-        { key: 'txn', label: '', render: (r: any) => `<a class="text-brand-600 hover:underline" href="/admin/reclass/students/${r.id}?domain=${domain}">Transactions →</a>` },
+        { key: 'txn', label: '', render: (r: any) => `<a class="text-brand-600 hover:underline" href="/admin/reclass/students/${r.id}?domain=${domain}">Transactions →</a>`, html: true },
       ]}
       emptyMessage="No active students yet. Add students in SIS first."
     />

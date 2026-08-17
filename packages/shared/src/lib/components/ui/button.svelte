@@ -37,7 +37,7 @@
     type?: 'button' | 'submit' | 'reset';
     class?: string;
     children?: import('svelte').Snippet;
-    onclick?: (e: MouseEvent) => void;
+    onclick?: (_e: MouseEvent) => void;
     [key: string]: unknown;
   }
 

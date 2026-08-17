@@ -1,5 +1,24 @@
 import { getUserClient } from './supabase.ts';
 
+/**
+ * Constant-time comparison of an expected secret against the supplied value.
+ * Hashes both sides with SHA-256 and compares digests, so length and value
+ * timing do not leak. Falls back to a plain comparison where WebCrypto is
+ * unavailable.
+ */
+export async function verifySecret(actual: string, expected: string): Promise<boolean> {
+  const actualBytes = new TextEncoder().encode(actual);
+  const expectedBytes = new TextEncoder().encode(expected);
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const a = new Uint8Array(await crypto.subtle.digest('SHA-256', actualBytes));
+    const b = new Uint8Array(await crypto.subtle.digest('SHA-256', expectedBytes));
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+    return diff === 0;
+  }
+  return actual === expected;
+}
+
 export interface VerifiedUser {
   id: string;
   email?: string;

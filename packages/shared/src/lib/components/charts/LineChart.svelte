@@ -13,7 +13,7 @@
     height?: number;
     color?: string;
     unit?: string;
-    format?: (v: number) => string;
+    format?: (_v: number) => string;
   } = $props();
 
   let svgEl: SVGSVGElement = $state()!;

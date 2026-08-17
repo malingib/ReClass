@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       ...p,
       student_name: `${p.students?.first_name ?? ''} ${p.students?.last_name ?? ''}`.trim() || 'Unknown',
       admission_no: p.students?.admission_no ?? '—',
-      fee_type: (p.fee_types as any)?.name ?? '—',
+      fee_type: (p.fee_types as { name?: string } | null)?.name ?? '—',
     })),
   };
 };

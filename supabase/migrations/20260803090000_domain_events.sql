@@ -6,7 +6,7 @@
 
 CREATE TABLE IF NOT EXISTS domain_events (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id   uuid NOT NULL,                       -- FK added in 0003 once tenants table context is confirmed
+  tenant_id   uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
   topic       text NOT NULL CHECK (length(topic) <= 120),
   payload     jsonb NOT NULL DEFAULT '{}'::jsonb,
   source_type text NOT NULL DEFAULT '',            -- e.g. 'payment', 'payroll_run'
@@ -27,5 +27,3 @@ CREATE INDEX IF NOT EXISTS idx_domain_events_unconsumed
 
 -- RLS: service-role only; no client access. Enable but grant nothing public.
 ALTER TABLE domain_events ENABLE ROW LEVEL SECURITY;
-
-COMMIT;

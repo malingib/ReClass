@@ -5,9 +5,7 @@
   import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '$lib/components/ui/dialog/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
-  import { Alert, AlertTitle, AlertDescription } from '$lib/components/ui/alert/index.js';
-  import { Separator } from '$lib/components/ui/separator/index.js';
-  import { Trash2 } from 'lucide-svelte';
+  import { Alert, AlertTitle } from '$lib/components/ui/alert/index.js';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
   import type { ActionResult } from '@sveltejs/kit';
@@ -97,10 +95,7 @@
     deletingUser = user;
   }
 
-  function closeCreate() {
-    showCreate = false;
-    editingUser = null;
-  }
+
 
   function closeDelete() {
     deletingUser = null;

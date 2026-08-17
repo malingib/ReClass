@@ -1,6 +1,5 @@
 <script lang="ts">
   import { suiteModules, moduleIcons } from '$lib/modules';
-  import { page } from '$app/stores';
   import { onMount } from 'svelte';
 
   const accentGradients: Record<string, string> = {

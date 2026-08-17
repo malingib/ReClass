@@ -26,7 +26,7 @@ export async function getReclassStats(sb: App.Locals['srv'], tenantId: string) {
       countRecords(sb, 'sessions', tenantId, q => q.eq('active', true).is('deleted_at', null)),
       getRecentAttendance(sb, tenantId, since),
       sb.from('session_occurrences').select('id, occurs_on, status').eq('tenant_id', tenantId).gte('occurs_on', since).then(r => r.data ?? []),
-      sb.from('payments').select('amount').eq('tenant_id', tenantId).eq('domain', 'remedial').eq('status', 'paid').then(r => (r.data ?? []).reduce((s: number, x: { amount: number }) => s + Number(x.amount ?? 0), 0)),
+      sb.from('payments').select('amount').eq('tenant_id', tenantId).eq('domain', 'remedial').eq('status', 'paid').limit(10000).then(r => (r.data ?? []).reduce((s: number, x: { amount: number }) => s + Number(x.amount ?? 0), 0)),
       countRecords(sb, 'payments', tenantId, q => q.eq('domain', 'remedial').eq('status', 'paid')),
       sb.from('payments').select('id, amount, method, created_at, students(first_name, last_name), fee_types(name)')
         .eq('tenant_id', tenantId).eq('domain', 'remedial').eq('status', 'paid')
@@ -49,7 +49,7 @@ export async function getReclassStats(sb: App.Locals['srv'], tenantId: string) {
       },
       recentPayments,
       trend: computeTrend(occ),
-      activity: buildActivityFeed(ta, recentPayments as any[]),
+      activity: buildActivityFeed(ta, recentPayments),
       error: null,
     };
   } catch (e) {

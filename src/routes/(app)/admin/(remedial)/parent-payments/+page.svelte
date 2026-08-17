@@ -6,7 +6,7 @@
   const payments = $derived(data.payments ?? []);
   const stats = $derived(data.stats);
 
-  function channelLabel(p: any) {
+  function channelLabel(p: { domain: string; method?: string; bank_name?: string }) {
     if (p.domain === 'remedial') return 'M-Pesa';
     return p.method === 'bank' ? `Bank${p.bank_name ? ` (${p.bank_name})` : ''}` : (p.method ?? '—');
   }
@@ -57,7 +57,7 @@
       { key: 'fee_type', label: 'Fee' },
       { key: 'amount', label: 'Amount', render: (p: any) => `KES ${Number(p.amount).toLocaleString()}`, sortable: true },
       { key: 'channel', label: 'Channel', render: (p: any) => channelLabel(p) },
-      { key: 'receipt', label: 'Receipt', render: (p: any) => `<a class="text-primary hover:underline" href="/admin/receipts/${p.id}/print" target="_blank">Print</a>` },
+      { key: 'receipt', label: 'Receipt', render: (p: any) => `<a class="text-primary hover:underline" href="/admin/receipts/${p.id}/print" target="_blank">Print</a>`, html: true },
       { key: 'created_at', label: 'Date', render: (p: any) => p.created_at ? new Date(p.created_at).toLocaleDateString() : '—', sortable: true },
     ]}
     emptyMessage="No parent payments"

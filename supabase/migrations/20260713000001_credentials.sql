@@ -84,13 +84,13 @@ DROP POLICY IF EXISTS cred_platform ON public.credentials;
 
 CREATE POLICY cred_tenant ON public.credentials
   FOR ALL
-  USING (scope='tenant' AND tenant_id = current_setting('app.tenant_id')::uuid)
-  WITH CHECK (scope='tenant' AND tenant_id = current_setting('app.tenant_id')::uuid);
+  USING (scope='tenant' AND tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid))
+  WITH CHECK (scope='tenant' AND tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid));
 
 CREATE POLICY cred_platform ON public.credentials
   FOR ALL
-  USING (scope='platform' AND current_setting('app.role') = 'super_admin')
-  WITH CHECK (scope='platform' AND current_setting('app.role') = 'super_admin');
+  USING (scope='platform' AND coalesce(current_setting('app.role', true), '') = 'super_admin')
+  WITH CHECK (scope='platform' AND coalesce(current_setting('app.role', true), '') = 'super_admin');
 
 CREATE INDEX IF NOT EXISTS idx_credentials_tenant ON public.credentials(tenant_id) WHERE scope='tenant';
 CREATE INDEX IF NOT EXISTS idx_credentials_scope ON public.credentials(scope, purpose);

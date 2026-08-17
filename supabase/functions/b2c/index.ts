@@ -33,7 +33,12 @@ async function fetchWithRetry(url: string, opts: RequestInit, attempt = 0): Prom
 }
 
 function cleanPhone(raw: string): string {
-  return String(raw ?? '').replace(/[\s\-\()\.\+]/g, '');
+  // Normalize to international 254 format (same rules as STK): strip separators,
+  // map a leading 0 to 254 and a bare 7/1 prefix to 2547/2541.
+  const digits = String(raw ?? '').replace(/[\s\-\()\.\+]/g, '');
+  if (/^0(7|1)\d{8}$/.test(digits)) return `254${digits.slice(1)}`;
+  if (/^(7|1)\d{8}$/.test(digits)) return `254${digits}`;
+  return digits.replace(/^254(7|1)/, '254$1');
 }
 
 async function finalizeFailure(supabase: ReturnType<typeof getServiceClient>, tenantId: string, checkoutId: string, reason: string) {

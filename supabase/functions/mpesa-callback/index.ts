@@ -1,6 +1,7 @@
 import { getServiceClient } from '../_shared/supabase.ts';
 import { json, badRequest, unauthorized, internalError } from '../_shared/response.ts';
 import { getPlatformConfig } from '../_shared/platform-config.ts';
+import { verifySecret } from '../_shared/auth.ts';
 
 const supabase = getServiceClient();
 const MAX_BODY_BYTES = 10_240;
@@ -19,15 +20,22 @@ Deno.serve(async (req) => {
       return internalError(req);
     }
     const actual = req.headers.get('x-callback-secret') ?? '';
-    if (actual !== callbackSecret) {
+    if (!(await verifySecret(actual, callbackSecret))) {
       return unauthorized(req);
     }
 
-    // Limit body size
+    // Limit body size (enforce on actual bytes, not just the advisory header,
+    // so chunked requests cannot bypass the cap).
     const cl = parseInt(req.headers.get('content-length') ?? '0', 10);
     if (cl > MAX_BODY_BYTES) return badRequest('body_too_large', req);
 
-    const body = await req.json();
+    const raw = await req.text().catch(() => null);
+    if (raw === null) return badRequest('invalid_callback', req);
+    if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
+      return badRequest('body_too_large', req);
+    }
+
+    const body = JSON.parse(raw);
     const stk = body?.Body?.stkCallback ?? {};
     const CheckoutRequestID = stk.CheckoutRequestID;
     const ResultCode = stk.ResultCode;
@@ -71,10 +79,21 @@ Deno.serve(async (req) => {
       }
 
       // Reconcile with the checkout's student context (v3 RPC stamps it).
+      // Domain is derived from the checkout's fee type, NOT hardcoded, so
+      // school-fee STK pushes are stamped correctly.
+      let checkoutDomain = 'remedial';
+      if (cr.fee_type_id) {
+        const { data: ft } = await supabase.from('fee_types')
+          .select('domain')
+          .eq('id', cr.fee_type_id)
+          .eq('tenant_id', cr.tenant_id)
+          .maybeSingle();
+        if (ft?.domain === 'school' || ft?.domain === 'remedial') checkoutDomain = ft.domain;
+      }
       const { data: rec } = await supabase.rpc('reconcile_payment', {
         p_checkout_id: CheckoutRequestID, p_amount: cr.amount,
         p_phone: phone, p_tenant_id: cr.tenant_id,
-        p_student_id: cr.student_id, p_fee_type_id: cr.fee_type_id, p_domain: 'remedial',
+        p_student_id: cr.student_id, p_fee_type_id: cr.fee_type_id, p_domain: checkoutDomain,
       });
 
       if (rec?.status !== 'completed' && rec?.status !== 'duplicate') {
@@ -90,10 +109,12 @@ Deno.serve(async (req) => {
         .eq('tenant_id', cr.tenant_id)
         .maybeSingle();
       if (payment) {
+        // Deterministic receipt number so a retried callback can't mint a
+        // different receipt for the same payment. Built from stable inputs.
         await supabase.from('payments').update({
           student_id: cr.student_id,
           fee_type_id: cr.fee_type_id,
-          domain: 'remedial',
+          domain: checkoutDomain,
           receipt_no: `RCP-${cr.tenant_id.slice(0, 6).toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${CheckoutRequestID.slice(0, 5).toUpperCase()}`,
         }).eq('id', payment.id);
       }

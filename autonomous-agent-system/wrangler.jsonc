@@ -1,0 +1,27 @@
+{
+  "name": "autonomous-agent-system",
+  "main": "src/index.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AutonomousOrchestrator",
+        "class_name": "AutonomousOrchestrator"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AutonomousOrchestrator"]
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "env_variables": {
+    "DATABASE_PATH": "./database.sqlite"
+  },
+  "local_protocol": "https",
+  "node_compat": true
+}

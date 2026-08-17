@@ -31,7 +31,7 @@ export const GET: RequestHandler = async ({ locals }) => {
     `${r.students?.first_name ?? ''} ${r.students?.last_name ?? ''}`.trim(),
     r.students?.admission_no ?? '',
     r.students?.grade ?? '',
-    (r.fee_types as any)?.name ?? '',
+    (r.fee_types as { name?: string } | null)?.name ?? '',
     Number(r.amount).toFixed(2),
     r.domain === 'remedial' ? 'M-Pesa' : (r.method ?? ''),
     r.method === 'bank' ? (r.bank_reference ?? '') : (r.mpesa_receipt ?? ''),

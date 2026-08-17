@@ -1,7 +1,6 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import { Card, CardContent } from '$lib/components/ui/card/index.js';
-  import { Badge } from '$lib/components/ui/badge/index.js';
 
   const { data } = $props();
   const trend = $derived(data.trend ?? []);

@@ -37,7 +37,8 @@ type ParentRow = {
 
 /** Normalize a phone to the 254-prefixed form used as the login password. */
 export function normalizePhone(raw: string): string {
-  const digits = (raw ?? '').replace(/\D/g, '');
+  let digits = (raw ?? '').replace(/\D/g, '');
+  if (digits.startsWith('2540')) digits = `254${digits.slice(4)}`; // 25407xx → 2547xx
   if (digits.startsWith('0')) return `254${digits.slice(1)}`;
   if (digits.startsWith('254')) return digits;
   if (/^7\d{8}$/.test(digits)) return `254${digits}`;
@@ -128,6 +129,7 @@ async function enqueueLoginSms(
   const { data: existing } = await sb
     .from('notifications')
     .select('id')
+    .eq('tenant_id', tenantId)
     .eq('channel', 'sms')
     .eq('external_id', externalId)
     .maybeSingle();

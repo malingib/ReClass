@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       .order('created_at', { ascending: false }),
     locals.srv
       .from('payments')
-      .select('id, amount, domain, fee_types(name), created_at')
+      .select('id, student_id, amount, domain, fee_types(name), created_at')
       .eq('tenant_id', tenantId)
       .in('student_id', studentIds)
       .order('created_at', { ascending: false })
@@ -31,9 +31,9 @@ export const load: PageServerLoad = async ({ locals }) => {
     parent,
     students: students ?? [],
     enrollments: enrollments ?? [],
-    payments: (payments ?? []).map((p: any) => ({
+    payments: (payments ?? []).map((p) => ({
       ...p,
-      fee_type: p.fee_types?.name ?? '—',
+      fee_type: (p.fee_types as { name?: string } | null)?.name ?? '—',
     })),
   };
 };

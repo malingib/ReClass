@@ -70,7 +70,8 @@ Deno.serve(async (req) => {
     await supabase.from('credentials').update(
       { test_status: ok ? 'ok' : 'failed', last_tested_at: new Date().toISOString() }).eq('id', credential_id);
     return json({ status: ok ? 'ok' : 'failed', detail }, 200, req);
-  } catch {
+  } catch (err) {
+    console.error('credentials-test error:', (err as Error).message);
     return internalError(req);
   }
 });
