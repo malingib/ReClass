@@ -24,6 +24,14 @@ export default [
     },
   },
   {
+    // shadcn/ui boilerplate uses `let` with $props() for consistency — noisy
+    // `prefer-const` warnings here add no signal and drown real issues.
+    files: ['src/lib/components/ui/**/*.svelte'],
+    rules: {
+      'prefer-const': 'off',
+    },
+  },
+  {
     files: ['**/*.ts'],
     languageOptions: {
       parser: tsParser,

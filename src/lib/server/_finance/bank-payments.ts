@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod/v3';
 import { parseForm } from '$lib/server/_platform/validation';
+import { logError, sanitizeError } from '$lib/server/_platform/log';
 import { enqueuePaymentReceiptSms, getStudentPayerPhone } from './notify';
 
 /**
@@ -80,7 +81,8 @@ export async function recordBankPayment(
     if (payErr.code === '23505') {
       return fail(409, { message: 'This bank reference has already been recorded for your school.' });
     }
-    return fail(500, { message: `Failed to record payment: ${payErr.message}` });
+    logError('bank_payment_insert', payErr, { tenantId });
+    return fail(500, { message: sanitizeError(payErr, 'Failed to record payment. Please try again.') });
   }
 
   // School-fee receipt SMS: unlike M-Pesa there is no callback carrying the

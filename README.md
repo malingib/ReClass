@@ -105,16 +105,16 @@ npx playwright test
 
 Playwright has no npm script and is not run by current CI. It requires a built app, installed browser, dedicated non-production users, and appropriate test environment configuration.
 
-Latest observed results on 2026-08-10 (verified on this host):
+Latest observed results on 2026-08-20 (verified on this host):
 
 | Check | Result |
 |---|---|
-| `npm test -- --run` | Pass: 16 files, 154 tests |
+| `npm test -- --run` | Pass: 17 files, 123 tests |
 | `npm run lint` | Pass: 0 errors, 0 warnings |
 | `npm run typecheck` (`svelte-check`) | Pass: 0 errors, 0 warnings — **this is the authoritative type gate** |
-| `python3 scripts/verify_tenant_isolation.py src` | Pass: 0 unscoped service-role chains across 76 files (hard CI gate) |
+| `python3 scripts/verify_tenant_isolation.py src` | Pass: 0 unscoped service-role chains across 80 files (hard CI gate) |
 | `npm run build` | Pass: clean Vite SSR build |
-| `npm audit --audit-level=low` | 0 moderate/high/critical |
+| `npm audit --audit-level=low` | 0 vulnerabilities (nanoid/cookie overrides) |
 
 > **Type-checking note:** `npm run typecheck` runs `svelte-check`, which is the project's type gate and is green. Raw `tsc --noEmit` is intentionally **not** used: Svelte 5 `*.svelte` named exports are not visible to plain `tsc` (TS2614 in `src/lib/components/ui/*/index.ts`), but svelte-check resolves them. CI uses `svelte-check`, so the build is unaffected. Do not add a raw-`tsc` step to CI.
 

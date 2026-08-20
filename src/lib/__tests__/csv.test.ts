@@ -32,4 +32,25 @@ describe('csvResponse', () => {
     const body = await res.text();
     expect(body).toBe('A\n""\n""');
   });
+
+  it('neutralizes spreadsheet formula injection', async () => {
+    const cases: [string, string][] = [
+      ['=HYPERLINK("https://evil","Click")', `A\n"'=HYPERLINK(""https://evil"",""Click"")"`],
+      ["+2+3+cmd|'/C calc'!A0", `A\n"'+2+3+cmd|'/C calc'!A0"`],
+      ['-2+3', `A\n"'-2+3"`],
+      ['@SUM(1+1)', `A\n"'@SUM(1+1)"`],
+      ['\t=2+2', `A\n"'\t=2+2"`],
+      ['  =2+2', `A\n"'  =2+2"`],
+    ];
+    for (const [input, expectedBody] of cases) {
+      const res = csvResponse(['A'], [[input]], 'inj.csv');
+      const body = await res.text();
+      expect(body).toBe(expectedBody);
+    }
+  });
+
+  it('does not mangle normal values that contain formula chars mid-string', async () => {
+    const res = csvResponse(['A'], [['hello = world']], 'ok.csv');
+    expect(await res.text()).toBe('A\n"hello = world"');
+  });
 });

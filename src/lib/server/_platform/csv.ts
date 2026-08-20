@@ -1,6 +1,15 @@
 
 function escape(v: unknown): string {
-  const s = String(v ?? '');
+  let s = String(v ?? '');
+  // Neutralize spreadsheet formula injection (OWASP CSV Injection):
+  // cells starting with = + - @ (after optional whitespace/BOM) are
+  // interpreted as formulas by Excel/Sheets. Prefix with a single quote
+  // so the content is treated as text. Tab (0x09) prefix bypass is also
+  // covered by trimming then checking the first char.
+  const trimmed = s.trimStart();
+  if (/^[=+\-@]/.test(trimmed) || /^\t/.test(s)) {
+    s = `'${s}`;
+  }
   return `"${s.replace(/"/g, '""')}"`;
 }
 

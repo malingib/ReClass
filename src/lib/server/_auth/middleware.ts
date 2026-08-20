@@ -120,9 +120,11 @@ export function securityHeaders(event: Parameters<Handle>[0]['event']): void {
   const headers: Record<string, string> = {
     'X-Content-Type-Options': 'nosniff',
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-    'X-Frame-Options': 'SAMEORIGIN',
+    'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Content-Security-Policy': CONTENT_SECURITY_POLICY,
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
   };
 
   // Short-lived Cache-Control for authenticated module pages.
