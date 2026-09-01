@@ -1,5 +1,4 @@
 import type { LayoutServerLoad } from './$types';
-import { requireTenantRole } from '$lib/server/_auth/auth';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
   // role/tenantId are resolved authoritatively in hooks.server.ts from the
