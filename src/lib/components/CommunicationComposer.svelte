@@ -1,6 +1,6 @@
 <script lang="ts">
  import { Dialog,DialogContent,DialogHeader,DialogTitle,DialogFooter } from '$lib/components/ui/dialog/index.js'; import { enhance } from '$app/forms';
- let {open=false,recipientLabel='parents',recipientCount=0,recipientIds=[],recipientField='student_ids',templates=[],defaultChannel='sms',sample={first_name:'Jane',last_name:'Doe',admission_no:'ADM-001',grade:'Form 3',balance:'12,500',parent_name:'Parent'},action='?/messageParents'}=$props();
+ let {open=$bindable(false),recipientLabel='parents',recipientCount=0,recipientIds=[],recipientField='student_ids',templates=[],defaultChannel='sms',sample={first_name:'Jane',last_name:'Doe',admission_no:'ADM-001',grade:'Form 3',balance:'12,500',parent_name:'Parent'},action='?/messageParents'}=$props();
  let channel=$state<'sms'|'email'|'inapp'>(defaultChannel); let templateId=$state(''); let body=$state(''); let subject=$state('');
  const selectedTemplate=$derived(templates.find((t:any)=>t.id===templateId&&(t.channel==='in_app'?channel==='inapp':t.channel===channel))??null);
  const render=(v:string)=>v.replace(/\{\{\s*student_name\s*\}\}/g,`${sample.first_name??''} ${sample.last_name??''}`).replace(/\{\{\s*teacher_name\s*\}\}/g,`${sample.first_name??''} ${sample.last_name??''}`).replace(/\{\{\s*parent_name\s*\}\}/g,sample.parent_name??'Parent').replace(/\{\{\s*admission_no\s*\}\}/g,sample.admission_no??'').replace(/\{\{\s*class\s*\}\}/g,sample.grade??'').replace(/\{\{\s*balance\s*\}\}/g,sample.balance??'').replace(/\{\{\s*school_name\s*\}\}/g,'Your School');
