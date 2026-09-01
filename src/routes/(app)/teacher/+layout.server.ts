@@ -1,25 +1,26 @@
 import type { LayoutServerLoad } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
-import { teacherCapabilities } from '$lib/server/_auth/capabilities';
+import { capabilitiesForTeacher, type RemedialRole } from '$lib/server/_auth/capabilities';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
   const { user, tenantId } = requireTenantRole(locals, 'teacher', 'super_admin');
 
-  // Resolve this teacher's access scope from their teacher_type. Admins fall
-  // back to full access via hasCapability's role short-circuit.
   let teacherType: string | null = null;
+  let committeeRole: RemedialRole = 'none';
   if (locals.role === 'teacher') {
     const { data: teacher } = await locals.srv
       .from('teachers')
-      .select('teacher_type')
+      .select('teacher_type,remedial_role')
       .eq('tenant_id', tenantId)
       .eq('profile_id', user.id)
       .maybeSingle();
     teacherType = teacher?.teacher_type ?? null;
+    committeeRole = (teacher?.remedial_role ?? 'none') as RemedialRole;
   }
 
   return {
-    capabilities: teacherCapabilities(teacherType),
+    capabilities: capabilitiesForTeacher(teacherType, committeeRole),
     teacherType,
+    committeeRole,
   };
 };
