@@ -1,34 +1,121 @@
-# ReClass — Testing Strategy (Section 23)
+# eShule — Testing & Verification Strategy
 
-## Layers
-1. **Unit** (Vitest): services (stk, scheduler, attendance, notification), validation (Zod schemas), pure functions (conflict detect, reconciliation math). Coverage gate ≥ 80% on `lib/` and services.
-2. **Integration** (Supabase test project): RLS policies (cross-tenant leak test = critical), CRUD via PostgREST, triggers (amount_paid maintenance), migration apply.
-3. **E2E** (Playwright): key flows — login→role route; teacher mark attendance→lock→parent SMS; parent pay via STK (sandbox)→ledger updates; admin bulk-import; bursar waiver. Run on staging pre-prod.
-4. **Performance** (k6): STK endpoint (100 req/min), report export (1 term), dashboard load (p95 < 2s). Baselines at 1k/10k rows.
-5. **Security**: OWASP ZAP baseline scan; `npm audit`; dependency review; RLS leak test in CI.
-6. **Accessibility**: axe-core + Lighthouse CI (WCAG AA gate); manual screen-reader pass (VoiceOver/NVDA) on core pages.
-7. **UAT**: 1-week pilot at Malingi with 3 teachers, 10 parents, bursar; feedback log → fixes.
+> **Current-state testing reference — 1 September 2026.** Tests prove implementation behavior; source files or documentation alone do not prove deployment readiness.
 
-## Test Data & Environments
-- Seed script creates 2 tenants (Malingi + dummy) to prove isolation in integration tests.
-- Faker-generated students/teachers; M-Pesa sandbox credentials for payment E2E.
+## 1. Verification layers
 
-## CI Gating
-- PR blocks merge if: unit < 80% coverage, any integration/RLS test fails, ZAP high/critical, Lighthouse a11y < 90.
-- E2E nightly on staging (not per-PR — speed).
+1. **Static/type checks** — SvelteKit sync, TypeScript/Svelte checking and linting.
+2. **Unit tests** — pure domain logic, validation, authorization helpers and financial calculations.
+3. **Database integration tests** — migrations, constraints, RPCs, triggers, RLS and tenant isolation against a real Supabase/Postgres test environment.
+4. **End-to-end tests** — critical journeys through the actual application: authentication, teacher delivery, ReClass governance, parent payment, Bursar finance, Payroll and receipts.
+5. **Accessibility tests** — automated axe/Lighthouse checks plus keyboard and assistive-technology review.
+6. **Security tests** — dependency/security scanning, authorization-negative tests, secret handling and privileged-operation review.
+7. **Performance tests** — realistic tenant/data volumes, bounded queries, pagination and critical workflow latency.
+8. **Recovery tests** — backup restore, migration upgrade/rollback rehearsal and provider/queue failure recovery.
 
-## Representative Test Cases
-- TC-ATT-01: teacher marks present → saved; after lock → 409 on edit without reason.
-- TC-ATT-02: absent student → notification queued; parent receives SMS (mock gateway).
-- TC-PAY-01: STK success → invoice paid, ledger + receipt, SMS confirmation.
-- TC-PAY-02: amount > balance → 422 OVERPAYMENT.
-- TC-PAY-03: duplicate callback (same CheckoutRequestID) → no double credit (idempotent).
-- TC-RLS-01: tenant A user query returns zero rows for tenant B (leak test).
-- TC-AUTH-01: 5 failed logins → lockout + CAPTCHA.
-- TC-SCHED-01: double-book room → warning; admin override with reason → stored.
-- TC-CRED-01: tenant admin saves Daraja creds → encrypted; `/credentials` list never returns `encrypted_blob`.
-- TC-CRED-02: `resolve(tenant, mpesa)` returns tenant `school_send` prod → (absent) tenant sandbox → (absent) `CREDS_NOT_FOUND` — NOT the owner's `platform_billing` creds.
-- TC-CRED-02b: owner-scoped platform job with `super_admin` context uses `platform_billing` creds and sends only platform/billing notices, never tenant messages.
-- TC-CRED-03: non-super_admin cannot read/modify `scope=platform` creds (403).
-- TC-CRED-04: `POST /credentials/:id/test` with bad token → `test_status=failed`; cannot activate until `ok`.
-- TC-SEC-01: `decrypt_credential()` never invoked in client context; plaintext absent from any API response.
+## 2. Critical business invariants
+
+The following must have executable tests:
+
+- tenant A cannot read or mutate tenant B data;
+- server-side capability checks cannot be bypassed by hiding/showing UI;
+- teacher type and remedial governance assignment remain distinct;
+- only authorized committee members can approve attendance;
+- Treasurer/Chairman payroll responsibilities remain separated;
+- Bursar school-finance ownership remains separate from ReClass operations;
+- payroll components and runs are tenant/domain scoped;
+- payment reconciliation is idempotent;
+- duplicate provider callbacks cannot create duplicate accounting events;
+- receipts represent actual payment evidence;
+- referenced records in privileged mutations belong to the same tenant;
+- notification retries do not create unintended duplicate sends.
+
+## 3. Minimum critical E2E journeys
+
+### Teacher
+Login → today's work → assigned session → attendance/delivery → submit → status/approval feedback.
+
+### ReClass committee
+Login → governance queue → eligible attendance review → approve/reject → audit evidence.
+
+### Bursar
+Login → finance centre → outstanding fees → payment/reconciliation → waiver where permitted → receipt/evidence.
+
+### Parent
+Login → linked child → outstanding balance → allowed payment action → payment result → receipt/ledger.
+
+### Payroll
+Eligible components → payroll run → required approval → payout initiation by authorized operator → payment evidence.
+
+### Administration
+Create/update staff and student records → assign roles/teacher type/committee hat → verify derived navigation and denied actions.
+
+## 4. Database isolation tests
+
+Use at least two tenants in an integration environment. For every high-risk relationship, test both:
+
+- legitimate same-tenant access succeeds;
+- attacker-controlled cross-tenant identifiers return denial, no rows, or a controlled error and create no mutation.
+
+Prioritize students, guardians, teachers, sessions, attendance, invoices, payments, receipts, payroll, notifications, audit records and credentials.
+
+## 5. Financial correctness tests
+
+Cover:
+
+- positive payment amounts;
+- amount cannot exceed the permitted balance unless an explicit credit/overpayment policy exists;
+- duplicate checkout identifiers are idempotent;
+- same checkout with conflicting amount/tenant is rejected;
+- concurrent settlement cannot double-credit an invoice;
+- receipt/payment evidence is created once;
+- waivers cannot produce negative or impossible balances;
+- payroll generation cannot duplicate a tenant/teacher/period/domain run;
+- payout state changes occur only after the upstream response is known and valid.
+
+## 6. Authorization tests
+
+For every privileged action test at least:
+
+- authorized actor succeeds;
+- same-tenant unauthorized actor is denied;
+- cross-tenant actor is denied;
+- missing/expired identity is denied;
+- UI omission does not matter because the server remains authoritative.
+
+## 7. CI release gates
+
+A release candidate should not be promoted until the repository has evidence for the applicable gates:
+
+- dependency installation succeeds;
+- lint succeeds;
+- typecheck succeeds;
+- unit tests succeed;
+- database migrations replay cleanly;
+- tenant-isolation suite succeeds;
+- critical E2E suite succeeds;
+- accessibility checks pass agreed thresholds;
+- security scans have no unaccepted critical/high finding;
+- build succeeds using the supported deployment path.
+
+Do not claim a gate passed when the corresponding environment or provider integration was not actually exercised.
+
+## 8. Test-data rules
+
+- Never commit real student, parent, teacher or payment data.
+- Use deterministic synthetic tenants and records for integration tests.
+- Provider sandbox credentials belong only in protected CI/environment configuration.
+- Tests must not log secrets, tokens, full phone numbers or sensitive student information.
+
+## 9. Failure evidence
+
+When a test fails, record:
+
+1. exact commit/environment;
+2. failing test and reproducible input;
+3. expected versus actual behavior;
+4. security/data impact;
+5. remediation and regression test;
+6. whether production is affected or the issue is source-only.
+
+The repository's testing strategy is a verification contract, not a statement that all gates are currently green.
