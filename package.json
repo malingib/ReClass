@@ -31,17 +31,17 @@
   },
   "dependencies": {
     "@eshule/shared": "workspace:*",
-    "@sentry/sveltekit": "^10.67.0",
-    "@supabase/ssr": "^0.12.0",
+    "@sentry/sveltekit": "^10.72.0",
+    "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.45.0",
     "clsx": "^2.1.1",
     "d3-array": "^3.2.4",
     "d3-scale": "^4.0.2",
     "d3-shape": "^3.2.0",
-    "lucide-svelte": "^0.468.0",
+    "lucide-svelte": "^1.0.1",
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.3.1",
-    "zod": "^3.24.0"
+    "zod": "^4.5.2"
   },
   "overrides": {
     "nanoid": "3.3.18",
@@ -69,7 +69,7 @@
     "prettier-plugin-svelte": "^3.3.0",
     "prettier-plugin-tailwindcss": "^0.6.0",
     "shadcn-svelte": "1.0.0",
-    "svelte": "^5.25.0",
+    "svelte": "^5.57.0",
     "svelte-check": "^4.1.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.7.0",
