@@ -1,43 +1,20 @@
 <script lang="ts">
   import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '$lib/components/ui/dialog/index.js';
   import { enhance } from '$app/forms';
-  export let open = false;
-  export let recipientLabel = 'parents';
-  export let recipientCount = 0;
-  export let recipientIds: string[] = [];
-  export let templates: any[] = [];
-  export let defaultChannel: 'sms'|'email'|'inapp' = 'sms';
-  export let sample: any = { first_name:'Jane', last_name:'Doe', admission_no:'ADM-001', grade:'Form 3', balance:'12,500', parent_name:'Parent' };
-  export let action = '?/messageParents';
-  let channel = $state<'sms'|'email'|'inapp'>(defaultChannel);
-  let templateId = $state('');
-  let body = $state('');
-  let subject = $state('');
-  let resultMessage = $state('');
-  const selectedTemplate = $derived(templates.find((t:any)=>t.id===templateId && (t.channel==='in_app' ? channel==='inapp' : t.channel===channel)) ?? null);
-  const render = (value:string) => value.replace(/\{\{\s*student_name\s*\}\}/g,`${sample.first_name} ${sample.last_name}`).replace(/\{\{\s*parent_name\s*\}\}/g,sample.parent_name ?? 'Parent').replace(/\{\{\s*admission_no\s*\}\}/g,sample.admission_no ?? '').replace(/\{\{\s*class\s*\}\}/g,sample.grade ?? '').replace(/\{\{\s*balance\s*\}\}/g,sample.balance ?? '').replace(/\{\{\s*school_name\s*\}\}/g,'Your School');
-  function chooseTemplate(){ if(selectedTemplate){body=selectedTemplate.body;subject=selectedTemplate.subject??'';} }
-  function insertTag(tag:string){body += `${body && !body.endsWith(' ') ? ' ' : ''}{{${tag}}}`;}
-  function close(){open=false;resultMessage='';}
+  export let open=false; export let recipientLabel='parents'; export let recipientCount=0; export let recipientIds:string[]=[]; export let recipientField='student_ids'; export let templates:any[]=[]; export let defaultChannel:'sms'|'email'|'inapp'='sms'; export let sample:any={first_name:'Jane',last_name:'Doe',admission_no:'ADM-001',grade:'Form 3',balance:'12,500',parent_name:'Parent'}; export let action='?/messageParents';
+  let channel=$state<'sms'|'email'|'inapp'>(defaultChannel); let templateId=$state(''); let body=$state(''); let subject=$state('');
+  const selectedTemplate=$derived(templates.find((t:any)=>t.id===templateId && (t.channel==='in_app'?channel==='inapp':t.channel===channel))??null);
+  const render=(v:string)=>v.replace(/\{\{\s*student_name\s*\}\}/g,`${sample.first_name??''} ${sample.last_name??''}`).replace(/\{\{\s*teacher_name\s*\}\}/g,`${sample.first_name??''} ${sample.last_name??''}`).replace(/\{\{\s*parent_name\s*\}\}/g,sample.parent_name??'Parent').replace(/\{\{\s*admission_no\s*\}\}/g,sample.admission_no??'').replace(/\{\{\s*class\s*\}\}/g,sample.grade??'').replace(/\{\{\s*balance\s*\}\}/g,sample.balance??'').replace(/\{\{\s*school_name\s*\}\}/g,'Your School');
+  function chooseTemplate(){if(selectedTemplate){body=selectedTemplate.body;subject=selectedTemplate.subject??'';}} function insertTag(tag:string){body+=`${body&&!body.endsWith(' ')?' ':''}{{${tag}}}`;}
 </script>
-<Dialog {open} onOpenChange={(v:boolean)=>open=v}>
-  <DialogContent class="sm:max-w-2xl p-0">
-    <DialogHeader class="border-b border-border px-6 py-4"><DialogTitle>Message {recipientLabel}</DialogTitle></DialogHeader>
-    <form method="POST" action={action} class="space-y-5 px-6 py-5" use:enhance={() => async ({update}:any)=>{await update();}}>
-      <input type="hidden" name="student_ids" value={recipientIds.join(',')} />
-      <input type="hidden" name="template_id" value={templateId} />
-      <input type="hidden" name="subject" value={subject} />
-      <div class="rounded-lg bg-slate-50 p-3 text-sm"><strong>{recipientCount}</strong> {recipientLabel} selected · <strong>{recipientCount}</strong> messages will be sent. If a parent has multiple selected children, each selected child generates its own message.</div>
-      <div class="grid gap-4 sm:grid-cols-2">
-        <label class="space-y-1.5 text-sm font-semibold">Channel<select name="channel" bind:value={channel} class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 font-normal"><option value="sms">SMS</option><option value="email">Email</option><option value="inapp">In-app</option></select></label>
-        <label class="space-y-1.5 text-sm font-semibold">Template<select bind:value={templateId} onchange={chooseTemplate} class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 font-normal"><option value="">Custom message</option>{#each templates.filter((t:any)=>t.channel==='in_app' ? channel==='inapp' : t.channel===channel) as t}<option value={t.id}>{t.name} · v{t.version}</option>{/each}</select></label>
-      </div>
-      <div><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Tags</p><div class="mt-2 flex flex-wrap gap-2">{#each ['student_name','parent_name','admission_no','class','balance','school_name'] as tag}<button type="button" onclick={()=>insertTag(tag)} class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">{{tag}}</button>{/each}</div></div>
-      {#if channel==='email'}<label class="space-y-1.5 text-sm font-semibold">Subject<input bind:value={subject} name="subject_visible" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-normal" /></label>{/if}
-      <label class="space-y-1.5 text-sm font-semibold">Message<textarea bind:value={body} name="body" rows="7" maxlength="1000" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal focus:border-primary focus:outline-none" placeholder="Write a custom message or select a template..."></textarea></label>
-      <section class="rounded-xl border border-slate-200 bg-slate-50 p-4"><div class="flex items-center justify-between"><h3 class="text-sm font-bold">Preview · one recipient</h3><span class="text-xs text-slate-500">{sample.parent_name ?? 'Parent'} · {sample.first_name} {sample.last_name}</span></div><div class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{render(body || 'Your message preview will appear here.')}</div></section>
-      {#if resultMessage}<p class="rounded-lg bg-primary/10 p-3 text-sm font-semibold text-primary">{resultMessage}</p>{/if}
-      <DialogFooter><button type="button" onclick={close} class="rounded-lg border border-border px-4 py-2 text-sm font-medium">Cancel</button><button type="submit" class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Send {recipientCount} message{recipientCount===1?'':'s'}</button></DialogFooter>
-    </form>
-  </DialogContent>
-</Dialog>
+<Dialog {open} onOpenChange={(v:boolean)=>open=v}><DialogContent class="sm:max-w-2xl p-0"><DialogHeader class="border-b border-border px-6 py-4"><DialogTitle>Message {recipientLabel}</DialogTitle></DialogHeader>
+<form method="POST" action={action} class="space-y-5 px-6 py-5" use:enhance={() => async ({update}:any)=>{await update();}}>
+<input type="hidden" name={recipientField} value={recipientIds.join(',')}/><input type="hidden" name="template_id" value={templateId}/><input type="hidden" name="subject" value={subject}/>
+<div class="rounded-lg bg-slate-50 p-3 text-sm"><strong>{recipientCount}</strong> {recipientLabel} selected · <strong>{recipientCount}</strong> messages will be sent.</div>
+<div class="grid gap-4 sm:grid-cols-2"><label class="space-y-1.5 text-sm font-semibold">Channel<select name="channel" bind:value={channel} class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 font-normal"><option value="sms">SMS</option><option value="email">Email</option><option value="inapp">In-app</option></select></label><label class="space-y-1.5 text-sm font-semibold">Template<select bind:value={templateId} onchange={chooseTemplate} class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 font-normal"><option value="">Custom message</option>{#each templates.filter((t:any)=>t.channel==='in_app'?channel==='inapp':t.channel===channel) as t}<option value={t.id}>{t.name} · v{t.version}</option>{/each}</select></label></div>
+<div><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Tags</p><div class="mt-2 flex flex-wrap gap-2">{#each ['student_name','teacher_name','parent_name','admission_no','class','balance','school_name'] as tag}<button type="button" onclick={()=>insertTag(tag)} class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">{{tag}}</button>{/each}</div></div>
+{#if channel==='email'}<label class="space-y-1.5 text-sm font-semibold">Subject<input bind:value={subject} class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-normal"/></label>{/if}
+<label class="space-y-1.5 text-sm font-semibold">Message<textarea bind:value={body} name="body" rows="7" maxlength="1000" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" placeholder="Write a custom message or select a template..."></textarea></label>
+<section class="rounded-xl border border-slate-200 bg-slate-50 p-4"><div class="flex items-center justify-between"><h3 class="text-sm font-bold">Preview · one recipient</h3><span class="text-xs text-slate-500">{sample.parent_name??`${sample.first_name??''} ${sample.last_name??''}`}</span></div><div class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{render(body||'Your message preview will appear here.')}</div></section>
+<DialogFooter><button type="button" onclick={()=>open=false} class="rounded-lg border border-border px-4 py-2 text-sm font-medium">Cancel</button><button type="submit" class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Send {recipientCount} message{recipientCount===1?'':'s'}</button></DialogFooter>
+</form></DialogContent></Dialog>
