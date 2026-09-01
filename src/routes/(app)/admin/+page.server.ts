@@ -1,8 +1,9 @@
 import type { PageServerLoad } from './$types';
-import { redirect } from '@sveltejs/kit';
 
-// /admin is a pure module launcher — the school-wide dashboard was removed
-// (domains own their dashboards). Send the user to the module picker.
-export const load: PageServerLoad = async () => {
-  redirect(303, '/admin/modules');
-};
+/**
+ * The admin landing page is the school operations home. Modules remain available
+ * from the dedicated module hub, but the default journey starts with work to do.
+ */
+export const load: PageServerLoad = async () => ({
+  lastUpdated: new Date().toISOString(),
+});
