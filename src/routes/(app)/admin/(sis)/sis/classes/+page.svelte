@@ -9,7 +9,7 @@
 
 <DashboardContent title="Classes & Streams" subtitle="Manage forms, streams and homeroom assignments">
   {#snippet headerActions()}
-    <Button>Add Class</Button>
+    <Button href="/admin/subjects" variant="outline">Manage Subjects</Button>
   {/snippet}
 
   <DataTable

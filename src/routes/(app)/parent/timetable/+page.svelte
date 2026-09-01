@@ -6,13 +6,12 @@
   const timetable = $derived(data.timetable);
 </script>
 
-<DashboardContent title="Timetable" subtitle="Class schedule">
+<DashboardContent title="Timetable" subtitle="Class schedule for your children's classes">
   <DataTable data={timetable} columns={[
-    { key: 'title', label: 'Session', sortable: true },
-    { key: 'subject', label: 'Subject' },
-    { key: 'grade', label: 'Grade' },
-    { key: 'day_of_week', label: 'Day', sortable: true },
-    { key: 'start_time', label: 'Start' },
-    { key: 'end_time', label: 'End' },
-  ]} emptyMessage="No schedule available" />
+    { key: 'class', label: 'Class', sortable: true },
+    { key: 'subject', label: 'Subject', sortable: true },
+    { key: 'day', label: 'Day', sortable: true },
+    { key: 'time', label: 'Time', sortable: true },
+    { key: 'room', label: 'Room' },
+  ]} emptyMessage="No schedule available — remedial sessions for your children's classes will appear here" />
 </DashboardContent>

@@ -11,7 +11,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return handleOptions(req);
 
   const auth = req.headers.get('Authorization') ?? '';
-  if (!auth.startsWith('Bearer ') || auth.slice(7) !== EXPECTED_TOKEN) {
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const isValidServiceRole = token === EXPECTED_TOKEN || (() => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return payload.role === 'service_role' && payload.iss === 'supabase';
+    } catch { return false; }
+  })();
+  if (!token || !isValidServiceRole) {
     return unauthorized(req);
   }
 

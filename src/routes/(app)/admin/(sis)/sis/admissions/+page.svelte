@@ -9,7 +9,7 @@
 
 <DashboardContent title="Admissions" subtitle="Student applications and admission tracking">
   {#snippet headerActions()}
-    <Button>New Admission</Button>
+    <Button href="/admin/students" variant="outline">Go to Students</Button>
   {/snippet}
 
   <DataTable

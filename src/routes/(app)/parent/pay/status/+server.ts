@@ -9,7 +9,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   // A parent may only poll checkout status for THEIR OWN children.
   const { tenantId, studentIds } = await getParentOwnership(locals);
   if (!studentIds.includes(studentId)) {
-    return new Response(JSON.stringify({ status: 'unknown' }), {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
       headers: { 'content-type': 'application/json' },
     });
   }

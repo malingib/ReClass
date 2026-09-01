@@ -2,19 +2,25 @@
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
 
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+
   const { data } = $props();
   const payments = $derived(data.payments ?? []);
   const stats = $derived(data.stats);
+  const pagination = $derived(data.pagination);
 
   function channelLabel(p: { domain: string; method?: string; bank_name?: string }) {
     if (p.domain === 'remedial') return 'M-Pesa';
     return p.method === 'bank' ? `Bank${p.bank_name ? ` (${p.bank_name})` : ''}` : (p.method ?? '—');
   }
 
-  let filter = $state<'all' | 'mpesa' | 'bank'>('all');
-  const filtered = $derived(
-    filter === 'all' ? payments : payments.filter((p: any) => (p.domain === 'remedial' ? 'mpesa' : 'bank') === filter)
-  );
+  function setChannel(c: string) {
+    const url = new URL(page.url);
+    if (c === 'all') url.searchParams.delete('channel'); else url.searchParams.set('channel', c);
+    url.searchParams.delete('page');
+    goto(`${url.pathname}?${url.searchParams.toString()}`, { keepFocus: true, noScroll: true });
+  }
 </script>
 
 <DashboardContent title="Parent Payments" subtitle="Receipts from parents — M-Pesa (remedial) and bank (school fees)">
@@ -40,8 +46,8 @@
   <div class="flex gap-2">
     {#each [['all', 'All'], ['mpesa', 'M-Pesa'], ['bank', 'Bank']] as [f, label]}
       <button
-        onclick={() => filter = f as any}
-        class="rounded-md px-3 py-1.5 text-xs font-medium {filter === f ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:bg-muted'}"
+        onclick={() => setChannel(f as string)}
+        class="rounded-md px-3 py-1.5 text-xs font-medium {pagination.channel === f ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:bg-muted'}"
       >
         {label}
       </button>
@@ -49,7 +55,7 @@
   </div>
 
   <DataTable
-    data={filtered}
+    data={payments}
     columns={[
       { key: 'student_name', label: 'Student', sortable: true },
       { key: 'admission_no', label: 'Adm No' },
@@ -57,9 +63,10 @@
       { key: 'fee_type', label: 'Fee' },
       { key: 'amount', label: 'Amount', render: (p: any) => `KES ${Number(p.amount).toLocaleString()}`, sortable: true },
       { key: 'channel', label: 'Channel', render: (p: any) => channelLabel(p) },
-      { key: 'receipt', label: 'Receipt', render: (p: any) => `<a class="text-primary hover:underline" href="/admin/receipts/${p.id}/print" target="_blank">Print</a>`, html: true },
+      { key: 'receipt', label: 'Receipt', render: (p: any) => `<a class="text-primary hover:underline" href="/admin/receipts/${p.id}/print" target="_blank" rel="noopener">Print</a>`, html: true },
       { key: 'created_at', label: 'Date', render: (p: any) => p.created_at ? new Date(p.created_at).toLocaleDateString() : '—', sortable: true },
     ]}
     emptyMessage="No parent payments"
+    server={{ total: pagination.total, page: pagination.page, pageSize: pagination.pageSize, search: pagination.search, sortKey: pagination.sortKey, sortDir: pagination.sortDir }}
   />
 </DashboardContent>

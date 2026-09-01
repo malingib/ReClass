@@ -16,7 +16,7 @@
     <h3 class="text-sm font-semibold text-ink-900 mb-3">Recent Audit Log</h3>
     <DataTable data={audit} columns={[
       { key: 'action', label: 'Action' },
-      { key: 'user_id', label: 'User' },
+      { key: 'actor_id', label: 'Actor', render: (a: any) => a.actor_id ? `<span class="font-mono text-xs">${String(a.actor_id).slice(0,8)}</span>` : '—', html: true },
       { key: 'created_at', label: 'Time', render: (a: any) => a.created_at ? new Date(a.created_at).toLocaleString() : '—' },
     ]} emptyMessage="No audit logs" />
   </div>

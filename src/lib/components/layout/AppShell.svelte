@@ -14,6 +14,8 @@
     role = 'school_admin',
     roles = null,
     user = { name: 'eShule Admin', email: 'admin@eshule.app' },
+    brandName = 'eShule',
+    logoUrl = '',
     children,
   }: {
     title: string;
@@ -23,8 +25,12 @@
     role?: string;
     roles?: Role[] | null;
     user?: { name?: string; email?: string };
+    brandName?: string;
+    logoUrl?: string;
     children?: import('svelte').Snippet;
   } = $props();
+
+  const brandLetter = $derived((brandName?.trim()?.[0] ?? 'e').toUpperCase());
 
   interface NavItem { label: string; href: string; icon?: string; }
   interface NavGroup { label: string; items: NavItem[]; defaultOpen?: boolean; }
@@ -306,8 +312,12 @@
         </a>
       {:else}
         <div class="flex items-center gap-2.5">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white">e</div>
-          <p class="text-sm font-semibold text-slate-900">eShule</p>
+          {#if logoUrl}
+            <img src={logoUrl} alt={brandName} class="h-8 w-8 rounded-lg object-contain" />
+          {:else}
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white">{brandLetter}</div>
+          {/if}
+          <p class="text-sm font-semibold text-slate-900">{brandName}</p>
         </div>
       {/if}
     </div>
@@ -423,7 +433,7 @@
             <span class="font-medium text-slate-500">{currentModule.name}</span>
           </nav>
         {/if}
-        <p class="text-sm font-semibold text-slate-900">{currentModule?.name ?? 'eShule'}</p>
+        <p class="text-sm font-semibold text-slate-900">{currentModule?.name ?? brandName}</p>
         <p class="text-xs text-slate-500">{title}</p>
       </div>
 

@@ -3,42 +3,32 @@
   import DataTable from '$lib/components/DataTable.svelte';
   import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
   import { Download } from 'lucide-svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
 
   const { data } = $props();
   const totalRevenue = $derived(data.totalRevenue ?? 0);
   const payments = $derived(data.payments ?? []);
   const checkouts = $derived(data.checkouts ?? []);
-
-  let searchQuery = $state('');
-  let methodFilter = $state('all');
-
-  const filtered = $derived.by(() => {
-    let result = payments;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((p: any) =>
-        (p.student_name?.toLowerCase() ?? '').includes(q) ||
-        (p.admission_no?.toLowerCase() ?? '').includes(q) ||
-        (p.grade?.toLowerCase() ?? '').includes(q) ||
-        (p.fee_type?.toLowerCase() ?? '').includes(q)
-      );
-    }
-    if (methodFilter !== 'all') {
-      result = result.filter((p: any) => (p.domain === 'remedial' ? 'mpesa' : p.method) === methodFilter);
-    }
-    return result;
-  });
+  const pagination = $derived(data.pagination);
+  const stats = $derived(data.stats ?? { mpesa: 0, bank: 0, total: 0 });
 
   function methodLabel(p: any) {
     if (p.domain === 'remedial') return 'M-Pesa';
     return p.method === 'bank' ? `Bank${p.bank_name ? ` (${p.bank_name})` : ''}` : (p.method ?? '—');
   }
 
+  function setChannel(c: string) {
+    const url = new URL(page.url);
+    if (c === 'all') url.searchParams.delete('channel'); else url.searchParams.set('channel', c);
+    url.searchParams.delete('page');
+    goto(`${url.pathname}?${url.searchParams.toString()}`, { keepFocus: true, noScroll: true });
+  }
+
   function downloadCsv() {
     const headers = ['Student', 'Admission No', 'Grade', 'Fee', 'Amount (KES)', 'Method', 'Reference', 'Date'];
-    const rows = filtered.map((p: any) => [
+    const rows = payments.map((p: any) => [
       p.student_name, p.admission_no, p.grade, p.fee_type,
       p.amount, methodLabel(p),
       p.method === 'bank' ? (p.bank_reference ?? '') : (p.mpesa_receipt ?? ''),
@@ -64,26 +54,20 @@
   {/snippet}
 
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
-    <KpiCard label="Receipts" value={payments.length} sub="Listed" />
+    <KpiCard label="Receipts" value={pagination.total} sub="Matched" />
     <KpiCard label="Revenue (12mo)" value={`KES ${totalRevenue.toLocaleString()}`} sub="All channels" />
-    <KpiCard label="M-Pesa (remedial)" value={payments.filter((p:any)=>p.domain==='remedial').length} sub="Receipts" />
-    <KpiCard label="Bank (school)" value={payments.filter((p:any)=>p.domain!=='remedial').length} sub="Receipts" />
+    <KpiCard label="M-Pesa (remedial)" value={stats.mpesa} sub="Receipts" />
+    <KpiCard label="Bank (school)" value={stats.bank} sub="Receipts" />
   </div>
 
-  <div class="flex flex-wrap items-center gap-3">
-    <Input type="text" placeholder="Search by student, admission no, grade, fee…" bind:value={searchQuery} class="min-w-[200px]" />
-    <select bind:value={methodFilter}
-      class="rounded-md border border-input bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-      <option value="all">All channels</option>
-      <option value="mpesa">M-Pesa</option>
-      <option value="bank">Bank</option>
-    </select>
-    {#if filtered.length !== payments.length}
-      <span class="text-xs text-slate-400">{filtered.length} of {payments.length} shown</span>
-    {/if}
+  <div class="flex flex-wrap items-center gap-2">
+    {#each [['all','All channels'],['mpesa','M-Pesa'],['bank','Bank']] as [v,l]}
+      <button onclick={() => setChannel(v)} class="rounded-md px-3 py-1.5 text-xs font-medium {pagination.channel === v ? 'bg-primary text-primary-foreground' : 'border border-input bg-white text-muted-foreground hover:bg-muted'}">{l}</button>
+    {/each}
+    <span class="text-xs text-slate-400">Page {pagination.page} · {pagination.total} total</span>
   </div>
 
-  <DataTable data={filtered} columns={[
+  <DataTable data={payments} columns={[
     { key: 'student_name', label: 'Student', sortable: true },
     { key: 'admission_no', label: 'Adm No', sortable: true },
     { key: 'grade', label: 'Grade', sortable: true },
@@ -91,7 +75,7 @@
     { key: 'amount', label: 'Amount (KES)', render: (p: any) => `KES ${Number(p.amount).toLocaleString()}`, sortable: true },
     { key: 'method', label: 'Channel', render: (p: any) => methodLabel(p), sortable: true },
     { key: 'created_at', label: 'Date', render: (p: any) => p.created_at?.split('T')[0] ?? '—', sortable: true },
-  ]} emptyMessage="No receipts found" rowExtra={receiptActions} />
+  ]} emptyMessage="No receipts found" rowExtra={receiptActions} server={{ total: pagination.total, page: pagination.page, pageSize: pagination.pageSize, search: pagination.search, sortKey: pagination.sortKey, sortDir: pagination.sortDir }} />
 
   {#snippet receiptActions(p: any)}
     <a href={`/admin/receipts/${p.id}/print`} target="_blank" class="text-xs font-medium text-primary hover:underline">Print receipt</a>

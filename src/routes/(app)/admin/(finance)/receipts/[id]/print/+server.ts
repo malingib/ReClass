@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireTenantRole } from '$lib/server/_auth/auth';
+import { getParentOwnership } from '$lib/server/_auth/ownership';
 
 function esc(s: string | number | null | undefined): string {
   if (s == null) return '';
@@ -8,12 +9,12 @@ function esc(s: string | number | null | undefined): string {
 }
 
 export const GET: RequestHandler = async ({ locals, params }) => {
-  requireTenantRole(locals, 'school_admin', 'super_admin', 'bursar');
+  requireTenantRole(locals, 'school_admin', 'super_admin', 'bursar', 'parent', 'teacher', 'principal');
 
   const { data: p, error: perr } = await locals.srv
     .from('payments')
     .select(`
-      id, amount, method, domain, bank_reference, bank_name, mpesa_receipt, receipt_no, phone, status, created_at, reconciled_at,
+      id, amount, method, domain, student_id, bank_reference, bank_name, mpesa_receipt, receipt_no, phone, status, created_at, reconciled_at,
       students!inner(first_name, last_name, admission_no, grade),
       fee_types(name)
     `)
@@ -21,6 +22,12 @@ export const GET: RequestHandler = async ({ locals, params }) => {
     .eq('tenant_id', locals.tenantId)
     .maybeSingle();
   if (perr || !p) error(404, 'Receipt not found');
+
+  // Parent may only view receipts for their own children
+  if (locals.role === 'parent') {
+    const { studentIds } = await getParentOwnership(locals);
+    if (!studentIds.includes((p as any).student_id)) error(403, 'Forbidden');
+  }
 
   const shillings = Math.floor(Number(p.amount));
   const cents = Math.round((Number(p.amount) - shillings) * 100);

@@ -10,13 +10,12 @@
   <DataTable
     data={timetable}
     columns={[
-      { key: 'title', label: 'Session', sortable: true },
-      { key: 'subject', label: 'Subject' },
-      { key: 'grade', label: 'Grade' },
-      { key: 'day_of_week', label: 'Day', sortable: true },
-      { key: 'start_time', label: 'Start' },
-      { key: 'end_time', label: 'End' },
+      { key: 'class', label: 'Class', sortable: true },
+      { key: 'subject', label: 'Subject', sortable: true },
+      { key: 'day', label: 'Day', sortable: true },
+      { key: 'time', label: 'Time', sortable: true },
+      { key: 'room', label: 'Room' },
     ]}
-    emptyMessage="No sessions scheduled"
+    emptyMessage="No sessions scheduled — your remedial classes will appear here once scheduled by admin"
   />
 </DashboardContent>

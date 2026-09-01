@@ -2,9 +2,35 @@ import { getServiceClient } from '../_shared/supabase.ts';
 import { verifyAuth } from '../_shared/auth.ts';
 import { json, badRequest, unauthorized, forbidden, notFound, handleOptions, internalError } from '../_shared/response.ts';
 import { getPlatformConfig } from '../_shared/platform-config.ts';
-
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
+
+// Simple metrics collector for STK function
+const stkMetrics = {
+  initDuration: [] as number[],
+  failures: 0,
+  successes: 0,
+  darajaFailures: 0
+};
+
+function recordSTKInit(duration: number): void {
+  stkMetrics.initDuration.push(duration);
+  if (stkMetrics.initDuration.length > 100) {
+    stkMetrics.initDuration.shift();
+  }
+}
+
+function recordSTKFailure(): void {
+  stkMetrics.failures++;
+}
+
+function recordSTKSuccess(): void {
+  stkMetrics.successes++;
+}
+
+function recordDarajaFailure(): void {
+  stkMetrics.darajaFailures++;
+}
 
 async function fetchWithRetry(url: string, opts: RequestInit, attempt = 0): Promise<Response> {
   try {
@@ -20,6 +46,8 @@ async function fetchWithRetry(url: string, opts: RequestInit, attempt = 0): Prom
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return handleOptions(req);
+
+  const startTime = Date.now();
 
   try {
     const user = await verifyAuth(req.headers.get('Authorization'));
@@ -114,18 +142,28 @@ Deno.serve(async (req) => {
     const base = secrets.environment === 'sandbox'
       ? 'https://sandbox.safaricom.co.ke' : 'https://api.safaricom.co.ke';
 
-    const auth = btoa(`${secrets.consumer_key}:${secrets.consumer_secret}`);
-    const oauthRes = await fetchWithRetry(
-      `${base}/oauth/v1/generate?grant_type=client_credentials`,
-      { headers: { Authorization: `Bearer ${auth}` } },
-    );
-    if (!oauthRes.ok) {
-      console.error(`[stk] OAuth token request failed with ${oauthRes.status}`);
-      return internalError(req);
-    }
-    const { access_token } = await oauthRes.json();
-    if (!access_token) {
-      console.error('[stk] OAuth token response missing access_token');
+    // Daraja OAuth — direct with retry (no external circuit-breaker import)
+    let access_token: string;
+    try {
+      const auth = btoa(`${secrets.consumer_key}:${secrets.consumer_secret}`);
+      const oauthRes = await fetchWithRetry(
+        `${base}/oauth/v1/generate?grant_type=client_credentials`,
+        { headers: { Authorization: `Basic ${auth}` } },
+      );
+      if (!oauthRes.ok) {
+        console.error(`[stk] OAuth token request failed with ${oauthRes.status}`);
+        recordDarajaFailure();
+        throw new Error(`OAuth request failed: ${oauthRes.status}`);
+      }
+      const oauthJson = await oauthRes.json();
+      access_token = oauthJson.access_token;
+      if (!access_token) {
+        console.error('[stk] OAuth token response missing access_token');
+        recordDarajaFailure();
+        throw new Error('OAuth token response missing access_token');
+      }
+    } catch (error) {
+      console.error('[stk] Daraja OAuth failed:', (error as Error).message);
       return internalError(req);
     }
 
@@ -143,7 +181,7 @@ Deno.serve(async (req) => {
     const checkoutId = crypto.randomUUID();
     const { error: checkoutInsertError } = await supabase.from('checkout_requests').insert({
       tenant_id, fee_type_id, student_id, checkout_id: checkoutId,
-      amount, phone, status: 'pending',
+      amount, phone: payPhone, status: 'pending',
     });
     if (checkoutInsertError) {
       // The database has a partial unique index for one pending request per
@@ -175,6 +213,7 @@ Deno.serve(async (req) => {
       await supabase.from('checkout_requests')
         .update({ status: 'failed', reason: `UPSTREAM_HTTP_${stkRes.status}` })
         .eq('checkout_id', checkoutId);
+      recordSTKFailure();
       return internalError(req);
     }
 
@@ -182,15 +221,29 @@ Deno.serve(async (req) => {
       await supabase.from('checkout_requests')
         .update({ status: 'failed', reason: stk.ResponseDescription ?? 'STK rejected' })
         .eq('checkout_id', checkoutId);
+      recordSTKFailure();
     } else {
       await supabase.from('checkout_requests')
         .update({ checkout_id: stk.CheckoutRequestID })
         .eq('checkout_id', checkoutId);
+      recordSTKSuccess();
     }
 
-    return json(stk, 200, req);
+    // Record metrics
+    const duration = Date.now() - startTime;
+    recordSTKInit(duration);
+
+    return json({ 
+      ...stk, 
+      metrics: {
+        duration,
+        successRate: stkMetrics.successes / (stkMetrics.successes + stkMetrics.failures) * 100 || 0,
+        darajaFailures: stkMetrics.darajaFailures
+      }
+    }, 200, req);
   } catch (err) {
     console.error('[stk] unexpected error:', (err as Error).message ?? String(err));
+    recordSTKFailure();
     return internalError(req);
   }
 });

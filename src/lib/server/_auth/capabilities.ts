@@ -39,8 +39,8 @@ const TEACHER_TYPE_CAPS: Record<string, Capability[]> = {
 };
 
 export function teacherCapabilities(teacherType: string | null | undefined): Capability[] {
-  if (!teacherType) return TEACHER_TYPE_CAPS.both;
-  return TEACHER_TYPE_CAPS[teacherType] ?? TEACHER_TYPE_CAPS.both;
+  if (!teacherType) return [];
+  return TEACHER_TYPE_CAPS[teacherType] ?? [];
 }
 
 export function hasCapability(

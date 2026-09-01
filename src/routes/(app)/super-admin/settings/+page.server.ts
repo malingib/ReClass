@@ -14,7 +14,7 @@ import {
 } from '$lib/server/_platform/credentials';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const sb = locals.srv;
+  const sb = locals.adminSrv;
   const config = await getPlatformConfig(sb);
   const credentials = await getPlatformCredentials(sb);
   return {
@@ -29,7 +29,7 @@ export const actions: Actions = {
     const fd = await request.formData();
     const key = String(fd.get('key') ?? '');
     const value = String(fd.get('value') ?? '');
-    return setPlatformConfig(locals.srv, key, value, locals.user?.id);
+    return setPlatformConfig(locals.adminSrv, key, value, locals.user?.id);
   },
 
   'config-remove': async ({ locals, request }) => {
@@ -38,7 +38,7 @@ export const actions: Actions = {
     if (!PLATFORM_CONFIG_KEYS.includes(key as (typeof PLATFORM_CONFIG_KEYS)[number])) {
       return fail(400, { error: `Unsupported platform config key: ${key}` });
     }
-    const { error } = await locals.srv
+    const { error } = await locals.adminSrv
       .from('platform_config')
       .delete()
       .eq('key', key);
@@ -51,7 +51,7 @@ export const actions: Actions = {
 
   'credential-save': async ({ locals, request }) => {
     const fd = await request.formData();
-    return savePlatformCredential(locals.srv, {
+    return savePlatformCredential(locals.adminSrv, {
       id: String(fd.get('id') ?? ''),
       provider: String(fd.get('provider') ?? ''),
       environment: String(fd.get('environment') ?? ''),
@@ -62,11 +62,11 @@ export const actions: Actions = {
 
   'credential-delete': async ({ locals, request }) => {
     const fd = await request.formData();
-    return deletePlatformCredential(locals.srv, String(fd.get('id') ?? ''));
+    return deletePlatformCredential(locals.adminSrv, String(fd.get('id') ?? ''));
   },
 
   'credential-test': async ({ locals, request }) => {
     const fd = await request.formData();
-    return testPlatformCredential(locals.srv, String(fd.get('id') ?? ''));
+    return testPlatformCredential(locals.adminSrv, String(fd.get('id') ?? ''));
   },
 };

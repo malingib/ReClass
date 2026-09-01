@@ -27,8 +27,26 @@
     : role === 'bursar' ? 'Reconcile M-Pesa paybill callbacks to invoices and waivers'
     : role === 'super_admin' ? 'Tenants, payments health and audit across schools'
     : 'School management');
+
+  // Whitelabel: school-facing roles adopt the tenant's brand; the platform owner
+  // (super_admin) dashboard keeps the platform-default branding.
+  const applyBrand = $derived(role !== 'super_admin' && !!data.brand?.brand_primary);
+  const brandName = $derived(applyBrand ? (data.brand?.name ?? 'eShule') : 'eShule');
+  const logoUrl = $derived(applyBrand ? (data.brand?.logo_url ?? '') : '');
+
+  const brandStyle = $derived(
+    applyBrand
+      ? `:root{--color-primary:${data.brand?.brand_primary};--color-ring:${data.brand?.brand_primary};--color-brand-400:color-mix(in srgb, ${data.brand?.brand_primary} 82%, white);--color-brand-500:${data.brand?.brand_primary};--color-brand-600:color-mix(in srgb, ${data.brand?.brand_primary} 84%, black);--color-brand-700:color-mix(in srgb, ${data.brand?.brand_primary} 68%, black);}`
+      : ''
+  );
 </script>
 
-<AppShell {title} {subtitle} {role} roles={data.roles} user={cookieUser}>
+<svelte:head>
+  {#if brandStyle}
+    <style id="tenant-brand">{brandStyle}</style>
+  {/if}
+</svelte:head>
+
+<AppShell {title} {subtitle} {role} roles={data.roles} user={cookieUser} {brandName} {logoUrl}>
   {@render children?.()}
 </AppShell>

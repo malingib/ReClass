@@ -28,15 +28,31 @@
     remedial: data.feeTypes.filter((f) => f.domain === 'remedial'),
   });
 
+  import { onDestroy } from 'svelte';
+
   let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+  onDestroy(() => {
+    if (pollTimer) clearInterval(pollTimer);
+  });
 
   function startPolling(studentId: string, feeTypeId: string) {
     polling = true;
     let attempts = 0;
+    if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(async () => {
       attempts++;
       try {
         const res = await fetch(`/parent/pay/status?student_id=${studentId}&fee_type_id=${feeTypeId}`);
+        if (!res.ok) {
+          if (res.status === 403) {
+            error = 'Not authorized for this student.';
+            polling = false;
+            if (pollTimer) clearInterval(pollTimer);
+            return;
+          }
+          throw new Error('poll failed');
+        }
         const status = await res.json();
         if (status.status === 'completed') {
           success = 'Payment confirmed! A receipt has been generated.';

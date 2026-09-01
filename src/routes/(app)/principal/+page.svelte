@@ -68,15 +68,15 @@
         <div class="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <div class="px-6 py-5">
             <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Classes</p>
-            <p class="mt-1 text-2xl font-bold text-slate-900">{data.sis?.classes ?? 0}</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{((data.sis as any)?.classes ?? (data.sis as any)?.activeClasses ?? 0)}</p>
           </div>
           <div class="px-6 py-5">
             <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Admissions</p>
-            <p class="mt-1 text-2xl font-bold text-slate-900">{data.sis?.admissions ?? 0}</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{((data.sis as any)?.admissions ?? (data.sis as any)?.recentAdmissions ?? 0)}</p>
           </div>
           <div class="px-6 py-5">
             <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Active enrollments</p>
-            <p class="mt-1 text-2xl font-bold text-slate-900">{data.sis?.enrollments ?? 0}</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{((data.sis as any)?.enrollments ?? (data.sis as any)?.totalEnrollments ?? 0)}</p>
           </div>
         </div>
       </div>

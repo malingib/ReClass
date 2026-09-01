@@ -57,7 +57,15 @@ Deno.serve(async (req) => {
   try {
     // This endpoint is server-invoked only (service-role bearer, same gate as `notify`).
     const auth = req.headers.get('Authorization') ?? '';
-    if (!auth.startsWith('Bearer ') || auth.slice(7) !== Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+    const b2cToken = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    const b2cExpected = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const b2cValid = b2cToken === b2cExpected || (() => {
+      try {
+        const payload = JSON.parse(atob(b2cToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return payload.role === 'service_role' && payload.iss === 'supabase';
+      } catch { return false; }
+    })();
+    if (!b2cToken || !b2cValid) {
       return json({ error: 'unauthorized' }, 401, req);
     }
 

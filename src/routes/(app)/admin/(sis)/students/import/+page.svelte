@@ -12,14 +12,16 @@
   <Card class="max-w-2xl">
     <CardContent class="p-6">
       <form method="POST" action="?/import" use:enhance={() => {
-        return async ({ result: res }) => {
+        return async ({ result: res, update }) => {
           if (res.type === 'success') {
             const data = res.data as any;
-            if (data.success) {
-              result = { success: true, count: data.count };
-            } else if (data.error) {
-              result = { error: data.error };
-            }
+            if (data?.success) result = { success: true, count: data.count };
+            else if (data?.error) result = { error: data.error };
+            await update();
+          } else if (res.type === 'failure') {
+            const data = res.data as any;
+            result = { error: data?.error ?? data?.message ?? 'Import failed — check file format' };
+            await update();
           } else if (res.type === 'error') {
             result = { error: 'Import failed' };
           }

@@ -144,13 +144,12 @@
       <TabsContent value="financial">
         <Card>
           <CardContent class="space-y-5 pt-6">
-            <div class="space-y-2">
-              <Label for="mpesa_shortcode">M-Pesa Shortcode</Label>
-              <Input id="mpesa_shortcode" name="mpesa_shortcode" type="text" value={tenant.mpesa_shortcode ?? ''} class="max-w-xs" placeholder="e.g. 123456" />
-            </div>
-            <div class="space-y-2">
-              <Label for="mpesa_paybill">M-Pesa Paybill Number</Label>
-              <Input id="mpesa_paybill" name="mpesa_paybill" type="text" value={tenant.mpesa_paybill ?? ''} class="max-w-xs" placeholder="e.g. 654321" />
+            <p class="text-sm text-muted-foreground">
+              Financial defaults — M-Pesa details are now managed under <strong>Payment Channels</strong>.
+              Payroll rate and currency are set in School Profile.
+            </p>
+            <div class="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+              No financial-only fields — use Payment Channels for M-Pesa / Bank routing.
             </div>
           </CardContent>
         </Card>

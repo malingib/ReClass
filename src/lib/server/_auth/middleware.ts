@@ -8,6 +8,8 @@ import {
   COOKIE_USER_TTL_SECONDS, COOKIE_USER_NAME, COOKIE_ROLE_NAME,
   ROUTE_LOGIN, PUBLIC_ROUTES, CONTENT_SECURITY_POLICY, TENANT_ID,
 } from '$lib/config';
+import { HealthChecker } from '$lib/health';
+import { metricsCollector } from '$lib/monitoring';
 
 const REQUIRED_ENV_VARS = [
   [PUBLIC_SUPABASE_URL, 'PUBLIC_SUPABASE_URL', 'Supabase project URL'],
@@ -34,6 +36,82 @@ export function validateEnv(): void {
       throw new Error(`Missing ${key} (${label}). Check your .env file.`);
     }
   }
+}
+
+export async function healthCheck(event: Parameters<Handle>[0]['event']): Promise<Response | null> {
+  const { pathname } = event.url;
+  
+  // Health check endpoint
+  if (pathname === '/api/health') {
+    const healthChecker = new HealthChecker(event.locals.srv);
+    
+    try {
+      const healthResult = await healthChecker.runFullHealthCheck();
+      
+      // Add monitoring data to health check response
+      const metrics = metricsCollector.getMetrics();
+      const response = {
+        ...healthResult,
+        metrics: {
+          summary: metricsCollector.getMetricSummary(),
+          counts: {
+            api_requests: metrics.api_requests,
+            error_count: metrics.error_count,
+            stk_failures: metrics.stk_failures,
+            stk_successes: metrics.stk_successes,
+            notification_failures: metrics.notification_failures,
+            notification_successes: metrics.notification_successes,
+          }
+        }
+      };
+      
+      return new Response(JSON.stringify(response, null, 2), {
+        status: healthResult.status === 'healthy' ? 200 : 
+                healthResult.status === 'degraded' ? 206 : 503,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Health-Status': healthResult.status,
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        error: 'Health check failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  }
+  
+  // Quick health check endpoint (lightweight)
+  if (pathname === '/api/health/quick') {
+    const healthChecker = new HealthChecker(event.locals.srv);
+    
+    try {
+      const healthResult = await healthChecker.runQuickHealthCheck();
+      
+      return new Response(JSON.stringify(healthResult, null, 2), {
+        status: healthResult.status === 'healthy' ? 200 : 503,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Health-Status': healthResult.status,
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        error: 'Quick health check failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  }
+  
+  return null; // Not a health check request
 }
 
 export function initClients(event: Parameters<Handle>[0]['event']): void {
