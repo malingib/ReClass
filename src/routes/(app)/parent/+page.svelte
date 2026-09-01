@@ -1,169 +1,35 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import { Skeleton } from '@eshule/shared';
 
   const { data } = $props();
-  const students = $derived(data.students);
-  const payments = $derived(data.payments);
-  const announcements = $derived(data.announcements);
+  const students = $derived(data.students ?? []);
+  const payments = $derived(data.payments ?? []);
   const ledger = $derived(data.ledger ?? []);
-  const loading = $derived(!students && !payments);
-  const totalBalance = $derived(ledger.reduce((sum, row: any) => sum + Number(row.balance ?? 0), 0));
+  const announcements = $derived(data.announcements ?? []);
+  const totalBalance = $derived(ledger.reduce((sum: number, row: any) => sum + Number(row.balance ?? 0), 0));
 </script>
 
-<DashboardContent title="Welcome back" subtitle="Your child's remedial schedule and M-Pesa payments">
-  <div class="space-y-8">
-    <!-- Main Content Grid -->
-    <div class="grid gap-6 lg:grid-cols-2">
-      {#if loading}
-        <!-- Children Skeleton -->
-        <div class="rounded-xl border border-slate-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]">
-          <Skeleton class="h-5 w-32 mb-4" />
-          <div class="space-y-3">
-            {#each Array(3) as _}
-              <div class="flex items-center gap-3">
-                <Skeleton class="h-4 w-16" />
-                <Skeleton class="h-4 w-32" />
-                <Skeleton class="h-4 w-16" />
-              </div>
-            {/each}
-          </div>
-        </div>
-        <!-- Payments Skeleton -->
-        <div class="rounded-xl border border-slate-200/60 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]">
-          <Skeleton class="h-5 w-32 mb-4" />
-          <div class="space-y-3">
-            {#each Array(3) as _}
-              <div class="flex items-center gap-3">
-                <Skeleton class="h-4 w-20" />
-                <Skeleton class="h-4 w-24" />
-                <Skeleton class="h-4 w-16" />
-                <Skeleton class="h-4 w-16" />
-              </div>
-            {/each}
-          </div>
-        </div>
-      {:else}
-        <div class="anim-card stagger-1 overflow-hidden rounded-xl border border-slate-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),0_2px_4px_rgba(0,0,0,0.04)]">
-          <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
-            <div class="flex items-center gap-3">
-              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                </svg>
-              </div>
-              <h3 class="text-base font-semibold text-slate-900">Linked children</h3>
-            </div>
-          </div>
-          <div class="p-0">
-            <DataTable data={students} columns={[
-              { key: 'admission_no', label: 'Adm No', sortable: true },
-              { key: 'first_name', label: 'Name', render: (s: any) => `${s.first_name} ${s.last_name}` },
-              { key: 'grade', label: 'Cohort' },
-            ]} emptyMessage="No children linked" />
-          </div>
-        </div>
+<DashboardContent title="Parent home" subtitle="Your children, school updates and payments">
+  {#snippet headerActions()}
+    <a href="/parent/pay" class="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30">Pay now</a>
+  {/snippet}
 
-        <div class="anim-card stagger-2 overflow-hidden rounded-xl border border-slate-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),0_2px_4px_rgba(0,0,0,0.04)]">
-          <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
-            <div class="flex items-center gap-3">
-              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-lg shadow-violet-500/25">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
-                </svg>
-              </div>
-              <h3 class="text-base font-semibold text-slate-900">Recent payments</h3>
-            </div>
-          </div>
-          <div class="p-0">
-            <DataTable data={payments} columns={[
-              { key: 'created_at', label: 'Date', render: (p: any) => p.created_at ? new Date(p.created_at).toLocaleDateString() : '—' },
-              { key: 'fee_type', label: 'Fee' },
-              { key: 'amount', label: 'Amount', render: (p: any) => `KES ${Number(p.amount).toLocaleString()}` },
-              { key: 'channel', label: 'Channel', render: (p: any) => p.domain === 'remedial' ? 'M-Pesa' : (p.method ?? 'Bank') },
-            ]} emptyMessage="No payments yet" />
-          </div>
-        </div>
-      {/if}
-    </div>
+  <div class="space-y-6">
+    <section aria-labelledby="pay-heading" class="rounded-2xl border border-primary/15 bg-primary/5 p-5 shadow-sm sm:p-6">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-bold uppercase tracking-[0.14em] text-primary">Payment at a glance</p><h2 id="pay-heading" class="mt-1 text-2xl font-bold text-slate-950">{totalBalance > 0 ? `KES ${totalBalance.toLocaleString()} outstanding` : 'No outstanding balance'}</h2><p class="mt-1 text-sm text-slate-600">Pay school or programme fees securely from one place.</p></div><div class="flex flex-wrap gap-2"><a href="/parent/pay" class="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30">Pay now <span aria-hidden="true" class="ml-1">→</span></a><a href="/parent/fees" class="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30">View fees</a></div></div>
+    </section>
 
-    <!-- Fees balance -->
+    <section aria-labelledby="children-heading" class="overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm"><div class="border-b border-slate-100 px-5 py-4"><h2 id="children-heading" class="text-base font-bold text-slate-900">My children</h2><p class="mt-1 text-sm text-slate-500">Linked students and their current school records.</p></div>{#if students.length === 0}<div class="px-5 py-12 text-center"><p class="text-sm font-semibold text-slate-700">No children linked yet</p><p class="mt-1 text-xs text-slate-500">Contact the school office to link your parent account.</p></div>{:else}<DataTable data={students} columns={[{key:'admission_no',label:'Admission No',sortable:true},{key:'first_name',label:'Name',render:(s:any)=>`${s.first_name} ${s.last_name}`},{key:'grade',label:'Class'},{key:'status',label:'Status'}]} emptyMessage="No children linked" />{/if}</section>
+
     {#if ledger.length > 0}
-      <div class="anim-card stagger-3 overflow-hidden rounded-xl border border-slate-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/50 px-6 py-4">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-base font-semibold text-slate-900">Fees balance</h3>
-              <p class="text-xs text-slate-500">Outstanding across all enrolled children (school + remedial fees)</p>
-            </div>
-          </div>
-          <div class="text-right">
-            <p class="text-xs font-medium text-slate-500">Total outstanding</p>
-            <p class="text-xl font-semibold {totalBalance > 0 ? 'text-amber-600' : 'text-emerald-600'}">KES {totalBalance.toLocaleString()}</p>
-          </div>
-        </div>
-        <div class="p-0">
-          <DataTable data={ledger} columns={[
-            { key: 'first_name', label: 'Child', render: (s: any) => `${s.first_name} ${s.last_name} (${s.admission_no ?? ''})` },
-            { key: 'grade', label: 'Cohort' },
-            { key: 'obligation', label: 'Total fees', render: (s: any) => `KES ${Number(s.obligation).toLocaleString()}` },
-            { key: 'paid', label: 'Paid', render: (s: any) => `KES ${Number(s.paid).toLocaleString()}` },
-            { key: 'balance', label: 'Balance', render: (s: any) => `KES ${Number(s.balance).toLocaleString()}` },
-          ]} emptyMessage="No fee balances" />
-          <div class="border-t border-slate-100 px-6 py-3">
-            <a href="/parent/fees" class="text-sm font-medium text-primary hover:underline">View fee details and pay →</a>
-          </div>
-        </div>
-      </div>
+      <section aria-labelledby="balance-heading" class="overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm"><div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div><h2 id="balance-heading" class="text-base font-bold text-slate-900">Fees balance</h2><p class="mt-1 text-sm text-slate-500">School and programme fees across your children.</p></div><a href="/parent/pay" class="text-sm font-bold text-primary hover:underline">Pay now <span aria-hidden="true">→</span></a></div><DataTable data={ledger} columns={[{key:'first_name',label:'Child',render:(s:any)=>`${s.first_name} ${s.last_name}`},{key:'grade',label:'Class'},{key:'obligation',label:'Total',render:(s:any)=>`KES ${Number(s.obligation).toLocaleString()}`},{key:'paid',label:'Paid',render:(s:any)=>`KES ${Number(s.paid).toLocaleString()}`},{key:'balance',label:'Balance',render:(s:any)=>`KES ${Number(s.balance).toLocaleString()}`}]} emptyMessage="No fee balances" /></section>
     {/if}
 
-    <!-- Announcements -->
-    {#if announcements.length > 0}
-      <div class="space-y-4">
-        <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-            </svg>
-          </div>
-          <h3 class="text-lg font-semibold text-slate-900">Announcements</h3>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2">
-          {#each announcements as a, i}
-            <div class="anim-card group overflow-hidden rounded-xl border border-slate-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),0_2px_4px_rgba(0,0,0,0.04)]" style:animation-delay="{0.3 + i * 0.05}s">
-              <div class="p-5">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2">
-                      <h4 class="text-sm font-semibold text-slate-900">{a.title}</h4>
-                      {#if a.priority === 'urgent'}
-                        <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Urgent</span>
-                      {:else if a.priority === 'high'}
-                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">High</span>
-                      {/if}
-                    </div>
-                    <p class="mt-2 text-sm text-slate-600 whitespace-pre-wrap line-clamp-3">{a.body}</p>
-                  </div>
-                </div>
-                {#if a.published_at}
-                  <div class="mt-4 flex items-center gap-2 text-[11px] text-slate-400">
-                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                    </svg>
-                    {new Date(a.published_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </div>
-                {/if}
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section aria-labelledby="payments-heading" class="overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm"><div class="flex items-center justify-between border-b border-slate-100 px-5 py-4"><h2 id="payments-heading" class="text-base font-bold text-slate-900">Recent payments</h2><a href="/parent/payments" class="text-sm font-semibold text-primary hover:underline">View all</a></div><DataTable data={payments.slice(0,5)} columns={[{key:'created_at',label:'Date',render:(p:any)=>p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'},{key:'fee_type',label:'Fee'},{key:'amount',label:'Amount',render:(p:any)=>`KES ${Number(p.amount).toLocaleString()}`},{key:'domain',label:'Type',render:(p:any)=>p.domain === 'remedial' ? 'Programme' : 'School'}]} emptyMessage="No payments yet" /></section>
+
+      <section aria-labelledby="updates-heading"><div class="flex items-center justify-between"><h2 id="updates-heading" class="text-base font-bold text-slate-900">School updates</h2><a href="/notifications" class="text-sm font-semibold text-primary hover:underline">View all</a></div><div class="mt-3 space-y-3">{#if announcements.length === 0}<div class="rounded-xl border border-slate-200/70 bg-white p-5 text-sm text-slate-500">No new school updates.</div>{:else}{#each announcements.slice(0,3) as a}<article class="rounded-xl border border-slate-200/70 bg-white p-4 shadow-sm"><div class="flex items-center gap-2"><h3 class="text-sm font-semibold text-slate-900">{a.title}</h3>{#if a.priority === 'urgent'}<span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">Urgent</span>{/if}</div><p class="mt-2 line-clamp-2 text-sm text-slate-600">{a.body}</p></article>{/each}{/if}</div></section>
+    </div>
   </div>
 </DashboardContent>
