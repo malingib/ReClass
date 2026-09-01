@@ -121,7 +121,7 @@ export async function generateRemedialPayroll(
 
   const { error: insertError } = await sb
     .from('payroll_runs')
-    .upsert(payrollRecords, { onConflict: 'tenant_id,teacher_id,period_start,period_end', ignoreDuplicates: false });
+    .upsert(payrollRecords, { onConflict: 'tenant_id,teacher_id,period_start,period_end,domain', ignoreDuplicates: false });
 
   if (insertError) {
     logError('payroll_generate', insertError, { periodStart, periodEnd });
@@ -185,7 +185,7 @@ export async function generateSchoolPayroll(
 
   const { error: insertError } = await sb
     .from('payroll_runs')
-    .upsert(payrollRecords, { onConflict: 'tenant_id,teacher_id,period_start,period_end', ignoreDuplicates: false });
+    .upsert(payrollRecords, { onConflict: 'tenant_id,teacher_id,period_start,period_end,domain', ignoreDuplicates: false });
 
   if (insertError) {
     logError('payroll_generate_school', insertError, { periodStart, periodEnd });
@@ -314,7 +314,16 @@ export async function payPayrollRunB2C(
   const status = (result?.data as { status?: string; error?: string; message?: string }) ?? {};
   if (status.status === 'processing') {
     // Update run status to processing immediately to prevent duplicate submissions
-    await sb.from('payroll_runs').update({ status: 'processing' }).eq('id', runId).eq('tenant_id', tenantId);
+    const { error: transitionError, count } = await sb
+      .from('payroll_runs')
+      .update({ status: 'processing' })
+      .eq('id', runId)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'approved');
+    if (transitionError || count === 0) {
+      logError('payroll_b2c_transition', transitionError ?? new Error('Payroll state changed during payout transition'), { runId });
+      return fail(409, { error: 'Payroll state changed while the payout was being initiated. Refresh before retrying.' });
+    }
     return { success: true as const, message: 'Payout request sent to M-Pesa. Confirmation is pending.' };
   }
   if (status.status === 'rejected') {
