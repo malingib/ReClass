@@ -1,4 +1,5 @@
 import type { LayoutServerLoad } from './$types';
+import { requireTenantRole } from '$lib/server/_auth/auth';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
   // role/tenantId are resolved authoritatively in hooks.server.ts from the
@@ -12,10 +13,22 @@ export const load: LayoutServerLoad = async ({ locals }) => {
       .maybeSingle();
     if (data) brand = { name: data.name, logo_url: data.logo_url ?? null, brand_primary: data.brand_primary ?? null };
   }
+  let canAccessCommittee = false;
+  if (locals.role === 'teacher' && locals.tenantId && locals.user) {
+    const { data: teacher } = await locals.srv
+      .from('teachers')
+      .select('remedial_role')
+      .eq('tenant_id', locals.tenantId)
+      .eq('profile_id', locals.user.id)
+      .maybeSingle();
+    canAccessCommittee = ['chairman', 'treasurer', 'member'].includes(teacher?.remedial_role ?? 'none');
+  }
+
   return {
     role: locals.role,
     roles: locals.roles,
     tenantId: locals.tenantId,
     brand,
+    canAccessCommittee,
   };
 };
