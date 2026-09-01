@@ -20,12 +20,12 @@
   });
 
   const title = $derived(`${roleLabels[role] ?? 'Admin'} Portal`);
-  const subtitle = $derived(role === 'school_admin' ? 'Remedial scheduling, teacher attendance, and parent M-Pesa payments'
-    : role === 'teacher' ? 'Mark your remedial sessions and confirm attendance'
-    : role === 'parent' ? 'Pay remediation tuition by M-Pesa paybill and view progress'
-    : role === 'principal' ? 'Approve teacher attendance and review remediation effectiveness'
-    : role === 'bursar' ? 'Reconcile M-Pesa paybill callbacks to invoices and waivers'
-    : role === 'super_admin' ? 'Tenants, payments health and audit across schools'
+  const subtitle = $derived(role === 'school_admin' ? 'School operations, people, finance, communications and programmes'
+    : role === 'teacher' ? 'Your teaching workspace, today’s schedule and classroom work'
+    : role === 'parent' ? 'Your children, school updates, fees and payments'
+    : role === 'principal' ? 'School leadership, performance, people and programme oversight'
+    : role === 'bursar' ? 'School finance operations, collections, reconciliation and reporting'
+    : role === 'super_admin' ? 'Schools, platform health, users and audit across eShule'
     : 'School management');
 
   // Whitelabel: school-facing roles adopt the tenant's brand; the platform owner
