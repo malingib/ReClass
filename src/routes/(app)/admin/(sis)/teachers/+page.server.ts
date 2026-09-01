@@ -12,6 +12,7 @@ const teacherSchema = z.object({
   subjects: z.string().max(500).optional(),
   phone: z.string().max(20).optional(),
   id_number: z.string().max(30).optional(),
+  teacher_type: z.enum(['remedial', 'classroom', 'both']),
   remedial_role: z.enum(['chairman', 'treasurer', 'member', 'none']).optional(),
 });
 
@@ -19,11 +20,9 @@ const deleteSchema = z.object({ id: z.string() });
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-  const sb = locals.srv;
-
-  const { data: teachers } = await sb
+  const { data: teachers } = await locals.srv
     .from('teachers')
-    .select('id, first_name, last_name, employee_no, subjects, phone, id_number, remedial_role')
+    .select('id, first_name, last_name, employee_no, subjects, phone, id_number, teacher_type, remedial_role')
     .eq('tenant_id', tenantId)
     .is('deleted_at', null)
     .order('first_name');
@@ -34,8 +33,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions = {
   create: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const fd = await request.formData();
-    const v = parseForm(teacherSchema, fd);
+    const v = parseForm(teacherSchema, await request.formData());
     if (!v.success) return fail(400, { errors: v.errors });
     const subjects = v.data.subjects ? v.data.subjects.split(',').map(s => s.trim()).filter(Boolean) : [];
     const { error } = await locals.srv.from('teachers').insert({
@@ -46,16 +44,16 @@ export const actions = {
       subjects: subjects.length > 0 ? subjects : null,
       phone: v.data.phone || null,
       id_number: v.data.id_number || null,
+      teacher_type: v.data.teacher_type,
       remedial_role: v.data.remedial_role || 'none',
     });
-    if (error) return fail(500, { message: `Failed: ${error.message}` });
+    if (error) return fail(500, { message: 'Failed to save teacher' });
     return { success: true, message: 'Teacher created successfully' };
   },
 
   update: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const fd = await request.formData();
-    const v = parseForm(teacherSchema, fd);
+    const v = parseForm(teacherSchema, await request.formData());
     if (!v.success) return fail(400, { errors: v.errors });
     if (!v.data.id) return fail(400, { message: 'ID required' });
     const subjects = v.data.subjects ? v.data.subjects.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -67,25 +65,25 @@ export const actions = {
         subjects: subjects.length > 0 ? subjects : null,
         phone: v.data.phone || null,
         id_number: v.data.id_number || null,
+        teacher_type: v.data.teacher_type,
         remedial_role: v.data.remedial_role || 'none',
       })
       .eq('id', v.data.id)
       .eq('tenant_id', tenantId);
-    if (error) return fail(500, { message: `Failed: ${error.message}` });
+    if (error) return fail(500, { message: 'Failed to save teacher' });
     return { success: true, message: 'Teacher updated successfully' };
   },
 
   delete: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const fd = await request.formData();
-    const v = parseForm(deleteSchema, fd);
+    const v = parseForm(deleteSchema, await request.formData());
     if (!v.success) return fail(400, { errors: v.errors });
     const { error } = await locals.srv.from('teachers')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', v.data.id)
       .eq('tenant_id', tenantId)
       .is('deleted_at', null);
-    if (error) return fail(500, { message: `Failed: ${error.message}` });
+    if (error) return fail(500, { message: 'Failed to delete teacher' });
     return { success: true, message: 'Teacher deleted successfully' };
   },
 } satisfies Actions;
