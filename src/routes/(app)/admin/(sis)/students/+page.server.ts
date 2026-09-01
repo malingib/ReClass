@@ -6,98 +6,45 @@ import { parseForm } from '$lib/server/_platform/validation';
 import { getStudentsByTenant } from '$lib/server/_sis/students';
 import { PAGE_LIST_MEDIUM } from '$lib/config';
 
-const studentSchema = z.object({
-  id: z.string().optional(),
-  first_name: z.string().min(1, 'First name is required').max(100),
-  last_name: z.string().min(1, 'Last name is required').max(100),
-  admission_no: z.string().min(1, 'Admission no is required').max(50),
-  grade: z.string().max(50).optional(),
-  status: z.enum(['active', 'inactive']),
-});
-
+const studentSchema = z.object({ id: z.string().optional(), first_name: z.string().min(1).max(100), last_name: z.string().min(1).max(100), admission_no: z.string().min(1).max(50), grade: z.string().max(50).optional(), status: z.enum(['active','inactive']) });
 const deleteSchema = z.object({ id: z.string() });
+const messageSchema = z.object({ student_ids: z.string().min(1), channel: z.enum(['sms','email','inapp']), template_id: z.string().uuid().optional().or(z.literal('')), body: z.string().min(1).max(1000), subject: z.string().max(200).optional() });
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
   const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1'));
   const search = url.searchParams.get('search') ?? '';
+  const balance = url.searchParams.get('balance') ?? 'all';
+  const status = url.searchParams.get('status') ?? 'all';
   const sortKey = url.searchParams.get('sort');
   const sortDir = url.searchParams.get('dir') === 'desc' ? 'desc' : 'asc';
-
-  const result = await getStudentsByTenant(locals.srv, tenantId, {
-    page,
-    pageSize: PAGE_LIST_MEDIUM,
-    search,
-    sortKey,
-    sortDir,
-  });
-
-  return {
-    students: result.data,
-    pagination: {
-      total: result.total,
-      page: result.page,
-      pageSize: result.pageSize,
-      search,
-      sortKey,
-      sortDir: sortDir as 'asc' | 'desc',
-    },
-  };
+  const result = await getStudentsByTenant(locals.srv, tenantId, { page, pageSize: PAGE_LIST_MEDIUM, search, sortKey, sortDir });
+  const rows = (result.data as Record<string, any>[]).map((s) => ({ ...s, balance: Number(s.balance ?? 0) }));
+  const filtered = rows.filter((s) => status === 'all' || s.status === status).filter((s) => balance === 'all' || (balance === 'outstanding' ? s.balance > 0 : s.balance <= 0));
+  const { data: templates } = await locals.srv.from('notification_templates').select('id,key,name,channel,subject,body,variables,version').eq('tenant_id', tenantId).eq('active', true).in('channel', ['sms','email','in_app']).order('name');
+  return { students: filtered, pagination: { total: result.total, page: result.page, pageSize: result.pageSize, search, sortKey, sortDir, balance, status }, messageTemplates: templates ?? [] };
 };
 
 export const actions = {
-  create: async ({ locals, request }) => {
-    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const fd = await request.formData();
-    const v = parseForm(studentSchema, fd);
-    if (!v.success) return fail(400, { errors: v.errors });
-    const { error } = await locals.srv.from('students').insert({
-      tenant_id: tenantId,
-      first_name: v.data.first_name,
-      last_name: v.data.last_name,
-      admission_no: v.data.admission_no,
-      grade: v.data.grade || null,
-      status: v.data.status ?? 'active',
-    });
-    if (error) {
-      if (error.code === '23505') return fail(409, { message: 'A student with this admission number already exists.' });
-      return fail(500, { message: `Failed: ${error.message}` });
-    }
-    return { success: true, message: 'Student created successfully' };
-  },
-
-  update: async ({ locals, request }) => {
-    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const fd = await request.formData();
-    const v = parseForm(studentSchema, fd);
-    if (!v.success) return fail(400, { errors: v.errors });
-    if (!v.data.id) return fail(400, { message: 'ID required' });
-
-    const { error } = await locals.srv.from('students')
-      .update({
-        first_name: v.data.first_name,
-        last_name: v.data.last_name,
-        admission_no: v.data.admission_no,
-        grade: v.data.grade || null,
-        status: v.data.status ?? 'active',
-      })
-      .eq('id', v.data.id)
-      .eq('tenant_id', tenantId);
-    if (error) return fail(500, { message: `Failed: ${error.message}` });
-    return { success: true, message: 'Student updated successfully' };
-  },
-
-  delete: async ({ locals, request }) => {
-    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
-    const fd = await request.formData();
-    const v = parseForm(deleteSchema, fd);
-    if (!v.success) return fail(400, { errors: v.errors });
-    const { error } = await locals.srv.from('students')
-      .update({ deleted_at: new Date().toISOString(), status: 'inactive' })
-      .eq('id', v.data.id)
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null);
-    if (error) return fail(500, { message: `Failed: ${error.message}` });
-    return { success: true, message: 'Student deleted successfully' };
+  create: async ({ locals, request }) => { const { tenantId } = requireTenantRole(locals,'school_admin','super_admin'); const v=parseForm(studentSchema,await request.formData()); if(!v.success)return fail(400,{errors:v.errors}); const {error}=await locals.srv.from('students').insert({tenant_id:tenantId,first_name:v.data.first_name,last_name:v.data.last_name,admission_no:v.data.admission_no,grade:v.data.grade||null,status:v.data.status??'active'}); if(error)return fail(error.code==='23505'?409:500,{message:error.code==='23505'?'A student with this admission number already exists.':`Failed: ${error.message}`}); return {success:true,message:'Student created successfully'}; },
+  update: async ({ locals, request }) => { const { tenantId }=requireTenantRole(locals,'school_admin','super_admin'); const v=parseForm(studentSchema,await request.formData()); if(!v.success)return fail(400,{errors:v.errors}); if(!v.data.id)return fail(400,{message:'ID required'}); const {error}=await locals.srv.from('students').update({first_name:v.data.first_name,last_name:v.data.last_name,admission_no:v.data.admission_no,grade:v.data.grade||null,status:v.data.status??'active'}).eq('id',v.data.id).eq('tenant_id',tenantId); if(error)return fail(500,{message:`Failed: ${error.message}`}); return {success:true,message:'Student updated successfully'}; },
+  delete: async ({ locals, request }) => { const { tenantId }=requireTenantRole(locals,'school_admin','super_admin'); const v=parseForm(deleteSchema,await request.formData()); if(!v.success)return fail(400,{errors:v.errors}); const {error}=await locals.srv.from('students').update({deleted_at:new Date().toISOString(),status:'inactive'}).eq('id',v.data.id).eq('tenant_id',tenantId).is('deleted_at',null); if(error)return fail(500,{message:`Failed: ${error.message}`}); return {success:true,message:'Student deleted successfully'}; },
+  messageParents: async ({ locals, request, getClientAddress }) => {
+    const { tenantId }=requireTenantRole(locals,'school_admin','super_admin');
+    const parsed=messageSchema.safeParse(Object.fromEntries(await request.formData()));
+    if(!parsed.success)return fail(400,{message:'A recipient selection and message are required.'});
+    const ids=parsed.data.student_ids.split(',').map((x)=>x.trim()).filter(Boolean);
+    if(!ids.length)return fail(400,{message:'Select at least one student.'});
+    const { data: students }=await locals.srv.from('students').select('id,first_name,last_name,admission_no,grade').eq('tenant_id',tenantId).in('id',ids).is('deleted_at',null);
+    const { data: links }=await locals.srv.from('guardians_link').select('student_id,parent_id,parents(id,full_name,phone,email,sms_consent)').in('student_id',ids);
+    const byStudent=new Map<string,any[]>(); for(const link of links??[]){const arr=byStudent.get(link.student_id)??[]; if(link.parents)arr.push(link.parents); byStudent.set(link.student_id,arr);}
+    const selectedTemplate=parsed.data.template_id ? (await locals.srv.from('notification_templates').select('id,body,subject').eq('id',parsed.data.template_id).eq('tenant_id',tenantId).maybeSingle()).data : null;
+    const baseBody=selectedTemplate?.body ?? parsed.data.body; const bodyFor=(s:any,p:any)=>baseBody.replace(/\{\{\s*student_name\s*\}\}/g,`${s.first_name} ${s.last_name}`).replace(/\{\{\s*parent_name\s*\}\}/g,p.full_name).replace(/\{\{\s*admission_no\s*\}\}/g,s.admission_no).replace(/\{\{\s*class\s*\}\}/g,s.grade??'').replace(/\{\{\s*school_name\s*\}\}/g,'{{school_name}}');
+    const rows:any[]=[];
+    for(const s of students??[]){ for(const p of byStudent.get(s.id)??[]){ const recipient=parsed.data.channel==='email' ? p.email : p.phone; if(!recipient)continue; rows.push({tenant_id:tenantId,channel:parsed.data.channel,recipient,template:parsed.data.template_id||'custom',body:bodyFor(s,p),status:'queued',related_type:'student_parent_message',related_id:s.id,created_at:new Date().toISOString()}); } }
+    if(!rows.length)return fail(400,{message:'No selected students have a usable parent contact for this channel.'});
+    const {error}=await locals.srv.from('notifications').insert(rows); if(error)return fail(500,{message:`Unable to queue messages: ${error.message}`});
+    await locals.srv.from('audit_log').insert({tenant_id:tenantId,actor_id:locals.user?.id??null,action:'message_parents_bulk',entity:'students',entity_id:null,after:{student_count:students?.length??0,message_count:rows.length,channel:parsed.data.channel,template_id:parsed.data.template_id||null},ip:getClientAddress()});
+    return {success:true,message:`${rows.length} message${rows.length===1?'':'s'} queued.`};
   },
 } satisfies Actions;
