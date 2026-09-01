@@ -13,24 +13,24 @@ const RIGHTS = [['view_committee','View committee'],['manage_members','Manage co
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin', 'principal'); const db = locals.srv;
-  const [{ data: roles }, { data: assignments }, { data: operators }, { data: settings }, governance, { data: teacherRoles }] = await Promise.all([
+  const [{ data: roles }, { data: assignments }, { data: operators }, { data: settings }, { data: teacherRoles }] = await Promise.all([
     db.from('remedial_committee_role_definitions').select('id,name,description,active').eq('tenant_id', tenantId).eq('active', true).order('name'),
     db.from('remedial_committee_role_assignments').select('id,role_id,teacher_id,active,assigned_at,remedial_committee_role_definitions!inner(name),profiles!inner(full_name,phone)').eq('tenant_id', tenantId).order('assigned_at', { ascending: false }),
     db.from('remedial_paybill_operators').select('id,role_assignment_id,committee_member_id,operator_role,approval_level,active,remedial_committee_role_assignments(profiles(full_name),remedial_committee_role_definitions(name))').eq('tenant_id', tenantId).order('operator_role'),
-    db.from('remedial_paybill_settings').select('*').eq('tenant_id', tenantId).maybeSingle(), governance = await db.rpc('remedial_paybill_governance_status', { p_tenant_id: tenantId }),
+    db.from('remedial_paybill_settings').select('*').eq('tenant_id', tenantId).maybeSingle(),
     db.from('user_roles').select('user_id').eq('tenant_id', tenantId).eq('role', 'teacher'),
   ]);
   const ids = (teacherRoles ?? []).map((r: any) => r.user_id); const { data: teachers } = ids.length ? await db.from('profiles').select('id,full_name,phone').in('id', ids).order('full_name') : { data: [] };
   const assignmentIds = (assignments ?? []).map((r: any) => r.id); const { data: rights } = assignmentIds.length ? await db.from('remedial_committee_rights').select('assignment_id,right_code,granted').in('assignment_id', assignmentIds).eq('granted', true) : { data: [] };
-  return { roles: roles ?? [], assignments: assignments ?? [], teachers: teachers ?? [], operators: operators ?? [], rights: rights ?? [], rightCatalog: RIGHTS, settings: settings ?? { approval_levels: 1, minimum_web_operators: 2, maker_checker_required: true }, governance: governance?.data ?? null };
+  const { data: governance } = await db.rpc('remedial_paybill_governance_status', { p_tenant_id: tenantId });
+  return { roles: roles ?? [], assignments: assignments ?? [], teachers: teachers ?? [], operators: operators ?? [], rights: rights ?? [], rightCatalog: RIGHTS, settings: settings ?? { approval_levels: 1, minimum_web_operators: 2, maker_checker_required: true }, governance: governance ?? null };
 };
 
 export const actions = {
   assignRole: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin', 'principal'); const v = parseForm(assignmentSchema, await request.formData()); if (!v.success) return fail(400, { message: 'Select an existing committee role and a teacher.' });
     const { error: validationError } = await locals.srv.rpc('validate_reclass_committee_role_assignment', { p_tenant_id: tenantId, p_role_id: v.data.role_id, p_teacher_id: v.data.teacher_id }); if (validationError) return fail(400, { message: validationError.message });
-    const { error } = await locals.srv.from('remedial_committee_role_assignments').upsert({ tenant_id: tenantId, role_id: v.data.role_id, teacher_id: v.data.teacher_id, active: true, assigned_by: locals.user?.id ?? null }, { onConflict: 'tenant_id,role_id,teacher_id' }); if (error) return fail(500, { message: error.message });
-    return { success: true, message: 'Committee role assigned to teacher.' };
+    const { error } = await locals.srv.from('remedial_committee_role_assignments').upsert({ tenant_id: tenantId, role_id: v.data.role_id, teacher_id: v.data.teacher_id, active: true, assigned_by: locals.user?.id ?? null }, { onConflict: 'tenant_id,role_id,teacher_id' }); if (error) return fail(500, { message: error.message }); return { success: true, message: 'Committee role assigned to teacher.' };
   },
   assignOperator: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin', 'principal'); const v = parseForm(operatorSchema, await request.formData()); if (!v.success) return fail(400, { message: 'Complete the PayBill operator assignment.' });
@@ -38,9 +38,7 @@ export const actions = {
     const { error: validationError } = await locals.srv.rpc('validate_reclass_paybill_role_operator', { p_tenant_id: tenantId, p_role_assignment_id: v.data.role_assignment_id, p_operator_role: v.data.operator_role, p_approval_level: level }); if (validationError) return fail(400, { message: validationError.message });
     const { data: existing } = await locals.srv.from('remedial_paybill_operators').select('id').eq('tenant_id', tenantId).eq('role_assignment_id', v.data.role_assignment_id).eq('operator_role', v.data.operator_role).eq('approval_level', level).maybeSingle();
     const payload = { tenant_id: tenantId, role_assignment_id: v.data.role_assignment_id, committee_member_id: null, operator_role: v.data.operator_role, approval_level: level, active: true, effective_to: null };
-    const result = existing ? await locals.srv.from('remedial_paybill_operators').update(payload).eq('id', existing.id).eq('tenant_id', tenantId) : await locals.srv.from('remedial_paybill_operators').insert(payload);
-    if (result.error) return fail(500, { message: result.error.message });
-    return { success: true, message: 'PayBill rights assigned to the teacher holding that committee role.' };
+    const result = existing ? await locals.srv.from('remedial_paybill_operators').update(payload).eq('id', existing.id).eq('tenant_id', tenantId) : await locals.srv.from('remedial_paybill_operators').insert(payload); if (result.error) return fail(500, { message: result.error.message }); return { success: true, message: 'PayBill rights assigned to the teacher holding that committee role.' };
   },
   grantRights: async ({ locals, request }) => {
     const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin', 'principal'); const v = parseForm(rightsSchema, await request.formData()); if (!v.success) return fail(400, { message: 'Select a committee assignment.' });
@@ -55,7 +53,6 @@ export const actions = {
     const { error } = await locals.srv.from('remedial_paybill_settings').upsert({ tenant_id: tenantId, paybill_number: v.data.paybill_number || null, account_prefix: v.data.account_prefix || null, approval_levels: v.data.approval_levels, minimum_web_operators: 2, maker_checker_required: true, initiator_may_approve_own_transaction: false, updated_by: locals.user?.id ?? null }, { onConflict: 'tenant_id' }); if (error) return fail(500, { message: error.message }); return { success: true, message: 'PayBill governance settings saved.' };
   },
   deactivate: async ({ locals, request }) => {
-    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin', 'principal'); const v = parseForm(idSchema, await request.formData()); if (!v.success) return fail(400, { message: 'Assignment not found.' });
-    await locals.srv.from('remedial_paybill_operators').update({ active: false, effective_to: new Date().toISOString() }).eq('id', v.data.id).eq('tenant_id', tenantId); return { success: true, message: 'Operator assignment deactivated.' };
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin', 'principal'); const v = parseForm(idSchema, await request.formData()); if (!v.success) return fail(400, { message: 'Assignment not found.' }); await locals.srv.from('remedial_paybill_operators').update({ active: false, effective_to: new Date().toISOString() }).eq('id', v.data.id).eq('tenant_id', tenantId); return { success: true, message: 'Operator assignment deactivated.' };
   },
 } satisfies Actions;
