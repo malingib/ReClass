@@ -28,6 +28,8 @@
     : role === 'super_admin' ? 'Platform configuration, module provisioning, and audit oversight'
     : 'School management');
 
+  const canAccessCommittee = $derived(data.canAccessCommittee ?? false);
+
   const applyBrand = $derived(role !== 'super_admin' && !!data.brand?.brand_primary);
   const brandName = $derived(applyBrand ? (data.brand?.name ?? 'eShule') : 'eShule');
   const logoUrl = $derived(applyBrand ? (data.brand?.logo_url ?? '') : '');
@@ -45,6 +47,6 @@
   {/if}
 </svelte:head>
 
-<AppShell {title} {subtitle} {role} roles={data.roles} user={cookieUser} {brandName} {logoUrl}>
+<AppShell {title} {subtitle} {role} roles={data.roles} user={cookieUser} {brandName} {logoUrl} {canAccessCommittee}>
   {@render children?.()}
 </AppShell>
