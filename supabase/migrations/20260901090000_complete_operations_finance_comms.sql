@@ -1,0 +1,173 @@
+-- eShule/ReClass completion migration
+-- Scope: one student ReClass obligation; flexible teacher payments; committee rights;
+-- weekly payroll; individual receipts; communications; audit; analytics.
+
+-- Teacher attendance is deliberately only ATTENDED / ABSENT.
+ALTER TABLE public.teacher_attendance DROP CONSTRAINT IF EXISTS teacher_attendance_status_check;
+ALTER TABLE public.teacher_attendance ADD CONSTRAINT teacher_attendance_status_check CHECK (status IN ('attended','absent'));
+
+ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS approval_status text NOT NULL DEFAULT 'pending';
+ALTER TABLE public.teacher_attendance DROP CONSTRAINT IF EXISTS teacher_attendance_approval_status_check;
+ALTER TABLE public.teacher_attendance ADD CONSTRAINT teacher_attendance_approval_status_check CHECK (approval_status IN ('pending','approved','rejected'));
+ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS reviewed_by uuid REFERENCES public.profiles(id);
+ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS reviewed_at timestamptz;
+ALTER TABLE public.teacher_attendance ADD COLUMN IF NOT EXISTS review_note text;
+
+-- Existing committee business roles remain business roles. Rights are additive.
+CREATE TABLE IF NOT EXISTS public.reclass_committee_roles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  name text NOT NULL, description text, active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(tenant_id,name)
+);
+CREATE TABLE IF NOT EXISTS public.reclass_committee_assignments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  profile_id uuid NOT NULL REFERENCES public.profiles(id), role_id uuid NOT NULL REFERENCES public.reclass_committee_roles(id),
+  assigned_by uuid REFERENCES public.profiles(id), assigned_at timestamptz NOT NULL DEFAULT now(),
+  active boolean NOT NULL DEFAULT true, UNIQUE(tenant_id,profile_id,role_id)
+);
+CREATE TABLE IF NOT EXISTS public.reclass_committee_rights (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  assignment_id uuid NOT NULL REFERENCES public.reclass_committee_assignments(id) ON DELETE CASCADE,
+  right_key text NOT NULL, granted_by uuid REFERENCES public.profiles(id), granted_at timestamptz NOT NULL DEFAULT now(),
+  active boolean NOT NULL DEFAULT true, UNIQUE(assignment_id,right_key)
+);
+
+-- One and only one student-side remedial obligation definition.
+CREATE TABLE IF NOT EXISTS public.reclass_fee_definition (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  name text NOT NULL DEFAULT 'ReClass Fee', amount numeric(12,2) NOT NULL CHECK (amount >= 0),
+  frequency text NOT NULL DEFAULT 'term', description text, active boolean NOT NULL DEFAULT true,
+  effective_from date, effective_to date, created_by uuid REFERENCES public.profiles(id), created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id,name)
+);
+CREATE TABLE IF NOT EXISTS public.reclass_obligations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  student_id uuid NOT NULL, fee_definition_id uuid NOT NULL REFERENCES public.reclass_fee_definition(id),
+  period_start date, period_end date, amount numeric(12,2) NOT NULL CHECK (amount >= 0),
+  paid_amount numeric(12,2) NOT NULL DEFAULT 0 CHECK (paid_amount >= 0), status text NOT NULL DEFAULT 'open'
+    CHECK(status IN ('open','partially_paid','paid','waived','cancelled')),
+  created_by uuid REFERENCES public.profiles(id), created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_reclass_obligations_student ON public.reclass_obligations(tenant_id,student_id,status);
+
+-- Flexible teacher payment definitions. Committee compensation is a distinct definition from teaching pay.
+CREATE TABLE IF NOT EXISTS public.teacher_payment_definitions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  name text NOT NULL, category text NOT NULL CHECK(category IN ('teaching','allowance','committee','role','session','special_assignment','one_off','deduction','other')),
+  calculation_method text NOT NULL DEFAULT 'fixed' CHECK(calculation_method IN ('fixed','per_session','per_unit','percentage','manual')),
+  amount numeric(12,2) NOT NULL DEFAULT 0 CHECK(amount >= 0), percentage numeric(7,4), frequency text NOT NULL DEFAULT 'weekly',
+  eligibility jsonb NOT NULL DEFAULT '{}'::jsonb, active boolean NOT NULL DEFAULT true,
+  effective_from date, effective_to date, created_by uuid REFERENCES public.profiles(id), created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id,name)
+);
+CREATE TABLE IF NOT EXISTS public.teacher_payment_lines (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  payroll_id uuid NOT NULL REFERENCES public.payroll_runs(id) ON DELETE CASCADE, teacher_id uuid NOT NULL REFERENCES public.teachers(id),
+  definition_id uuid NOT NULL REFERENCES public.teacher_payment_definitions(id), description text,
+  quantity numeric(12,3) NOT NULL DEFAULT 1, unit_amount numeric(12,2) NOT NULL DEFAULT 0, amount numeric(12,2) NOT NULL DEFAULT 0,
+  source jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_teacher_payment_lines_payroll ON public.teacher_payment_lines(payroll_id);
+
+-- Weekly payroll workflow: committee prepares -> principal approves -> initiator -> payment approver.
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS prepared_by uuid REFERENCES public.profiles(id);
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS prepared_at timestamptz;
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS principal_approved_by uuid REFERENCES public.profiles(id);
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS principal_approved_at timestamptz;
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS principal_note text;
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS payment_initiated_by uuid REFERENCES public.profiles(id);
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS payment_initiated_at timestamptz;
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS payment_approved_by uuid REFERENCES public.profiles(id);
+ALTER TABLE public.payroll_runs ADD COLUMN IF NOT EXISTS payment_approved_at timestamptz;
+ALTER TABLE public.payroll_runs DROP CONSTRAINT IF EXISTS payroll_runs_status_check;
+ALTER TABLE public.payroll_runs ADD CONSTRAINT payroll_runs_status_check CHECK(status IN ('draft','submitted','principal_approved','payment_initiated','payment_approved','paid','teacher_confirmed','rejected','returned'));
+
+CREATE TABLE IF NOT EXISTS public.teacher_payment_receipts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  payment_id uuid, payroll_id uuid REFERENCES public.payroll_runs(id), teacher_id uuid REFERENCES public.teachers(id),
+  receipt_number text NOT NULL, amount numeric(12,2) NOT NULL CHECK(amount >= 0), payment_reference text,
+  payment_method text, paid_at timestamptz, teacher_confirmed_at timestamptz, teacher_confirmed_by uuid REFERENCES public.profiles(id),
+  created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(tenant_id,receipt_number)
+);
+
+-- Generic receipts: one successful payment = one receipt, regardless of domain.
+CREATE TABLE IF NOT EXISTS public.payment_receipts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  payment_id uuid, receipt_number text NOT NULL, payer_profile_id uuid REFERENCES public.profiles(id),
+  beneficiary_id uuid, domain text NOT NULL CHECK(domain IN ('school_fee','reclass','payroll','other')),
+  amount numeric(12,2) NOT NULL CHECK(amount >= 0), currency text NOT NULL DEFAULT 'KES',
+  payment_reference text, payment_method text, paid_at timestamptz, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(tenant_id,receipt_number)
+);
+
+-- Audit: WHO did WHAT, TO WHICH RECORD, WHEN, WHY, and RESULT.
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  actor_id uuid REFERENCES public.profiles(id), actor_label text, action text NOT NULL, module text NOT NULL,
+  entity_type text, entity_id uuid, target_label text, reason text, before_data jsonb, after_data jsonb,
+  source text NOT NULL DEFAULT 'web', result text NOT NULL DEFAULT 'success', metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_time ON public.audit_logs(tenant_id,created_at DESC);
+
+-- Notification templates + event triggers + per-recipient delivery records.
+CREATE TABLE IF NOT EXISTS public.notification_templates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  key text NOT NULL, name text NOT NULL, channel text NOT NULL CHECK(channel IN ('sms','email','in_app','whatsapp')),
+  subject text, body text NOT NULL, variables jsonb NOT NULL DEFAULT '[]'::jsonb, version integer NOT NULL DEFAULT 1,
+  active boolean NOT NULL DEFAULT true, updated_by uuid REFERENCES public.profiles(id), updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id,key,channel,version)
+);
+CREATE TABLE IF NOT EXISTS public.notification_triggers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  event_key text NOT NULL, template_id uuid REFERENCES public.notification_templates(id), enabled boolean NOT NULL DEFAULT true,
+  recipient_rule jsonb NOT NULL DEFAULT '{}'::jsonb, created_by uuid REFERENCES public.profiles(id), UNIQUE(tenant_id,event_key,template_id)
+);
+CREATE TABLE IF NOT EXISTS public.notification_deliveries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  event_key text NOT NULL, template_id uuid REFERENCES public.notification_templates(id), recipient_profile_id uuid REFERENCES public.profiles(id),
+  channel text NOT NULL CHECK(channel IN ('sms','email','in_app','whatsapp')), entity_type text, entity_id uuid,
+  rendered_subject text, rendered_body text, status text NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','sent','delivered','failed','read')),
+  attempts integer NOT NULL DEFAULT 0, provider_reference text, last_error text, sent_at timestamptz, delivered_at timestamptz, read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_recipient ON public.notification_deliveries(tenant_id,recipient_profile_id,created_at DESC);
+
+-- Standard event names for the application.
+CREATE TABLE IF NOT EXISTS public.notification_event_catalog (
+  event_key text PRIMARY KEY, description text NOT NULL
+);
+INSERT INTO public.notification_event_catalog(event_key,description) VALUES
+('payroll.submitted','Payroll submitted for principal approval'),('payroll.principal_approved','Payroll approved by principal'),
+('payment.initiated','Approved payment initiated'),('payment.approved','Payment approved; notify teacher'),
+('teacher.receipt_confirmed','Teacher confirmed payment receipt'),('school_fee.payment_received','School fee payment received'),
+('reclass.payment_received','ReClass payment received'),('teacher.attendance_submitted','Teacher attendance submitted for committee approval'),
+('teacher.attendance_approved','Teacher attendance approved'),('teacher.attendance_rejected','Teacher attendance rejected'),
+('student.parent_message','Message sent to a student parent/guardian'),('teacher.message','Message sent to a teacher')
+ON CONFLICT DO NOTHING;
+
+-- Analytics views use live transactional data; no seeded/demo metrics.
+CREATE OR REPLACE VIEW public.v_teacher_attendance_daily AS
+SELECT tenant_id, occurs_on::date AS day,
+  count(*) FILTER (WHERE status='attended') AS attended,
+  count(*) FILTER (WHERE status='absent') AS absent,
+  count(*) AS total
+FROM public.teacher_attendance ta JOIN public.session_occurrences so ON so.id=ta.occurrence_id
+WHERE ta.deleted_at IS NULL GROUP BY tenant_id,occurs_on::date;
+
+CREATE OR REPLACE VIEW public.v_payroll_weekly AS
+SELECT tenant_id, period_start, period_end, count(*) AS teacher_count,
+  sum(amount) AS payroll_total,
+  count(*) FILTER (WHERE status='paid') AS paid_teachers,
+  count(*) FILTER (WHERE status='teacher_confirmed') AS confirmed_teachers
+FROM public.payroll_runs WHERE deleted_at IS NULL GROUP BY tenant_id,period_start,period_end;
+
+CREATE OR REPLACE VIEW public.v_teacher_payment_breakdown AS
+SELECT l.tenant_id,l.payroll_id,l.teacher_id,d.name,d.category,l.quantity,l.unit_amount,l.amount
+FROM public.teacher_payment_lines l JOIN public.teacher_payment_definitions d ON d.id=l.definition_id;
+
+-- Prevent direct client writes to audit log; service/RPC code should append events.
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notification_deliveries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notification_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notification_triggers ENABLE ROW LEVEL SECURITY;
