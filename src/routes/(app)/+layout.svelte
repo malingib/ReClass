@@ -20,16 +20,14 @@
   });
 
   const title = $derived(`${roleLabels[role] ?? 'Admin'} Portal`);
-  const subtitle = $derived(role === 'school_admin' ? 'Remedial scheduling, teacher attendance, and parent M-Pesa payments'
-    : role === 'teacher' ? 'Mark your remedial sessions and confirm attendance'
-    : role === 'parent' ? 'Pay remediation tuition by M-Pesa paybill and view progress'
-    : role === 'principal' ? 'Approve teacher attendance and review remediation effectiveness'
-    : role === 'bursar' ? 'Reconcile M-Pesa paybill callbacks to invoices and waivers'
-    : role === 'super_admin' ? 'Tenants, payments health and audit across schools'
+  const subtitle = $derived(role === 'school_admin' ? 'School administration across SIS, remedial operations, finance, payroll, and communications'
+    : role === 'teacher' ? 'Your teaching scope, delivery records, and assigned remedial responsibilities'
+    : role === 'parent' ? 'View your child\'s progress and pay remedial tuition by M-Pesa'
+    : role === 'principal' ? 'Oversight of remedial delivery, attendance review, and school performance'
+    : role === 'bursar' ? 'School fee collection, reconciliation, and actual-payment receipts'
+    : role === 'super_admin' ? 'Platform configuration, module provisioning, and audit oversight'
     : 'School management');
 
-  // Whitelabel: school-facing roles adopt the tenant's brand; the platform owner
-  // (super_admin) dashboard keeps the platform-default branding.
   const applyBrand = $derived(role !== 'super_admin' && !!data.brand?.brand_primary);
   const brandName = $derived(applyBrand ? (data.brand?.name ?? 'eShule') : 'eShule');
   const logoUrl = $derived(applyBrand ? (data.brand?.logo_url ?? '') : '');
