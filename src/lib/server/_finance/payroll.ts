@@ -300,10 +300,15 @@ export async function payPayrollRunB2C(
     const resp = await sb.functions.invoke('b2c', {
       body: { tenant_id: tenantId, run_id: runId, actor_id: actorId ?? null },
     });
-    result = { data: resp?.data };
+    result = { data: resp?.data, error: resp?.error ? { message: resp.error.message } : undefined };
   } catch (err) {
     logError('payroll_b2c_invoke', err instanceof Error ? err : new Error(String(err)), { runId });
     return fail(502, { error: 'Payout service unreachable. Please try again.' });
+  }
+
+  if (result?.error) {
+    logError('payroll_b2c_response', new Error(result.error.message ?? 'Payout service returned an error'), { runId });
+    return fail(502, { error: 'Payout service could not process the request. Please try again.' });
   }
 
   const status = (result?.data as { status?: string; error?: string; message?: string }) ?? {};
