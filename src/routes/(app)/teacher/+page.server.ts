@@ -1,14 +1,18 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { getTeacherOwnership } from '$lib/server/_auth/ownership';
-import { hasCapability } from '$lib/server/_auth/capabilities';
+import { hasCapability, canApproveAttendance, canRunPayroll, canAuthorizePayout } from '$lib/server/_auth/capabilities';
 import type { Capability } from '$lib/server/_auth/capabilities';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { tenantId, teacher } = await getTeacherOwnership(locals);
   const caps = (locals as App.Locals & { capabilities?: Capability[] }).capabilities ?? [];
+  const committeeRole = (teacher as { remedial_role?: string | null }).remedial_role ?? 'none';
   const canRemedial = hasCapability(locals.role, teacher.teacher_type, 'remedial:view');
   const canSis = hasCapability(locals.role, teacher.teacher_type, 'sis:view');
+  const canReviewAttendance = canApproveAttendance(committeeRole) || hasCapability(locals.role, teacher.teacher_type, 'remedial:attendance_review');
+  const canPayroll = canRunPayroll(committeeRole);
+  const canPayout = canAuthorizePayout(committeeRole);
   const from = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
   const through = new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
 
@@ -28,8 +32,12 @@ export const load: PageServerLoad = async ({ locals }) => {
   return {
     capabilities: caps,
     teacherType: teacher.teacher_type,
+    committeeRole,
     canRemedial,
     canSis,
+    canReviewAttendance,
+    canPayroll,
+    canPayout,
     stats: {
       sessions: timetable?.length ?? 0,
       pending: delivery.filter((item) => (item.attendance as { approval_status?: string } | null)?.approval_status === 'pending').length,
