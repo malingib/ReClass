@@ -16,6 +16,7 @@
     user = { name: 'eShule Admin', email: 'admin@eshule.app' },
     brandName = 'eShule',
     logoUrl = '',
+    canAccessCommittee = false,
     children,
   }: {
     title: string;
@@ -27,6 +28,7 @@
     user?: { name?: string; email?: string };
     brandName?: string;
     logoUrl?: string;
+    canAccessCommittee?: boolean;
     children?: import('svelte').Snippet;
   } = $props();
 
@@ -106,7 +108,7 @@
         { label: 'My dashboard', href: '/teacher', icon: 'dashboard' },
         { label: 'Remedial timetable', href: '/teacher/timetable', icon: 'calendar' },
         { label: 'My classes', href: '/teacher/classes', icon: 'subjects' },
-        { label: 'Committee', href: '/teacher/committee', icon: 'teachers' },
+        ...(canAccessCommittee ? [{ label: 'Committee', href: '/teacher/committee', icon: 'teachers' }] : []),
       ]},
     ],
     parent: [
