@@ -19,7 +19,6 @@ const TEACHER_TYPE_CAPS: Record<string, Capability[]> = {
     'remedial:view',
     'remedial:schedule',
     'remedial:attendance_mark',
-    'remedial:attendance_review',
     'remedial:fees',
   ],
   classroom: ['sis:view'],
@@ -27,7 +26,6 @@ const TEACHER_TYPE_CAPS: Record<string, Capability[]> = {
     'remedial:view',
     'remedial:schedule',
     'remedial:attendance_mark',
-    'remedial:attendance_review',
     'remedial:fees',
     'sis:view',
   ],
@@ -39,7 +37,7 @@ const TEACHER_TYPE_CAPS: Record<string, Capability[]> = {
 // - bursar: school-finance and actual-payment receipt evidence
 // - teacher: scoped by teacher_type; committee powers remain hat-based
 const ROLE_CAPS: Partial<Record<Role, Capability[]>> = {
-  principal: ['remedial:view', 'remedial:attendance_review', 'sis:view', 'finance:view', 'finance:receipts'],
+  principal: ['remedial:view', 'sis:view', 'finance:view', 'finance:receipts'],
   bursar: ['finance:view', 'finance:receipts'],
 };
 
@@ -54,7 +52,6 @@ export function roleCapabilities(role: Role | null | undefined): Capability[] {
       'remedial:view',
       'remedial:schedule',
       'remedial:attendance_mark',
-      'remedial:attendance_review',
       'remedial:fees',
       'finance:view',
       'finance:receipts',
@@ -78,6 +75,7 @@ export function isRemedialOfficer(remRole: RemedialRole | string | null | undefi
   return remRole === hat;
 }
 
+// Committee review is a governance responsibility, never a generic teaching permission.
 export function canApproveAttendance(remRole: RemedialRole | string | null | undefined): boolean {
   return remRole === 'chairman' || remRole === 'member';
 }
