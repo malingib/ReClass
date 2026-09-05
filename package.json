@@ -7,9 +7,9 @@
   "engines": { "node": ">=22 <23" },
   "scripts": {
     "dev": "vite dev", "build": "vite build", "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --compiler-warnings \\"state_referenced_locally:ignore\\"",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch --compiler-warnings \\"state_referenced_locally:ignore\\"",
-    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --compiler-warnings \\"state_referenced_locally:ignore\\"",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --compiler-warnings \"state_referenced_locally:ignore\"",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch --compiler-warnings \"state_referenced_locally:ignore\"",
+    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --compiler-warnings \"state_referenced_locally:ignore\"",
     "test": "vitest run", "test:watch": "vitest", "test:e2e": "playwright test", "test:e2e:install": "playwright install --with-deps chromium",
     "test:e2e:dev": "playwright test --config=e2e.full-suite.config.ts", "test:e2e:audit": "playwright test --config=e2e.comprehensive-audit.config.ts",
     "audit:sections": "node scripts/audit-sections.mjs", "audit:nav": "node scripts/audit-nav-links.mjs", "check:boundaries": "node scripts/check-boundaries.mjs",
