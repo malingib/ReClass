@@ -13,6 +13,8 @@ ALTER TABLE public.students ADD COLUMN IF NOT EXISTS archived_at timestamptz;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_students_student_no ON public.students(tenant_id, student_no) WHERE student_no IS NOT NULL AND deleted_at IS NULL;
 
 ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS application_no text;
+ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS academic_year text;
+ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS class_id uuid REFERENCES public.sis_classes(id);
 ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS applicant_first_name text;
 ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS applicant_middle_name text;
 ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS applicant_last_name text;
