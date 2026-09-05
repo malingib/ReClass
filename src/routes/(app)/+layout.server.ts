@@ -1,27 +1,33 @@
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-  // role/tenantId are resolved authoritatively in hooks.server.ts from the
-  // JWT + user_roles. Source them from locals rather than re-deriving from URL.
-  let brand: { name: string; logo_url: string | null; brand_primary: string | null } | null = null;
-  if (locals.tenantId && locals.srv) {
-    const { data } = await locals.srv
-      .from('tenants')
-      .select('name, logo_url, brand_primary')
-      .eq('id', locals.tenantId)
-      .maybeSingle();
-    if (data) brand = { name: data.name, logo_url: data.logo_url ?? null, brand_primary: data.brand_primary ?? null };
-  }
-  let canAccessCommittee = false;
-  if (locals.role === 'teacher' && locals.tenantId && locals.user) {
-    const { data: teacher } = await locals.srv
-      .from('teachers')
-      .select('remedial_role')
-      .eq('tenant_id', locals.tenantId)
-      .eq('profile_id', locals.user.id)
-      .maybeSingle();
-    canAccessCommittee = ['chairman', 'treasurer', 'member'].includes(teacher?.remedial_role ?? 'none');
-  }
+  // Both lookups depend only on the authoritative request context and can run
+  // concurrently. Keeping them parallel removes avoidable TTFB from every app route.
+  const brandQuery = locals.tenantId && locals.srv
+    ? locals.srv
+        .from('tenants')
+        .select('name, logo_url, brand_primary')
+        .eq('id', locals.tenantId)
+        .maybeSingle()
+    : Promise.resolve({ data: null });
+
+  const committeeQuery = locals.role === 'teacher' && locals.tenantId && locals.user && locals.srv
+    ? locals.srv
+        .from('teachers')
+        .select('remedial_role')
+        .eq('tenant_id', locals.tenantId)
+        .eq('profile_id', locals.user.id)
+        .maybeSingle()
+    : Promise.resolve({ data: null });
+
+  const [{ data: brandData }, { data: teacher }] = await Promise.all([brandQuery, committeeQuery]);
+
+  const brand = brandData
+    ? { name: brandData.name, logo_url: brandData.logo_url ?? null, brand_primary: brandData.brand_primary ?? null }
+    : null;
+  const canAccessCommittee = ['chairman', 'treasurer', 'member'].includes(
+    (teacher as { remedial_role?: string } | null)?.remedial_role ?? 'none',
+  );
 
   return {
     role: locals.role,
