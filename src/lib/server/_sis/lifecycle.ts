@@ -19,15 +19,8 @@ export async function getStudent360(sb: Db, tenantId: string, studentId: string)
   return { student: student.data as Row | null, guardians: (guardians.data ?? []) as Row[], enrollments: (enrollments.data ?? []) as Row[], events: (events.data ?? []) as Row[], documents: (documents.data ?? []) as Row[], invoices: (invoices.data ?? []) as Row[], remedial: (remedial.data ?? []) as Row[], admissions: (admissions.data ?? []) as Row[], error: student.error };
 }
 
-export async function getEnrollmentOptions(sb: Db, tenantId: string) {
-  const { data } = await db(sb).from('sis_classes').select('id,name,stream,code,academic_year,status').eq('tenant_id', tenantId).eq('status', 'active').order('name');
-  return (data ?? []) as Row[];
-}
-
-export async function getStudentsForEnrollment(sb: Db, tenantId: string) {
-  const { data } = await db(sb).from('students').select('id,admission_no,student_no,first_name,last_name').eq('tenant_id', tenantId).is('deleted_at', null).eq('status', 'active').order('first_name', { ascending: true });
-  return (data ?? []) as Row[];
-}
+export async function getEnrollmentOptions(sb: Db, tenantId: string) { const { data } = await db(sb).from('sis_classes').select('id,name,stream,code,academic_year,status').eq('tenant_id', tenantId).eq('status', 'active').order('name'); return (data ?? []) as Row[]; }
+export async function getStudentsForEnrollment(sb: Db, tenantId: string) { const { data } = await db(sb).from('students').select('id,admission_no,student_no,first_name,last_name').eq('tenant_id', tenantId).is('deleted_at', null).eq('status', 'active').order('first_name', { ascending: true }); return (data ?? []) as Row[]; }
 
 export async function createEnrollment(sb: Db, input: { tenantId: string; studentId: string; classId: string; academicYear: string; enrolledOn: string; actorId?: string | null }) {
   const client = db(sb);
@@ -40,8 +33,24 @@ export async function createEnrollment(sb: Db, input: { tenantId: string; studen
 }
 
 export async function recordLifecycleEvent(sb: Db, input: { tenantId: string; studentId: string; enrollmentId?: string | null; eventType: string; effectiveOn: string; reason?: string | null; notes?: string | null; actorId?: string | null }) {
-  const { error } = await db(sb).from('student_lifecycle_events').insert({ tenant_id: input.tenantId, student_id: input.studentId, enrollment_id: input.enrollmentId || null, event_type: input.eventType, effective_on: input.effectiveOn, reason: input.reason || null, notes: input.notes || null, actor_id: input.actorId || null });
-  return error ? { ok: false as const, error } : { ok: true as const };
+  const client = db(sb);
+  let enrollmentId = input.enrollmentId || null;
+  if (!enrollmentId) {
+    const { data } = await client.from('sis_enrollments').select('id').eq('student_id', input.studentId).eq('tenant_id', input.tenantId).eq('status', 'active').order('enrolled_at', { ascending: false }).limit(1).single();
+    enrollmentId = (data as Row | null)?.id ? String((data as Row).id) : null;
+  }
+  const { error } = await client.from('student_lifecycle_events').insert({ tenant_id: input.tenantId, student_id: input.studentId, enrollment_id: enrollmentId, event_type: input.eventType, effective_on: input.effectiveOn, reason: input.reason || null, notes: input.notes || null, actor_id: input.actorId || null });
+  if (error) return { ok: false as const, error };
+  const terminal = input.eventType === 'graduated' ? 'graduated' : input.eventType === 'transferred' ? 'transferred' : ['withdrawn','expelled'].includes(input.eventType) ? 'completed' : null;
+  if (terminal && enrollmentId) {
+    const { error: enrollmentError } = await client.from('sis_enrollments').update({ status: terminal, exited_at: input.effectiveOn }).eq('id', enrollmentId).eq('tenant_id', input.tenantId);
+    if (enrollmentError) return { ok: false as const, error: enrollmentError };
+  }
+  if (terminal) {
+    const { error: studentError } = await client.from('students').update({ status: 'inactive', archived_at: new Date().toISOString() }).eq('id', input.studentId).eq('tenant_id', input.tenantId);
+    if (studentError) return { ok: false as const, error: studentError };
+  }
+  return { ok: true as const };
 }
 
 export async function admitApplication(sb: Db, input: { tenantId: string; admissionId: string; actorId: string; admissionNo: string; studentNo?: string | null }) {
