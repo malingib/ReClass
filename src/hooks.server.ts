@@ -9,24 +9,21 @@ import { metricsCollector } from '$lib/monitoring';
 validateEnv();
 
 export const handle: Handle = async ({ event, resolve }) => {
+  const authStartedAt = Date.now();
   metricsCollector.incrementCounter('api_requests');
   initClients(event);
   correlationId(event);
   const healthResponse = await healthCheck(event);
   if (healthResponse) return healthResponse;
-  
+
   return resolveSession(event)
-    .then(() => { 
-      securityHeaders(event); 
-      routeGuard(event); 
-    })
     .then(() => {
-      // Add timing metrics for successful requests
-      metricsCollector.endTimer('auth_duration');
-      return resolve(event);
+      securityHeaders(event);
+      routeGuard(event);
+      metricsCollector.endTimer('auth_duration', authStartedAt);
     })
+    .then(() => resolve(event))
     .catch((error) => {
-      // Track authentication failures
       metricsCollector.incrementCounter('auth_failures');
       metricsCollector.incrementCounter('error_count');
       throw error;
