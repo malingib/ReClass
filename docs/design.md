@@ -1,98 +1,168 @@
-# ReClass — Design System (design.md)
+# eShule — Design System
 
-**Philosophy:** Calm, trustworthy, Kenya-first. Education software must feel safe and legible to teachers, parents, and bursars — not flashy. Density where pros need it (tables, reports), warmth where parents land (portal). Accessible by default (WCAG 2.1 AA). Bilingual (EN/SW). Mobile-first because most parents arrive by phone.
+> **Current-state design reference — 1 September 2026.** This document governs interface language, hierarchy, accessibility and interaction patterns. ReClass is presented as a product module within eShule, not as the global application identity.
 
-**Reference synthesis:** Flowbite Admin Dashboard is the structural reference for a clear desktop application shell, compact top-level utilities, data tables, and focused operational hierarchy. Preskool is the domain reference for school-centred navigation, academic-year context, action-led school dashboards, and task-specific cards. ReClass takes the strengths of both without copying their assets, layout code, or branding: the result is a light neutral workspace, a white role-scoped sidebar, an emerald action color, and a responsive bottom navigation for mobile.
+## 1. Product experience
 
----
+eShule should feel calm, trustworthy, legible and operational. Education software should not feel like a generic analytics dashboard. Dense tables and queues are appropriate for administrators; clear, task-led surfaces are appropriate for teachers and parents.
 
-## 1. Design Tokens (Tailwind theme extension)
-```js
-// tailwind.config.ts
-colors: {
-  brand: { 50:'#ecfdf3', 500:'#12b76a', 600:'#039855', 700:'#027a48' },
-  success:'#039855', warning:'#dc8b14', danger:'#d92d20', info:'#175cd3',
-  ink: { 900:'#0f172a', 700:'#334155', 500:'#64748b', 300:'#cbd5e1', 100:'#f1f5f9', 50:'#f8fafc' },
-}
-fontFamily: { sans:['DM Sans','sans-serif'], mono:['DM Mono','monospace'], sw:['"Noto Sans"','DM Sans'] }
-borderRadius: { sm:'6px', md:'10px', lg:'14px', xl:'20px' }
-spacing: 8px base scale (1=4px … 4=16px … 8=32px)
-shadow: { card:'0 1px 2px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.1)' }
+The interface should make responsibilities obvious:
+
+```text
+Role / assignment -> responsibility -> task -> action -> evidence
 ```
-Dark mode via `class` strategy; tokens swap ink tones.
 
-## 2. Typography
-- **Display/H1:** Inter 28/32 bold. **H2:** 22/28. **H3:** 18/24. **Body:** 14/20. **Small:** 12/16. **Table:** 13/18.
-- Swahili: same scale, `font-sw`, slightly looser tracking.
-- Numerals: tabular for money (`font-variant-numeric: tabular-nums`) — KES aligned.
+The design must never imply rights that the server does not grant.
 
-## 3. Spacing & Grid
-- 8px grid. Page max-width 1280 (admin), 480 (parent mobile-first). Content padding 16/24. Gap 12/16/24.
-- Calendar grid uses 7-col week; timetable uses time-rows.
+## 2. Visual foundations
 
-## 4. Components
-- **Card:** white, radius 18, shadow-card, padding 16/20, header row (title + action). Avoid oversized rounded cards and glass effects on operational surfaces.
-- **Button:** primary (brand-600, hover 700), secondary (white/ink-300 border), ghost, danger. Sizes sm/md/lg. Loading spinner. Disabled 50% opacity. Touch ≥44px. Default radius is 10 rather than pill-shaped.
-- **Form field:** label (12/ink-700), input radius 10, focus ring brand-500 2px, error text danger 12px, hint ink-500.
-- **Table:** sticky header where the page scrolls, zebra rows, sort chevrons, row-hover, density toggle (comfortable/compact), pagination footer. The table wrapper uses a 14-18px radius and a quiet border, not a heavy floating panel.
-- **Modal:** center, backdrop blur, radius 14, focus-trap, ESC close, footer actions.
-- **Toast:** top-right stack; success/info/danger; auto-dismiss 4s; action link.
-- **Empty state:** icon + title + CTA (e.g. "No remedial groups yet — Create one").
-- **Loading:** skeletons (shimmer) not spinners for lists; optimistic attendance save.
-- **Error:** inline field errors + page-level 500 with "Retry" + support link.
-- **Calendar:** month grid, session chips color-coded by subject, click → drawer with roster.
+Use the existing Tailwind design tokens and shared UI components as the source of truth. Avoid introducing raw component-level colors or one-off styling systems.
 
-## 5. Charts (reports)
-- Line (attendance trend), Bar (revenue by term), Donut (payment status), Stacked (teacher workload). Library: Recharts (light, accessible). Tooltips keyboard-navigable; alt-text summaries for screen readers.
+- Neutral, high-contrast workspace surfaces.
+- Emerald/green action language for positive school operations.
+- Clear warning and danger states paired with text/icons.
+- Moderate corner radii and restrained shadows.
+- Tabular numerals for KES amounts and operational metrics.
+- Consistent Lucide iconography.
+- Minimum 44px touch targets on primary interactive controls.
 
-## 6. Icons & Illustration
-- Icon set: Lucide (consistent stroke 1.75). Illustration: rare, only onboarding/empty states; friendly flat, school motif (books, clock, phone). Avoid clip-art.
+Do not copy assets, branding or layout code from external design references.
 
-## 7. Color & Meaning
-- status: paid=green, partial=amber, unpaid=red, locked=slate. present=green, late=amber, absent=red, excused=slate. Never convey status by color alone — pair with icon/text (a11y).
+## 3. Typography and layout
 
-## 8. Animations & Microinteractions
-- Page transitions 150ms ease; modal scale+fade 120ms; toast slide; respect `prefers-reduced-motion`. Button press scale .98. Attendance mark → check pop.
+- H1: approximately 28–32px; H2: 22–24px; H3: 18–20px.
+- Body: 14–16px with comfortable line height.
+- Supporting text: 12–14px.
+- Use an 8px spacing rhythm where practical.
+- Desktop operational pages may use a maximum content width around 1280px.
+- Parent and other mobile-first journeys should prioritize readable single-column layouts.
 
-## 9. Responsive Rules
-- ≥1024 sidebar + content. 640–1024 collapsed sidebar (icons). <640 bottom tab nav (role-scoped), single column, FAB for "mark attendance."
+## 4. Application shell
 
-## 10. Brand Voice
-- Clear, warm, plain. Teacher copy: "Mark all present, then adjust." Parent SMS: "Malingi HS: Your child was absent from Math remedial today. Reply STOP to opt out." No jargon, no ALL CAPS.
+Desktop:
 
-## 11. Accessibility (non-negotiable)
-- All interactive elements keyboard reachable; visible focus ring; ARIA labels on icon buttons; 4.5:1 contrast min; forms associated labels; tables have scope; dark mode retains contrast; language toggle persists.
+- role-scoped sidebar;
+- compact top utilities;
+- notification access;
+- account context;
+- clear page title and task hierarchy.
 
-## 12. Tailwind Guidelines for Devs
-- Use tokens only (no raw hex in components). Compose with `flex gap-4`, `grid`, `p-4`. Prefer `components/ui/*` over ad-hoc. Mobile-first utilities; `sm:/md:/lg:` only to enhance. Keep bundle lean (purge on).
+Mobile:
 
-## 13. Notification UX Enhancements (2026-07)
-- Primary users: teachers, admins, and parents. Notifications should feel like a calm inbox first, with high-priority items able to surface as toast-style prompts when action is urgent.
-- Inbox behavior: open from a persistent bell, show unread count, support quick actions such as “mark all read”, and surface loading/error states without empty-screen confusion.
-- Mobile-first behavior: keep notifications reachable on mobile web with a full-width sheet that fits the thumb and preserves focus and keyboard support.
-- Accessibility: every bell and notification item must be keyboard reachable, support Escape to close, and announce unread updates for screen readers.
-- Content: use plain-language subject lines, relative timestamps, and clear priority hints so users instantly understand what needs attention.
+- simplify navigation to the most important role tasks;
+- use sheets/drawers where appropriate;
+- keep primary actions reachable by thumb;
+- never hide a critical permission or warning solely because the viewport is narrow.
 
----
+Navigation is derived from rights, but route/server authorization remains authoritative.
 
-## 14. Dashboard Reference (2026-07)
+## 5. Role-driven UX
 
-**Sources:** Flowbite Admin Dashboard and Preskool Admin Dashboard.
+### Teacher
+Prioritize today's classes, attendance/delivery marking, timetable and assigned students. Do not show governance actions unless the teacher has the corresponding committee assignment/capability.
 
-This is an implementation reference for information hierarchy and interface rhythm. It does not replace the ReClass design system above: retain Kenya-first language, ReClass emerald brand colors, role-specific workflows, WCAG 2.1 AA requirements, and mobile-first behavior.
+### Bursar
+Prioritize school finance: receivables, payments, reconciliation, waivers and financial reporting. Do not present ReClass committee operations as Bursar responsibilities.
 
-### Reference characteristics
-- A contained, spacious dashboard surface with a compact top bar, role-scoped navigation, utility controls, notification access, and account access.
-- A first-screen composition led by one decisive operational metric, then a two-column rhythm of primary insight and active work. Supporting cards remain compact, nested, and clearly grouped.
-- Moderate-radius cards, quiet borders, pale surfaces, restrained shadows, compact controls, and concise status badges. Use ReClass token values rather than copying external raw hex values.
-- Metric emphasis uses a clear label, large tabular number, short explanatory copy, and a scoped period control. Charts should communicate attendance, fees, enrollment, or workload rather than generic marketing performance.
-- The right rail is reserved for active work, alerts, or recent activity. It is supplementary on desktop and becomes stacked content on smaller screens.
+### Principal
+Prioritize oversight, approvals, alerts and school-wide performance. Avoid implying that Principal oversight replaces operational ownership by Bursar, Payroll or ReClass.
 
-### Motion and responsiveness
-- Use masked or upward entrance reveals only as a supporting cue. Keep motion below 450ms, stagger related panels subtly, and fully disable non-essential movement for `prefers-reduced-motion`.
-- Preserve the reference's dense desktop composition at wide widths. At tablet width, reduce the secondary rail first; below 640px, stack panels in task order and retain 44px minimum touch targets.
+### ReClass committee
+Show governance queues only when the user's remedial assignment grants the relevant right. Separate attendance review from payroll preparation and payout authorization.
 
-### Guardrails
-- Do not introduce black or slate outer chrome in place of the ReClass canvas, and do not change school status meanings to match the reference palette.
-- Do not convert role dashboards into generic analytics pages. Teacher, parent, bursar, principal, admin, and platform tasks stay domain-led.
-- Preserve existing semantic markup, keyboard behavior, visible focus states, text alternatives, and plain-language copy.
+### Parent / Guardian
+Prioritize linked children, attendance, balances, receipts, payment actions and important messages. Never expose another student's or tenant's data.
+
+### School Admin
+Provide broad operational administration according to granted rights, with clear separation between configuration, finance, payroll and programme workflows.
+
+## 6. Components
+
+### Cards
+Use cards to group related information, not as decoration. Prefer quiet borders and moderate radii.
+
+### Buttons
+Primary, secondary, ghost and destructive variants should have predictable meaning. Loading and disabled states must be explicit.
+
+### Forms
+Every input needs a visible or programmatically associated label, useful hint/error text and an obvious focus state.
+
+### Tables
+Use sticky headers where useful, clear column labels, compact but readable rows, bounded pagination and explicit empty/error states.
+
+### Dialogs
+Dialogs require focus management, Escape support and clear confirmation/cancellation actions.
+
+### Empty states
+Explain what is missing and provide the next legitimate action. Never offer an action the current user cannot perform.
+
+### Loading/error states
+Prefer skeletons for data-heavy surfaces. Errors should explain recovery without exposing database/provider details.
+
+## 7. Status language
+
+Never communicate important state by color alone.
+
+| State | Meaning |
+|---|---|
+| Paid / approved / successful | Completed and accepted |
+| Partial / pending | Work or payment is incomplete |
+| Unpaid / rejected / failed | Action or correction may be required |
+| Locked | Further mutation is restricted |
+
+Use text, icons and accessible status labels alongside visual treatment.
+
+## 8. Notifications
+
+Notifications are a shared service, not a domain-owned page.
+
+- Persistent bell/inbox access.
+- Clear unread state.
+- Priority visible through text and semantics.
+- Mobile-friendly sheet or page.
+- Keyboard and screen-reader support.
+- Explicit loading, empty and failure states.
+- Delivery/retry state should be understandable to operators without exposing provider secrets.
+
+## 9. Accessibility
+
+Critical journeys target WCAG 2.1 AA:
+
+- keyboard reachability;
+- visible focus;
+- semantic headings and landmarks;
+- labels and descriptions for controls;
+- sufficient contrast;
+- screen-reader-friendly tables/statuses;
+- reflow at narrow widths;
+- reduced-motion support;
+- no color-only state communication.
+
+Accessibility testing should combine automated checks with keyboard and assistive-technology review.
+
+## 10. Content and localization
+
+Copy should be plain, direct and respectful. Avoid unnecessary technical jargon.
+
+English is the primary interface language. Swahili can be introduced through the shared translation layer where coverage exists. Currency is KES and school-local dates/times should use East Africa Time unless the tenant configuration explicitly requires otherwise.
+
+## 11. Dashboard principles
+
+Every role dashboard should answer three questions quickly:
+
+1. **What matters now?**
+2. **What do I need to do?**
+3. **What evidence or result should I review?**
+
+Do not turn role dashboards into generic analytics pages. Metrics must map to the user's responsibilities and permitted actions.
+
+## 12. Developer guardrails
+
+- Reuse shared components before creating page-specific equivalents.
+- Use design tokens rather than raw hex values in components.
+- Keep mobile-first responsive utilities.
+- Keep interaction state accessible and deterministic.
+- Respect `prefers-reduced-motion`.
+- Do not duplicate authorization logic in UI conditions.
+- Do not expose actions merely because they are visually convenient.
+- Update this document when a global design invariant changes.
