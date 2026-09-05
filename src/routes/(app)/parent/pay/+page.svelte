@@ -1,213 +1,83 @@
 <script lang="ts">
   import { getSupabase } from '$lib/supabase/client';
   import DashboardContent from '$lib/components/DashboardContent.svelte';
+  import { CheckCircle2, Clock3, CreditCard, ReceiptText, ShieldCheck, XCircle } from 'lucide-svelte';
   import type { PageData } from './$types';
+  import { onDestroy } from 'svelte';
 
   const { data }: { data: PageData } = $props();
-
   let selectedStudentId = $state('');
   let selectedFeeTypeId = $state('');
   let loading = $state(false);
   let polling = $state(false);
-  let success = $state<string | null>(null);
+  let success = $state(false);
   let error = $state<string | null>(null);
-
-  const selectedStudent = $derived(
-    data.students.find((s) => s.id === selectedStudentId) ?? null
-  );
-  const selectedFee = $derived(
-    data.feeTypes.find((f) => f.id === selectedFeeTypeId) ?? null
-  );
-  // Channel for the SELECTED fee's domain (one per domain, set by the school).
-  const selectedDomain = $derived(selectedFee?.domain === 'school' ? 'school' : 'remedial');
-  const selectedChannel = $derived(
-    selectedDomain === 'school' ? data.channels.school : data.channels.remedial
-  );
-  const feeTypesByDomain = $derived({
-    school: data.feeTypes.filter((f) => f.domain === 'school'),
-    remedial: data.feeTypes.filter((f) => f.domain === 'remedial'),
-  });
-
-  import { onDestroy } from 'svelte';
-
+  let pollAttempts = $state(0);
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-  onDestroy(() => {
-    if (pollTimer) clearInterval(pollTimer);
-  });
+  const selectedStudent = $derived(data.students.find((s) => s.id === selectedStudentId) ?? null);
+  const selectedFee = $derived(data.feeTypes.find((f) => f.id === selectedFeeTypeId) ?? null);
+  const selectedDomain = $derived(selectedFee?.domain === 'school' ? 'school' : 'remedial');
+  const selectedChannel = $derived(selectedDomain === 'school' ? data.channels.school : data.channels.remedial);
+  const feeTypesByDomain = $derived({ school: data.feeTypes.filter((f) => f.domain === 'school'), remedial: data.feeTypes.filter((f) => f.domain === 'remedial') });
+  const step = $derived(success ? 4 : polling ? 3 : selectedStudent && selectedFee ? 2 : 1);
 
+  onDestroy(() => { if (pollTimer) clearInterval(pollTimer); });
+  function stopPolling() { polling = false; if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
   function startPolling(studentId: string, feeTypeId: string) {
-    polling = true;
-    let attempts = 0;
-    if (pollTimer) clearInterval(pollTimer);
+    stopPolling(); polling = true; pollAttempts = 0;
     pollTimer = setInterval(async () => {
-      attempts++;
+      pollAttempts += 1;
       try {
         const res = await fetch(`/parent/pay/status?student_id=${studentId}&fee_type_id=${feeTypeId}`);
-        if (!res.ok) {
-          if (res.status === 403) {
-            error = 'Not authorized for this student.';
-            polling = false;
-            if (pollTimer) clearInterval(pollTimer);
-            return;
-          }
-          throw new Error('poll failed');
-        }
+        if (res.status === 403) { error = 'This payment is not authorized for the selected student.'; stopPolling(); return; }
+        if (!res.ok) throw new Error('status check failed');
         const status = await res.json();
-        if (status.status === 'completed') {
-          success = 'Payment confirmed! A receipt has been generated.';
-          polling = false;
-          if (pollTimer) clearInterval(pollTimer);
-          selectedStudentId = '';
-          selectedFeeTypeId = '';
-        } else if (status.status === 'failed') {
-          error = 'Payment failed. Please try again or contact the school.';
-          polling = false;
-          if (pollTimer) clearInterval(pollTimer);
-        }
-      } catch {
-        // ignore poll errors
-      }
-      if (attempts > 20) {
-        polling = false;
-        if (pollTimer) clearInterval(pollTimer);
-        if (!success) {
-          error = 'Still waiting for confirmation. Check your phone for the M-Pesa prompt.';
-        }
-      }
+        if (status.status === 'completed') { success = true; stopPolling(); }
+        else if (status.status === 'failed') { error = 'M-Pesa did not complete this payment. You can safely try again.'; stopPolling(); }
+      } catch { /* transient status failures should not interrupt the payment */ }
+      if (pollAttempts >= 20 && !success) { error = 'Confirmation is taking longer than expected. Check your phone and payment history before trying again.'; stopPolling(); }
     }, 3000);
   }
-
   async function handlePay(e: Event) {
     e.preventDefault();
-    if (!selectedStudentId || !selectedFeeTypeId || loading || polling) return;
-    error = null;
-    success = null;
-    loading = true;
-
+    if (!selectedStudentId || !selectedFeeTypeId || loading || polling || selectedChannel !== 'mpesa') return;
+    error = null; success = false; loading = true;
     try {
-      const { error: fnErr } = await getSupabase().functions.invoke('stk', {
-        body: { student_id: selectedStudentId, fee_type_id: selectedFeeTypeId },
-      });
+      const { error: fnErr } = await getSupabase().functions.invoke('stk', { body: { student_id: selectedStudentId, fee_type_id: selectedFeeTypeId } });
       if (fnErr) throw fnErr;
-      // Hand off to polling WITHOUT a gap where the button is re-enabled.
-      polling = true;
-      loading = false;
-      startPolling(selectedStudentId, selectedFeeTypeId);
+      loading = false; startPolling(selectedStudentId, selectedFeeTypeId);
     } catch (err) {
       loading = false;
-      const msg = err instanceof Error ? err.message : String(err);
-      error = `Payment request failed${msg ? ` (${msg})` : ''}. Please try again or contact the school.`;
+      error = `Payment request could not be started${err instanceof Error && err.message ? ` (${err.message})` : ''}. No payment was recorded. Please try again.`;
     }
   }
+  function resetPayment() { stopPolling(); loading = false; success = false; error = null; selectedStudentId = ''; selectedFeeTypeId = ''; }
 </script>
 
-<DashboardContent title="Pay fees" subtitle="Pay school fees and remedials for your children via the school's payment channels">
-  <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-    <form onsubmit={handlePay} class="space-y-4 rounded-xl border border-border bg-white p-6 shadow-card">
-      {#if success}
-        <div class="rounded-md bg-success/10 p-3 text-sm text-success">{success}</div>
-      {/if}
-      {#if error}
-        <div class="rounded-md bg-danger/10 p-3 text-sm text-danger">{error}</div>
-      {/if}
+<svelte:head><title>Pay fees · eShule</title><meta name="description" content="Secure school and remedial fee payment with M-Pesa confirmation and receipt evidence." /></svelte:head>
 
-      <div>
-        <label for="student-id" class="text-sm font-medium text-ink-700">Student</label>
-        <select id="student-id" name="student_id" bind:value={selectedStudentId} required disabled={loading || polling}
-          class="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none disabled:opacity-50">
-          <option value="">Select a student</option>
-          {#each data.students as s}
-            <option value={s.id}>{s.first_name} {s.last_name} · {s.admission_no}</option>
-          {/each}
-        </select>
+<DashboardContent title="Pay fees" subtitle="Complete one payment at a time. We keep the request locked while M-Pesa confirms it.">
+  <div class="mx-auto max-w-4xl space-y-6">
+    <ol aria-label="Payment progress" class="grid grid-cols-4 gap-2">
+      {#each ['Child', 'Payment', 'Confirm', 'Receipt'] as label, i}
+        <li class="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold {step > i ? 'border-primary/20 bg-primary/5 text-primary' : 'border-border bg-white text-ink-400'}"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full {step > i ? 'bg-primary text-white' : 'bg-ink-50'}">{i + 1}</span><span class="hidden sm:inline">{label}</span></li>
+      {/each}
+    </ol>
+
+    {#if success}
+      <section class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6" role="status"><div class="flex items-start gap-4"><CheckCircle2 class="mt-0.5 h-7 w-7 shrink-0 text-emerald-600" /><div><h2 class="text-lg font-semibold text-emerald-900">Payment confirmed</h2><p class="mt-1 text-sm text-emerald-800">Your payment has been recorded. A receipt is now the evidence of payment.</p><div class="mt-4 flex flex-wrap gap-2"><a href="/parent/payments" class="ui-action ui-action-primary"><ReceiptText class="h-4 w-4" /> View payment history</a><button type="button" onclick={resetPayment} class="ui-action ui-action-secondary">Make another payment</button></div></div></div></section>
+    {:else}
+      <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <form onsubmit={handlePay} class="ui-card space-y-5 p-5 sm:p-6">
+          {#if error}<div class="ui-status ui-status-danger" role="alert"><XCircle class="h-4 w-4 shrink-0" /><span>{error}</span></div>{/if}
+          <div><label for="student-id" class="text-sm font-semibold text-ink-800">1. Choose your child</label><select id="student-id" bind:value={selectedStudentId} required disabled={loading || polling} class="ui-control mt-2 w-full"><option value="">Select a student</option>{#each data.students as s}<option value={s.id}>{s.first_name} {s.last_name} · {s.admission_no}</option>{/each}</select></div>
+          <div><label for="fee-type" class="text-sm font-semibold text-ink-800">2. Choose what to pay</label><select id="fee-type" bind:value={selectedFeeTypeId} required disabled={loading || polling || !selectedStudentId} class="ui-control mt-2 w-full"><option value="">Select a fee</option><optgroup label="Remedial">{#each feeTypesByDomain.remedial as f}<option value={f.id}>{f.name} · KES {Number(f.amount).toLocaleString()}</option>{/each}</optgroup><optgroup label="School fees">{#each feeTypesByDomain.school as f}<option value={f.id}>{f.name} · KES {Number(f.amount).toLocaleString()}</option>{/each}</optgroup></select></div>
+          {#if selectedStudent && selectedFee}<div class="rounded-2xl border border-primary/15 bg-primary/5 p-4"><p class="text-xs font-bold uppercase tracking-[0.12em] text-primary">Payment summary</p><div class="mt-3 grid gap-2 text-sm sm:grid-cols-2"><p>Child <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong></p><p>Admission <strong>{selectedStudent.admission_no}</strong></p><p>Fee <strong>{selectedFee.name}</strong></p><p>Amount <strong>KES {Number(selectedFee.amount).toLocaleString()}</strong></p></div><p class="mt-3 text-xs text-ink-500">Channel: <strong>{selectedChannel === 'mpesa' ? 'M-Pesa STK Push' : 'Bank transfer'}</strong></p></div>{/if}
+          {#if selectedChannel === 'mpesa' && selectedStudent && selectedFee}<div class="rounded-2xl border border-border bg-ink-50 p-4"><div class="flex gap-3"><ShieldCheck class="h-5 w-5 shrink-0 text-primary" /><div><p class="text-sm font-semibold text-ink-800">Ready for M-Pesa</p><p class="mt-1 text-xs leading-5 text-ink-500">An STK prompt will be sent to your registered phone. Enter your M-Pesa PIN on your phone only. Your payment request stays locked until we receive confirmation.</p></div></div></div><button type="submit" disabled={loading || polling} class="ui-action ui-action-primary min-h-12 w-full justify-center text-sm">{#if loading}<Clock3 class="h-4 w-4 animate-pulse" /> Sending STK request…{:else if polling}<Clock3 class="h-4 w-4 animate-pulse" /> Waiting for M-Pesa confirmation…{:else}<CreditCard class="h-4 w-4" /> Pay KES {Number(selectedFee.amount).toLocaleString()} via M-Pesa{/if}</button>{:else if selectedChannel === 'bank' && selectedStudent && selectedFee}<div class="rounded-2xl border border-border bg-ink-50 p-4"><p class="text-sm font-semibold text-ink-800">Bank payment</p><p class="mt-2 text-sm text-ink-600">Pay to <strong>{data.tenant?.kcb_bank_name ?? 'KCB'}</strong>, account <strong>{data.tenant?.kcb_account_no ?? '—'}</strong>. Use the student's admission number as reference.</p><p class="mt-3 text-xs text-ink-500">The Bursar confirms bank payments and issues the receipt. Do not submit this payment again while a bank transaction is pending.</p></div>{/if}
+        </form>
+        <aside class="space-y-4"><div class="ui-card p-5"><h2 class="text-sm font-semibold text-ink-900">What happens next</h2><div class="mt-4 space-y-4 text-sm text-ink-600"><div class="flex gap-3"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">1</span><p>We send the payment request to your registered phone.</p></div><div class="flex gap-3"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">2</span><p>You approve it on your phone with your M-Pesa PIN.</p></div><div class="flex gap-3"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">3</span><p>We wait for confirmation before enabling another payment.</p></div><div class="flex gap-3"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">4</span><p>The confirmed payment appears in history as evidence.</p></div></div></div>{#if polling}<div class="ui-status ui-status-warning"><Clock3 class="h-4 w-4 shrink-0" /><span>Waiting for confirmation. Check your phone for the STK prompt. Do not press Pay again.</span></div>{/if}</aside>
       </div>
-
-      <div>
-        <label for="fee-type" class="text-sm font-medium text-ink-700">Fee</label>
-        <select id="fee-type" name="fee_type_id" bind:value={selectedFeeTypeId} required disabled={loading || polling || !selectedStudentId}
-          class="mt-1 w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none disabled:opacity-50">
-          <option value="">Select a fee</option>
-          <optgroup label="Remedial">
-            {#each feeTypesByDomain.remedial as f}
-              <option value={f.id}>{f.name} · KES {Number(f.amount).toLocaleString()}</option>
-            {/each}
-          </optgroup>
-          <optgroup label="School fees">
-            {#each feeTypesByDomain.school as f}
-              <option value={f.id}>{f.name} · KES {Number(f.amount).toLocaleString()}</option>
-            {/each}
-          </optgroup>
-        </select>
-      </div>
-
-      {#if selectedStudent && selectedFee}
-        <div class="rounded-lg border border-brand-200 bg-brand-50/60 px-4 py-3 space-y-1.5">
-          <p class="text-sm font-semibold text-ink-900">Payment Summary</p>
-          <p class="text-sm text-ink-600">Student: <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.admission_no})</p>
-          <p class="text-sm text-ink-600">Fee: <strong>{selectedFee.name}</strong> ({selectedDomain === 'school' ? 'School' : 'Remedial'})</p>
-          <p class="text-sm text-ink-600">Amount: <strong>KES {Number(selectedFee.amount).toLocaleString()}</strong></p>
-          <p class="text-sm text-ink-600">Channel: <strong>{selectedChannel === 'mpesa' ? 'M-Pesa paybill' : 'Bank transfer (KCB)'}</strong></p>
-        </div>
-      {/if}
-
-      {#if selectedChannel === 'mpesa' && selectedStudent && selectedFee}
-        <div class="rounded-md bg-ink-50 p-3 text-xs text-ink-600">
-          An M-Pesa STK push will be sent to <strong>{data.parent.phone}</strong>. Enter your PIN when prompted.
-          The account reference is the student's admission number (<strong>{selectedStudent.admission_no}</strong>).
-        </div>
-        <button type="submit" disabled={!selectedStudentId || !selectedFeeTypeId || loading || polling}
-          class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:opacity-50">
-          {#if loading}
-            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-            Sending STK push…
-          {:else if polling}
-            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-            Waiting for confirmation…
-          {:else}
-            Pay via M-Pesa
-          {/if}
-        </button>
-        {#if polling}
-          <div class="rounded-md bg-warning/10 p-3 text-xs text-warning">
-            Waiting for M-Pesa confirmation. Check your phone for the STK prompt and enter your PIN.
-          </div>
-        {/if}
-      {:else if selectedChannel === 'bank' && selectedStudent && selectedFee}
-        <div class="rounded-lg border border-border bg-ink-50/60 px-4 py-4">
-          <p class="text-sm font-semibold text-ink-900">Pay by bank transfer</p>
-          <p class="mt-2 text-sm text-ink-600">
-            This fee is collected via bank transfer. Deposit the amount to:
-          </p>
-          <div class="mt-3 space-y-1.5 text-sm">
-            <p class="text-ink-800"><strong>{data.tenant?.kcb_bank_name ?? 'KCB'}</strong></p>
-            <p class="text-ink-800">Account: <strong>{data.tenant?.kcb_account_no ?? '—'}</strong></p>
-            {#if data.tenant?.buni_shortcode}
-              <p class="text-ink-800">Buni pay: <strong>{data.tenant.buni_shortcode}</strong></p>
-            {/if}
-            <p class="text-ink-800">Student: <strong>{selectedStudent.first_name} {selectedStudent.last_name} · {selectedStudent.admission_no}</strong></p>
-          </div>
-          <p class="mt-3 text-xs text-ink-500">
-            After depositing, the school will confirm the payment and generate a receipt. You can also pay
-            at the bank using the student's admission number as the payment reference.
-          </p>
-        </div>
-        <button type="button" disabled
-          class="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md bg-ink-200 px-4 py-2.5 text-sm font-medium text-ink-500">
-          Bank channel — pay at the bank
-        </button>
-      {/if}
-
-      <p class="text-xs text-ink-500">Funds settle at the school's payment accounts. Confirmation arrives by SMS via Mobiwave.</p>
-    </form>
-
-    <div class="space-y-3 rounded-xl border border-brand-200 bg-brand-50/60 p-6 shadow-card">
-      <h3 class="text-sm font-semibold text-ink-900">How payment works</h3>
-      <ol class="space-y-3 text-sm text-ink-600">
-        <li class="flex gap-3"><span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">1</span> Select your child and the fee you want to pay — school fees or remedials.</li>
-        <li class="flex gap-3"><span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">2</span> The school's channel for that fee type decides how you pay: M-Pesa STK push or bank transfer.</li>
-        <li class="flex gap-3"><span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">3</span> The payment is routed to the correct student by admission number and a receipt is generated.</li>
-      </ol>
-    </div>
+    {/if}
   </div>
 </DashboardContent>
