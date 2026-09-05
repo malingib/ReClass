@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { MetricsCollector, monitorAsyncOperation, monitorDatabaseQuery } from '../monitoring';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  MetricsCollector,
+  metricsCollector,
+  monitorAsyncOperation,
+  monitorDatabaseQuery,
+} from '../monitoring';
+
+beforeEach(() => metricsCollector.reset());
 
 describe('MetricsCollector', () => {
   it('records a supplied start timestamp without shared timer state', () => {
@@ -20,9 +27,8 @@ describe('MetricsCollector', () => {
 
 describe('monitorAsyncOperation', () => {
   it('records successful operation duration', async () => {
-    const collector = new MetricsCollector();
     await monitorAsyncOperation(async () => 'ok', 'stk_init_duration');
-    expect(typeof collector.getMetricAverage('stk_init_duration')).toBe('number');
+    expect(metricsCollector.getMetricAverage('stk_init_duration')).toBeGreaterThanOrEqual(0);
   });
 });
 
