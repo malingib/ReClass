@@ -23,10 +23,10 @@ import { join, relative, sep } from 'node:path';
 import {
   MODULES,
   KERNEL_MODULES,
-  PUBLIC_SURFACE,
   canImport,
 } from '../packages/shared/src/lib/modules.js';
 
+const PUBLIC_SURFACE = ['index.ts', 'contracts.ts', 'api.ts'];
 const root = process.cwd();
 const serverRoot = join(root, 'src', 'lib', 'server');
 const migrationsRoot = join(root, 'supabase', 'migrations');
@@ -40,7 +40,6 @@ function walk(dir, out = []) {
   return out;
 }
 
-// Pull every static + dynamic import specifier out of a source file.
 function importSpecifiers(src) {
   const specs = [];
   let m;
@@ -53,10 +52,6 @@ function importSpecifiers(src) {
   return specs;
 }
 
-/**
- * Resolve a specifier to { from, to, fileBase } when it targets another
- * server module folder, else null.
- */
 function resolveServerTarget(spec, fromFile) {
   let target;
   if (spec.startsWith('$lib/server/')) {
@@ -105,10 +100,6 @@ for (const file of files) {
   }
 }
 
-// ── Seed mirror check: the live tenant_modules seed must use known ids ─────
-// Only the most recent migration containing a tenant_modules INSERT is the
-// current seed statement (older migrations are a historical record). Phase 3's
-// rename re-issues an idempotent INSERT with the new id, keeping this green.
 const provisionableIds = new Set(
   Object.values(MODULES).filter((m) => m.provisionable).map((m) => m.id),
 );
@@ -125,7 +116,6 @@ if (!latestSeed) {
   seedWarnings.push('no migration contains a tenant_modules INSERT — seed mirror unverified');
 } else {
   const sql = latestSeed.sql;
-  // Only the tenant_modules backfill block, to avoid other ARRAY[...] literals.
   const start = sql.indexOf('INSERT INTO public.tenant_modules');
   const end = sql.indexOf('ON CONFLICT', start);
   const block = end === -1 ? sql.slice(start) : sql.slice(start, end);
