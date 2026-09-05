@@ -1,44 +1,32 @@
 /**
- * Monitoring and metrics collection for critical paths
- * Provides performance tracking and error counting
+ * Lightweight server-side monitoring helpers.
+ *
+ * IMPORTANT: Vercel instances are ephemeral. These counters are diagnostic
+ * only; durable business/audit telemetry belongs in the database and errors
+ * belong in Sentry. Never use this module as a source of financial truth.
  */
 
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
 export interface Metrics {
-  // STK Payment Flow
   stk_init_duration: number[];
   stk_callback_duration: number[];
   stk_failures: number;
   stk_successes: number;
-  
-  // Database Performance
   db_query_duration: number[];
   db_slow_queries: number;
-  
-  // External Services
   daraja_duration: number[];
   daraja_failures: number;
   mobiwave_duration: number[];
   mobiwave_failures: number;
-  
-  // Notifications
   notification_duration: number[];
   notification_failures: number;
   notification_successes: number;
-  
-  // Authentication
   auth_duration: number[];
   auth_failures: number;
-  
-  // General
   api_requests: number;
   error_count: number;
 }
 
-// Global metrics instance
-let metrics: Metrics = {
+const createMetrics = (): Metrics => ({
   stk_init_duration: [],
   stk_callback_duration: [],
   stk_failures: 0,
@@ -56,50 +44,63 @@ let metrics: Metrics = {
   auth_failures: 0,
   api_requests: 0,
   error_count: 0,
-};
+});
 
-// Configuration
-const SLOW_QUERY_THRESHOLD = 1000; // 1 second
-const METRICS_MAX_SIZE = 1000; // Keep last 1000 measurements
+let metrics = createMetrics();
+
+const SLOW_QUERY_THRESHOLD = 1000;
+const METRICS_MAX_SIZE = 1000;
 
 export class MetricsCollector {
-  private startTime: number = 0;
-
-  startTimer(): void {
-    this.startTime = Date.now();
-  }
-
-  endTimer(metricName: keyof Metrics): void {
-    const duration = Date.now() - this.startTime;
+  private recordDuration(metricName: keyof Metrics, duration: number): void {
     this.recordMetric(metricName, duration);
   }
 
+  /** Deprecated compatibility API. Prefer monitorAsyncOperation for timings. */
+  startTimer(): number {
+    return Date.now();
+  }
+
+  /** Deprecated compatibility API. Accepts a start timestamp when supplied. */
+  endTimer(metricName: keyof Metrics, startTime = Date.now()): void {
+    this.recordDuration(metricName, Math.max(0, Date.now() - startTime));
+  }
+
   recordMetric(metricName: keyof Metrics, value: number): void {
-    const cur = metrics[metricName];
-    if (Array.isArray(cur)) {
-      cur.push(value);
-      if (cur.length > METRICS_MAX_SIZE) cur.shift();
-    } else if (typeof cur === 'number') {
-      (metrics as unknown as Record<string, number>)[metricName as string] = cur + value;
+    const current = metrics[metricName];
+    if (Array.isArray(current)) {
+      current.push(value);
+      if (current.length > METRICS_MAX_SIZE) current.shift();
+      return;
+    }
+    if (typeof current === 'number') {
+      (metrics as unknown as Record<string, number>)[metricName] = current + value;
     }
   }
 
   incrementCounter(metricName: keyof Metrics): void {
     if (typeof metrics[metricName] === 'number') {
-      metrics[metricName]++;
+      (metrics as unknown as Record<string, number>)[metricName]++;
     }
   }
 
   getMetrics(): Metrics {
-    return { ...metrics };
+    return {
+      ...metrics,
+      stk_init_duration: [...metrics.stk_init_duration],
+      stk_callback_duration: [...metrics.stk_callback_duration],
+      db_query_duration: [...metrics.db_query_duration],
+      daraja_duration: [...metrics.daraja_duration],
+      mobiwave_duration: [...metrics.mobiwave_duration],
+      notification_duration: [...metrics.notification_duration],
+      auth_duration: [...metrics.auth_duration],
+    };
   }
 
   getMetricAverage(metricName: keyof Metrics): number {
     const values = metrics[metricName];
-    if (!Array.isArray(values) || values.length === 0) {
-      return 0;
-    }
-    return values.reduce((sum, val) => sum + val, 0) / values.length;
+    if (!Array.isArray(values) || values.length === 0) return 0;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
   }
 
   getMetricSummary(): string {
@@ -114,129 +115,95 @@ export class MetricsCollector {
       'Notification Success Rate': `${((metrics.notification_successes / (metrics.notification_successes + metrics.notification_failures)) * 100 || 0).toFixed(1)}%`,
       'Total Errors': metrics.error_count,
     };
-    
-    return Object.entries(summary)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('\n');
+    return Object.entries(summary).map(([key, value]) => `${key}: ${value}`).join('\n');
   }
 
   reset(): void {
-    metrics = {
-      stk_init_duration: [],
-      stk_callback_duration: [],
-      stk_failures: 0,
-      stk_successes: 0,
-      db_query_duration: [],
-      db_slow_queries: 0,
-      daraja_duration: [],
-      daraja_failures: 0,
-      mobiwave_duration: [],
-      mobiwave_failures: 0,
-      notification_duration: [],
-      notification_failures: 0,
-      notification_successes: 0,
-      auth_duration: [],
-      auth_failures: 0,
-      api_requests: 0,
-      error_count: 0,
-    };
+    metrics = createMetrics();
   }
 }
 
-// Global instance
 export const metricsCollector = new MetricsCollector();
 
-// Utility functions for common monitoring patterns
-export function monitorAsyncOperation<T>(
+export async function monitorAsyncOperation<T>(
   operation: () => Promise<T>,
   metricName: keyof Metrics,
-  errorMetric?: keyof Metrics
+  errorMetric?: keyof Metrics,
 ): Promise<T> {
-  metricsCollector.startTimer();
-  return operation()
-    .then((result) => {
-      metricsCollector.endTimer(metricName);
-      return result;
-    })
-    .catch((error) => {
-      if (errorMetric) {
-        metricsCollector.incrementCounter(errorMetric);
-      }
-      metricsCollector.incrementCounter('error_count');
-      throw error;
-    });
+  const startedAt = Date.now();
+  try {
+    const result = await operation();
+    metricsCollector.endTimer(metricName, startedAt);
+    return result;
+  } catch (error) {
+    if (errorMetric) metricsCollector.incrementCounter(errorMetric);
+    metricsCollector.incrementCounter('error_count');
+    throw error;
+  }
 }
 
-export function monitorDatabaseQuery<T>(
+export async function monitorDatabaseQuery<T>(
   query: () => Promise<T>,
-  queryName: string
+  queryName: string,
 ): Promise<T> {
-  metricsCollector.startTimer();
-  return query()
-    .then((result) => {
-      const duration = Date.now() - metricsCollector['startTime'];
-      metricsCollector.recordMetric('db_query_duration', duration);
-      
-      if (duration > SLOW_QUERY_THRESHOLD) {
-        metricsCollector.incrementCounter('db_slow_queries');
-        console.warn(`Slow query detected: ${queryName} took ${duration}ms`);
-      }
-      
-      return result;
-    })
-    .catch((error) => {
-      metricsCollector.incrementCounter('error_count');
-      throw error;
-    });
+  const startedAt = Date.now();
+  try {
+    const result = await query();
+    const duration = Math.max(0, Date.now() - startedAt);
+    metricsCollector.recordMetric('db_query_duration', duration);
+    if (duration > SLOW_QUERY_THRESHOLD) {
+      metricsCollector.incrementCounter('db_slow_queries');
+      console.warn(`Slow query detected: ${queryName} took ${duration}ms`);
+    }
+    return result;
+  } catch (error) {
+    metricsCollector.incrementCounter('error_count');
+    throw error;
+  }
 }
 
-export function withCircuitBreaker<T>(
+type CircuitState = { failures: number; lastFailureTime: number; open: boolean };
+const circuits = new Map<string, CircuitState>();
+
+/**
+ * Process-local circuit breaker. This protects a single warm server instance;
+ * durable outage state should be handled by the queue/provider layer.
+ */
+export async function withCircuitBreaker<T>(
   operation: () => Promise<T>,
   serviceName: string,
-  options: {
-    failureThreshold?: number;
-    resetTimeout?: number;
-    monitoringWindow?: number;
-  } = {}
+  options: { failureThreshold?: number; resetTimeout?: number; monitoringWindow?: number } = {},
 ): Promise<T> {
-  const {
-    failureThreshold = 5,
-    resetTimeout = 30000,
-    monitoringWindow = 60000
-  } = options;
+  const failureThreshold = options.failureThreshold ?? 5;
+  const resetTimeout = options.resetTimeout ?? 30_000;
+  const monitoringWindow = options.monitoringWindow ?? 60_000;
+  const now = Date.now();
+  const state = circuits.get(serviceName) ?? { failures: 0, lastFailureTime: 0, open: false };
 
-  // Simple circuit breaker implementation
-  let failures = 0;
-  let lastFailureTime = 0;
-  let isCircuitOpen = false;
+  if (state.lastFailureTime && now - state.lastFailureTime > monitoringWindow) {
+    state.failures = 0;
+    state.open = false;
+  }
+  if (state.open && now - state.lastFailureTime <= resetTimeout) {
+    throw new Error(`${serviceName} is currently unavailable (circuit open)`);
+  }
+  if (state.open) state.open = false;
 
-  return new Promise((resolve, reject) => {
-    if (isCircuitOpen) {
-      if (Date.now() - lastFailureTime > resetTimeout) {
-        isCircuitOpen = false;
-        failures = 0;
-      } else {
-        reject(new Error(`${serviceName} is currently unavailable (circuit open)`));
-        return;
-      }
+  try {
+    const result = await operation();
+    state.failures = 0;
+    state.open = false;
+    circuits.set(serviceName, state);
+    return result;
+  } catch (error) {
+    state.failures += 1;
+    state.lastFailureTime = Date.now();
+    if (state.failures >= failureThreshold) {
+      state.open = true;
+      console.warn(`Circuit breaker opened for ${serviceName} after ${state.failures} failures`);
     }
-
-    operation()
-      .then((result) => {
-        failures = 0;
-        resolve(result);
-      })
-      .catch((error) => {
-        failures++;
-        lastFailureTime = Date.now();
-        
-        if (failures >= failureThreshold) {
-          isCircuitOpen = true;
-          console.warn(`Circuit breaker opened for ${serviceName} after ${failures} failures`);
-        }
-        
-        metricsCollector.incrementCounter('error_count');
-        reject(error);
-      });
-  });
+    circuits.set(serviceName, state);
+    metricsCollector.incrementCounter('error_count');
+    throw error;
+  }
 }
