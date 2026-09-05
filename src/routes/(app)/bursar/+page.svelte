@@ -1,7 +1,6 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  import KpiCard from '$lib/components/dashboard/KpiCard.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import { ArrowRight, CheckCircle2, Download, ReceiptText, Search, WalletCards } from 'lucide-svelte';
   import { goto } from '$app/navigation';
