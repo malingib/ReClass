@@ -1,6 +1,6 @@
 -- eShule SIS foundation, additive to the existing SIS tables.
--- IMPORTANT: sis_classes, sis_admissions and sis_enrollments remain the canonical
--- class/admission/enrollment tables. No parallel student identity is introduced.
+-- IMPORTANT: sis_classes, sis_admissions and sis_enrollments remain canonical.
+-- Existing enrollment history is never deleted or deduplicated by this migration.
 
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS student_no text;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS middle_name text;
@@ -25,7 +25,6 @@ ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS guardian_relationship
 ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS guardian_phone text;
 ALTER TABLE public.sis_admissions ADD COLUMN IF NOT EXISTS guardian_email text;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sis_admissions_application_no ON public.sis_admissions(tenant_id, application_no) WHERE application_no IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_sis_enrollments_student_year ON public.sis_enrollments(tenant_id, student_id, academic_year);
 
 CREATE TABLE IF NOT EXISTS public.student_lifecycle_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES public.tenants(id), student_id uuid NOT NULL REFERENCES public.students(id),
