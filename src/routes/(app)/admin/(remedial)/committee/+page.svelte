@@ -7,25 +7,109 @@
   let operatorMember = $state('');
   let operatorRole = $state('initiator');
   let approvalLevel = $state(1);
-  const toggleRight = (code: string) => selectedRights = selectedRights.includes(code) ? selectedRights.filter((r) => r !== code) : [...selectedRights, code];
-  const rightsFor = (id: string) => data.rights.filter((r: any) => r.assignment_id === id).map((r: any) => r.right_code);
-  function loadRights(id: string) { rightsAssignmentId = id; selectedRights = rightsFor(id); }
+
+  const toggleRight = (code: string) => {
+    selectedRights = selectedRights.includes(code)
+      ? selectedRights.filter((r) => r !== code)
+      : [...selectedRights, code];
+  };
+
+  const rightsFor = (id: string) =>
+    data.rights.filter((r: any) => r.assignment_id === id).map((r: any) => r.right_code);
+
+  function loadRights(id: string) {
+    rightsAssignmentId = id;
+    selectedRights = rightsFor(id);
+  }
 </script>
+
 <svelte:head><title>ReClass committee roles & PayBill rights · eShule</title></svelte:head>
+
 <div class="mx-auto max-w-6xl space-y-6 py-6 sm:py-8">
-  <header class="rounded-3xl border border-border/60 bg-white p-6 shadow-card sm:p-8"><p class="text-xs font-bold uppercase tracking-[0.16em] text-primary">ReClass governance</p><h1 class="mt-2 text-3xl font-semibold tracking-tight text-ink-900">Committee roles & PayBill rights</h1><p class="mt-3 max-w-3xl text-sm leading-6 text-ink-500">The remedial committee already has defined business roles. Admin assigns those roles to teachers. PayBill initiation, approval and other rights are an additional permission layer and do not replace the committee role.</p></header>
-  {#if form?.message}<div role={form.success ? 'status' : 'alert'} class="rounded-xl border p-4 text-sm font-semibold {form.success ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-800'}">{form.message}</div>{/if}
+  <header class="rounded-3xl border border-border/60 bg-white p-6 shadow-card sm:p-8">
+    <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary">ReClass governance</p>
+    <h1 class="mt-2 text-3xl font-semibold tracking-tight text-ink-900">Committee roles & PayBill rights</h1>
+    <p class="mt-3 max-w-3xl text-sm leading-6 text-ink-500">The remedial committee has defined business roles. Admin assigns those roles to teachers. PayBill initiation, approval and other rights are an additional permission layer and do not replace the committee role.</p>
+  </header>
 
-  <section class="grid gap-4 lg:grid-cols-3"><article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p class="text-xs font-bold uppercase text-slate-500">Committee roles</p><p class="mt-2 text-3xl font-bold text-slate-950">{data.roles.length}</p><p class="mt-1 text-xs text-slate-500">Predefined roles available for assignment.</p></article><article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p class="text-xs font-bold uppercase text-slate-500">Teacher assignments</p><p class="mt-2 text-3xl font-bold text-slate-950">{data.assignments.filter((a:any) => a.active).length}</p><p class="mt-1 text-xs text-slate-500">Committee roles currently assigned.</p></article><article class="rounded-2xl border {data.governance?.ready ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'} p-5 shadow-sm"><p class="text-xs font-bold uppercase text-slate-600">PayBill readiness</p><p class="mt-2 text-xl font-bold {data.governance?.ready ? 'text-emerald-800' : 'text-amber-800'}">{data.governance?.ready ? 'Ready' : 'Configuration incomplete'}</p><p class="mt-1 text-xs text-slate-600">{data.governance?.approval_levels_configured ?? 0} / {data.governance?.required_approval_levels ?? 1} approval levels configured.</p></article></section>
+  {#if form?.message}
+    <div role={form.success ? 'status' : 'alert'} class="rounded-xl border p-4 text-sm font-semibold {form.success ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-800'}">{form.message}</div>
+  {/if}
 
-  <section class="grid gap-6 lg:grid-cols-2">
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><h2 class="text-lg font-bold text-slate-900">Assign an existing committee role</h2><p class="mt-1 text-sm text-slate-500">Only users who have the <strong>Teacher</strong> role can be appointed. This does not change their base eShule role.</p><form method="POST" action="?/assignRole" class="mt-5 space-y-4"><label class="block text-sm font-semibold text-slate-700">Committee role<select name="role_id" bind:value={roleId} required class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="">Select predefined role</option>{#each data.roles as r}<option value={r.id}>{r.name}{r.description ? ` · ${r.description}` : ''}</option>{/each}</select></label><label class="block text-sm font-semibold text-slate-700">Teacher<select name="teacher_id" bind:value={teacherId} required class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="">Select teacher</option>{#each data.teachers as t}<option value={t.id}>{t.full_name}{t.phone ? ` · ${t.phone}` : ''}</option>{/each}</select></label><button class="min-h-11 w-full rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground">Assign committee role</button></form></div>
-
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><h2 class="text-lg font-bold text-slate-900">Add PayBill rights</h2><p class="mt-1 text-sm text-slate-500">Rights are additive. A committee role does not automatically make someone a PayBill operator.</p>{#if data.assignments.length}<form method="POST" action="?/grantRights" class="mt-5 space-y-4"><label class="block text-sm font-semibold text-slate-700">Committee assignment<select name="assignment_id" bind:value={rightsAssignmentId} onchange={(e) => loadRights((e.currentTarget as HTMLSelectElement).value)} required class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="">Select teacher + role</option>{#each data.assignments.filter((a:any) => a.active) as a}<option value={a.id}>{a.profiles?.full_name} · {a.remedial_committee_role_definitions?.name}</option>{/each}</select></label><input type="hidden" name="rights" value={selectedRights.join(',')} /><div class="grid gap-2 sm:grid-cols-2">{#each data.rightCatalog as right}<label class="flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700"><input type="checkbox" checked={selectedRights.includes(right[0])} onchange={() => toggleRight(right[0])} />{right[1]}</label>{/each}</div><button class="min-h-11 w-full rounded-lg bg-slate-900 px-4 text-sm font-bold text-white">Save additional rights</button></form>{:else}<div class="mt-5 rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">Assign a committee role to a teacher first.</div>{/if}</div>
+  <section class="grid gap-4 lg:grid-cols-3">
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p class="text-xs font-bold uppercase text-slate-500">Committee roles</p><p class="mt-2 text-3xl font-bold text-slate-950">{data.roles.length}</p><p class="mt-1 text-xs text-slate-500">Predefined roles available for assignment.</p></article>
+    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p class="text-xs font-bold uppercase text-slate-500">Teacher assignments</p><p class="mt-2 text-3xl font-bold text-slate-950">{data.assignments.filter((a: any) => a.active).length}</p><p class="mt-1 text-xs text-slate-500">Committee roles currently assigned.</p></article>
+    <article class="rounded-2xl border {data.governance?.ready ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'} p-5 shadow-sm"><p class="text-xs font-bold uppercase text-slate-600">PayBill readiness</p><p class="mt-2 text-xl font-bold {data.governance?.ready ? 'text-emerald-800' : 'text-amber-800'}">{data.governance?.ready ? 'Ready' : 'Configuration incomplete'}</p><p class="mt-1 text-xs text-slate-600">{data.governance?.approval_levels_configured ?? 0} / {data.governance?.required_approval_levels ?? 1} approval levels configured.</p></article>
   </section>
 
-  <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><h2 class="text-lg font-bold text-slate-900">PayBill operator layer</h2><p class="mt-1 text-sm text-slate-500">After a teacher has a committee role, Admin can add maker/checker rights and approval levels required for the Safaricom PayBill workflow.</p><form method="POST" action="?/assignOperator" class="mt-5 grid gap-4 lg:grid-cols-3"><label class="text-sm font-semibold text-slate-700">Committee member<select name="committee_member_id" bind:value={operatorMember} required class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="">Select committee member</option>{#each data.assignments.filter((a:any) => a.active) as a}<option value={a.id}>{a.profiles?.full_name} · {a.remedial_committee_role_definitions?.name}</option>{/each}</select></label><label class="text-sm font-semibold text-slate-700">PayBill role<select name="operator_role" bind:value={operatorRole} class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="initiator">Initiator / maker</option><option value="approver">Approver / checker</option><option value="manager">Manager</option><option value="auditor">Auditor / read only</option></select></label>{#if operatorRole === 'approver'}<label class="text-sm font-semibold text-slate-700">Approval level<select name="approval_level" bind:value={approvalLevel} class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3">{#each Array.from({ length: Math.max(1, Number(data.settings.approval_levels ?? 1)) }, (_, index) => index + 1) as level}<option value={level}>{level}</option>{/each}</select></label>{:else}<input type="hidden" name="approval_level" value="" />{/if}<button class="min-h-11 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground lg:col-span-3">Save PayBill operator assignment</button></form></section>
+  <section class="grid gap-6 lg:grid-cols-2">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <h2 class="text-lg font-bold text-slate-900">Assign an existing committee role</h2>
+      <p class="mt-1 text-sm text-slate-500">Only users who have the <strong>Teacher</strong> role can be appointed. This does not change their base eShule role.</p>
+      <form method="POST" action="?/assignRole" class="mt-5 space-y-4">
+        <label class="block text-sm font-semibold text-slate-700">Committee role<select name="role_id" bind:value={roleId} required class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="">Select predefined role</option>{#each data.roles as r}<option value={r.id}>{r.name}{r.description ? ` · ${r.description}` : ''}</option>{/each}</select></label>
+        <label class="block text-sm font-semibold text-slate-700">Teacher<select name="teacher_id" bind:value={teacherId} required class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="">Select teacher</option>{#each data.teachers as t}<option value={t.id}>{t.full_name}{t.phone ? ` · ${t.phone}` : ''}</option>{/each}</select></label>
+        <button class="min-h-11 w-full rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground">Assign committee role</button>
+      </form>
+    </div>
 
-  <section class="grid gap-6 lg:grid-cols-2"><div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 class="text-base font-bold text-slate-900">Assigned committee roles</h2><div class="mt-4 divide-y divide-slate-100">{#if data.assignments.length === 0}<p class="py-6 text-sm text-slate-500">No committee roles assigned to teachers yet.</p>{:else}{#each data.assignments as a a.id}<div class="flex items-center justify-between gap-3 py-3"><div><p class="text-sm font-semibold text-slate-900">{a.profiles?.full_name}</p><p class="text-xs text-slate-500">{a.remedial_committee_role_definitions?.name} · {a.active ? 'Active' : 'Inactive'}</p></div><span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold">Teacher</span></div>{/each}{/if}</div></div><div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 class="text-base font-bold text-slate-900">PayBill operator assignments</h2><div class="mt-4 divide-y divide-slate-100">{#if data.operators.length === 0}<p class="py-6 text-sm text-slate-500">No PayBill operators assigned yet.</p>{:else}{#each data.operators as op}<div class="flex items-center justify-between gap-3 py-3"><div><p class="text-sm font-semibold text-slate-900">{op.remedial_committee_members?.profiles?.full_name}</p><p class="text-xs text-slate-500">{op.operator_role}{op.approval_level ? ` · Level ${op.approval_level}` : ''} · {op.active ? 'Active' : 'Inactive'}</p></div>{#if op.active}<form method="POST" action="?/deactivate"><input type="hidden" name="id" value={op.id}/><button class="text-xs font-semibold text-red-600 hover:underline">Deactivate</button></form>{/if}</div>{/each}{/if}</div></div></section>
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <h2 class="text-lg font-bold text-slate-900">Add PayBill rights</h2>
+      <p class="mt-1 text-sm text-slate-500">Rights are additive. A committee role does not automatically make someone a PayBill operator.</p>
+      {#if data.assignments.length}
+        <form method="POST" action="?/grantRights" class="mt-5 space-y-4">
+          <label class="block text-sm font-semibold text-slate-700">Committee assignment<select name="assignment_id" bind:value={rightsAssignmentId} onchange={(e) => loadRights((e.currentTarget as HTMLSelectElement).value)} required class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="">Select teacher + role</option>{#each data.assignments.filter((a: any) => a.active) as a}<option value={a.id}>{a.profiles?.full_name} · {a.remedial_committee_role_definitions?.name}</option>{/each}</select></label>
+          <input type="hidden" name="rights" value={selectedRights.join(',')} />
+          <div class="grid gap-2 sm:grid-cols-2">{#each data.rightCatalog as right}<label class="flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700"><input type="checkbox" checked={selectedRights.includes(right[0])} onchange={() => toggleRight(right[0])} />{right[1]}</label>{/each}</div>
+          <button class="min-h-11 w-full rounded-lg bg-slate-900 px-4 text-sm font-bold text-white">Save additional rights</button>
+        </form>
+      {:else}
+        <div class="mt-5 rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">Assign a committee role to a teacher first.</div>
+      {/if}
+    </div>
+  </section>
+
+  <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <h2 class="text-lg font-bold text-slate-900">PayBill operator layer</h2>
+    <p class="mt-1 text-sm text-slate-500">After a teacher has a committee role, Admin can add maker/checker rights and approval levels required for the Safaricom PayBill workflow.</p>
+    <form method="POST" action="?/assignOperator" class="mt-5 grid gap-4 lg:grid-cols-3">
+      <label class="text-sm font-semibold text-slate-700">Committee member<select name="committee_member_id" bind:value={operatorMember} required class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="">Select committee member</option>{#each data.assignments.filter((a: any) => a.active) as a}<option value={a.id}>{a.profiles?.full_name} · {a.remedial_committee_role_definitions?.name}</option>{/each}</select></label>
+      <label class="text-sm font-semibold text-slate-700">PayBill role<select name="operator_role" bind:value={operatorRole} class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3"><option value="initiator">Initiator / maker</option><option value="approver">Approver / checker</option><option value="manager">Manager</option><option value="auditor">Auditor / read only</option></select></label>
+      {#if operatorRole === 'approver'}
+        <label class="text-sm font-semibold text-slate-700">Approval level<select name="approval_level" bind:value={approvalLevel} class="mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3">{#each Array.from({ length: Math.max(1, Number(data.settings.approval_levels ?? 1)) }, (_, index) => index + 1) as level}<option value={level}>{level}</option>{/each}</select></label>
+      {:else}
+        <input type="hidden" name="approval_level" value="" />
+      {/if}
+      <button class="min-h-11 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground lg:col-span-3">Save PayBill operator assignment</button>
+    </form>
+  </section>
+
+  <section class="grid gap-6 lg:grid-cols-2">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 class="text-base font-bold text-slate-900">Assigned committee roles</h2>
+      <div class="mt-4 divide-y divide-slate-100">
+        {#if data.assignments.length === 0}
+          <p class="py-6 text-sm text-slate-500">No committee roles assigned to teachers yet.</p>
+        {:else}
+          {#each data.assignments as a (a.id)}
+            <div class="flex items-center justify-between gap-3 py-3"><div><p class="text-sm font-semibold text-slate-900">{a.profiles?.full_name}</p><p class="text-xs text-slate-500">{a.remedial_committee_role_definitions?.name} · {a.active ? 'Active' : 'Inactive'}</p></div><span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold">Teacher</span></div>
+          {/each}
+        {/if}
+      </div>
+    </div>
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 class="text-base font-bold text-slate-900">PayBill operator assignments</h2>
+      <div class="mt-4 divide-y divide-slate-100">
+        {#if data.operators.length === 0}
+          <p class="py-6 text-sm text-slate-500">No PayBill operators assigned yet.</p>
+        {:else}
+          {#each data.operators as op}
+            <div class="flex items-center justify-between gap-3 py-3"><div><p class="text-sm font-semibold text-slate-900">{op.remedial_committee_members?.profiles?.full_name}</p><p class="text-xs text-slate-500">{op.operator_role}{op.approval_level ? ` · Level ${op.approval_level}` : ''} · {op.active ? 'Active' : 'Inactive'}</p></div>{#if op.active}<form method="POST" action="?/deactivate"><input type="hidden" name="id" value={op.id}/><button class="text-xs font-semibold text-red-600 hover:underline">Deactivate</button></form>{/if}</div>
+          {/each}
+        {/if}
+      </div>
+    </div>
+  </section>
+
   <aside class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><strong>Governance:</strong> committee role ≠ PayBill permission. Admin first appoints a teacher to the appropriate existing committee role, then grants only the additional rights required for their duties. PayBill maker/checker separation remains mandatory.</aside>
 </div>
