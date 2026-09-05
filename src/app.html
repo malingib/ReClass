@@ -4,18 +4,10 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f766e" />
     <title>eShule</title>
-    <!-- Preconnect to Supabase for faster API calls -->
-    <link rel="preconnect" href="https://*.supabase.co" crossorigin />
-    <!-- DNS-prefetch for Sentry error tracking -->
+    <!-- Sentry is non-critical for first paint; DNS resolution may happen opportunistically. -->
     <link rel="dns-prefetch" href="https://sentry.io" />
-    <!-- Speculation Rules: prerender likely next navigations -->
-    <script type="speculationrules">{
-      "prerender": [{
-        "where": { "href_matches": "/admin/*" },
-        "eagerness": "moderate"
-      }]
-    }</script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">
