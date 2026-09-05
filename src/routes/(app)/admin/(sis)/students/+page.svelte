@@ -8,77 +8,26 @@
   import type { PageData } from './$types';
   import type { ActionResult } from '@sveltejs/kit';
   import { dispatchToast } from '$lib/notifications';
-
   interface Student { id: string; first_name: string; last_name: string; admission_no: string; grade: string | null; status: string; }
   interface ActionData extends Record<string, unknown> { message?: string; errors?: Record<string, string[]>; }
   const { data }: { data: PageData } = $props();
-  const students = $derived(data.students);
-  const pagination = $derived(data.pagination);
-  let formData = $state<Record<string, unknown>>({});
-  let errors = $state<Record<string, string[]>>({});
-  let msg = $state<{ type: 'success' | 'error'; text: string } | null>(null);
-  let submitting = $state(false);
-  let showCreate = $state(false);
-  let editingStudent = $state<Student | null>(null);
-  let deletingStudent = $state<Student | null>(null);
-
-  function handleSubmit() {
-    submitting = true; errors = {}; msg = null;
-    return async ({ result, update }: { result: ActionResult<ActionData, ActionData>; update: (_opts?: { reset?: boolean }) => void }) => {
-      try {
-        if (result.type === 'failure' && result.data) { if (result.data.errors) errors = result.data.errors; if (result.data.message) msg = { type: 'error', text: result.data.message }; dispatchToast('Error', result.data.message ?? 'Please fix the highlighted fields.'); }
-        if (result.type === 'error') { msg = { type: 'error', text: 'A network error occurred. Please try again.' }; dispatchToast('Network Error', 'Please check your connection.'); }
-        if (result.type === 'success') { msg = { type: 'success', text: result.data?.message ?? 'Saved' }; dispatchToast('Saved', result.data?.message ?? 'Changes saved successfully.'); formData = {}; editingStudent = null; showCreate = false; }
-        update();
-      } finally { submitting = false; }
-    };
-  }
+  const students = $derived(data.students); const pagination = $derived(data.pagination);
+  let formData = $state<Record<string, unknown>>({}); let errors = $state<Record<string, string[]>>({}); let msg = $state<{ type: 'success' | 'error'; text: string } | null>(null); let submitting = $state(false); let showCreate = $state(false); let editingStudent = $state<Student | null>(null); let deletingStudent = $state<Student | null>(null);
+  function handleSubmit() { submitting = true; errors = {}; msg = null; return async ({ result, update }: { result: ActionResult<ActionData, ActionData>; update: (_opts?: { reset?: boolean }) => void }) => { try { if (result.type === 'failure' && result.data) { if (result.data.errors) errors = result.data.errors; if (result.data.message) msg = { type: 'error', text: result.data.message }; dispatchToast('Error', result.data.message ?? 'Please fix the highlighted fields.'); } if (result.type === 'error') { msg = { type: 'error', text: 'A network error occurred. Please try again.' }; dispatchToast('Network Error', 'Please check your connection.'); } if (result.type === 'success') { msg = { type: 'success', text: result.data?.message ?? 'Saved' }; dispatchToast('Saved', result.data?.message ?? 'Changes saved successfully.'); formData = {}; editingStudent = null; showCreate = false; } update(); } finally { submitting = false; } }; }
   function openCreate() { formData = {}; editingStudent = null; showCreate = true; }
   function openEdit(student: Student) { editingStudent = student; formData = { id: student.id, first_name: student.first_name, last_name: student.last_name, admission_no: student.admission_no, grade: student.grade ?? '', status: student.status }; showCreate = true; }
   function openDelete(student: Student) { deletingStudent = student; }
-  function closeCreate() { showCreate = false; editingStudent = null; }
 </script>
-
 <DashboardContent title="Students" subtitle="Student register and 360° records">
   {#snippet headerActions()}
-    <Button href="/admin/students/import" size="sm" variant="outline">Import</Button>
-    <Button href="/admin/enrollment" size="sm" variant="outline">Enrollment</Button>
-    <Button href="/admin/admissions" size="sm" variant="outline">Admissions</Button>
-    <Button onclick={openCreate} size="sm"><Plus class="h-3.5 w-3.5" /> Add Student</Button>
+    <Button href="/admin/students/import" size="sm" variant="outline">Import</Button><Button href="/admin/enrollment" size="sm" variant="outline">Enrollment</Button><Button href="/admin/admissions" size="sm" variant="outline">Admissions</Button><Button onclick={openCreate} size="sm"><Plus class="h-3.5 w-3.5" /> Add Student</Button>
   {/snippet}
-
-  <DataTable
-    data={students}
-    columns={[
-      { key: 'admission_no', label: 'Adm No', sortable: true, render: (s: Student) => s.admission_no },
-      { key: 'first_name', label: 'Name', render: (s: Student) => `${s.first_name} ${s.last_name}` },
-      { key: 'grade', label: 'Legacy Grade', sortable: true },
-      { key: 'status', label: 'Status', sortable: true },
-    ]}
-    emptyMessage="No students found"
-    onEdit={openEdit}
-    onDelete={openDelete}
-    onRowClick={(s: Student) => { window.location.href = `/admin/students/${s.id}`; }}
-    server={{ total: pagination.total, page: pagination.page, pageSize: pagination.pageSize, search: pagination.search, sortKey: pagination.sortKey, sortDir: pagination.sortDir }}
-  />
+  <DataTable data={students} columns={[
+    { key: 'admission_no', label: 'Adm No', sortable: true, html: true, render: (s: Student) => `<a href="/admin/students/${s.id}" class="font-medium text-primary hover:underline">${s.admission_no}</a>` },
+    { key: 'first_name', label: 'Name', render: (s: Student) => `${s.first_name} ${s.last_name}` },
+    { key: 'grade', label: 'Legacy Grade', sortable: true }, { key: 'status', label: 'Status', sortable: true },
+  ]} emptyMessage="No students found" onEdit={openEdit} onDelete={openDelete} server={{ total: pagination.total, page: pagination.page, pageSize: pagination.pageSize, search: pagination.search, sortKey: pagination.sortKey, sortDir: pagination.sortDir }} />
 </DashboardContent>
-
-<Dialog open={showCreate} onOpenChange={(o: boolean) => { if (!o) closeCreate(); }}>
-  <DialogContent class="sm:max-w-lg p-0"><DialogHeader class="border-b border-border px-6 py-4"><DialogTitle class="text-base font-semibold">{editingStudent ? 'Edit Student' : 'Add Student'}</DialogTitle></DialogHeader>
-    <form method="POST" action={editingStudent ? '?/update' : '?/create'} class="px-6 py-5 space-y-4" use:enhance={handleSubmit}>
-      {#if editingStudent}<input type="hidden" name="id" value={editingStudent.id} />{/if}
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-1.5"><label for="first_name" class="text-xs font-medium">First Name</label><input id="first_name" name="first_name" value={formData.first_name} class="field" placeholder="John" />{#if errors.first_name?.[0]}<p class="text-xs text-destructive">{errors.first_name[0]}</p>{/if}</div>
-        <div class="space-y-1.5"><label for="last_name" class="text-xs font-medium">Last Name</label><input id="last_name" name="last_name" value={formData.last_name} class="field" placeholder="Doe" />{#if errors.last_name?.[0]}<p class="text-xs text-destructive">{errors.last_name[0]}</p>{/if}</div>
-      </div>
-      <div class="space-y-1.5"><label for="admission_no" class="text-xs font-medium">Admission No</label><input id="admission_no" name="admission_no" value={formData.admission_no} class="field" placeholder="ADM-001" />{#if errors.admission_no?.[0]}<p class="text-xs text-destructive">{errors.admission_no[0]}</p>{/if}</div>
-      <div class="space-y-1.5"><label for="grade" class="text-xs font-medium">Legacy Grade</label><input id="grade" name="grade" value={formData.grade} class="field" placeholder="Use Enrollment for current class/stream" /><p class="text-[11px] text-muted-foreground">New enrollments should use Academic Year → Year Group → Stream.</p></div>
-      <div class="space-y-1.5"><label for="status" class="text-xs font-medium">Status</label><select id="status" name="status" value={formData.status} class="field"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
-      {#if msg}<div class="rounded-lg px-4 py-2 text-sm {msg.type === 'success' ? 'bg-primary/10 text-primary' : 'bg-red-50 text-destructive'}">{msg.text}</div>{/if}
-      <DialogFooter class="pt-2"><DialogClose><button type="button" class="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button></DialogClose><Button type="submit" disabled={submitting}>{editingStudent ? 'Update' : 'Create'}</Button></DialogFooter>
-    </form>
-  </DialogContent>
-</Dialog>
-
-<Dialog open={!!deletingStudent} onOpenChange={(o: boolean) => { if (!o) deletingStudent = null; }}><DialogContent class="sm:max-w-sm p-0"><div class="px-6 py-5 text-center"><div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-destructive"><Trash2 class="h-6 w-6" /></div><h3 class="text-base font-semibold">Archive Student</h3><p class="mt-2 text-sm text-muted-foreground">This is a soft archive. The student’s historical records remain retained and can be restored through the lifecycle workflow.</p></div><div class="flex justify-end gap-3 border-t border-border px-6 py-4"><DialogClose><button type="button" class="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button></DialogClose><form method="POST" action="?/delete" use:enhance><input type="hidden" name="id" value={deletingStudent?.id ?? ''} /><Button type="submit" variant="destructive">Archive</Button></form></div></DialogContent></Dialog>
+<Dialog open={showCreate} onOpenChange={(o: boolean) => { if (!o) { showCreate = false; editingStudent = null; } }}><DialogContent class="sm:max-w-lg p-0"><DialogHeader class="border-b border-border px-6 py-4"><DialogTitle>{editingStudent ? 'Edit Student' : 'Add Student'}</DialogTitle></DialogHeader><form method="POST" action={editingStudent ? '?/update' : '?/create'} class="px-6 py-5 space-y-4" use:enhance={handleSubmit}>{#if editingStudent}<input type="hidden" name="id" value={editingStudent.id} />{/if}<div class="grid grid-cols-2 gap-4"><div><label for="first_name" class="text-xs font-medium">First Name</label><input id="first_name" name="first_name" value={formData.first_name} class="field" />{#if errors.first_name?.[0]}<p class="text-xs text-destructive">{errors.first_name[0]}</p>{/if}</div><div><label for="last_name" class="text-xs font-medium">Last Name</label><input id="last_name" name="last_name" value={formData.last_name} class="field" />{#if errors.last_name?.[0]}<p class="text-xs text-destructive">{errors.last_name[0]}</p>{/if}</div></div><div><label for="admission_no" class="text-xs font-medium">Admission No</label><input id="admission_no" name="admission_no" value={formData.admission_no} class="field" />{#if errors.admission_no?.[0]}<p class="text-xs text-destructive">{errors.admission_no[0]}</p>{/if}</div><div><label for="grade" class="text-xs font-medium">Legacy Grade</label><input id="grade" name="grade" value={formData.grade} class="field" /><p class="text-[11px] text-muted-foreground">Use Enrollment for current year group and stream.</p></div><div><label for="status" class="text-xs font-medium">Status</label><select id="status" name="status" value={formData.status} class="field"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>{#if msg}<div class="rounded-lg bg-muted px-4 py-2 text-sm">{msg.text}</div>{/if}<DialogFooter><DialogClose><button type="button" class="rounded-lg border px-4 py-2 text-sm">Cancel</button></DialogClose><Button type="submit" disabled={submitting}>{editingStudent ? 'Update' : 'Create'}</Button></DialogFooter></form></DialogContent></Dialog>
+<Dialog open={!!deletingStudent} onOpenChange={(o: boolean) => { if (!o) deletingStudent = null; }}><DialogContent class="sm:max-w-sm p-0"><div class="px-6 py-5 text-center"><div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-destructive"><Trash2 class="h-6 w-6" /></div><h3 class="text-base font-semibold">Archive Student</h3><p class="mt-2 text-sm text-muted-foreground">Historical records are retained; this removes the student from the active register.</p></div><div class="flex justify-end gap-3 border-t border-border px-6 py-4"><DialogClose><button type="button" class="rounded-lg border px-4 py-2 text-sm">Cancel</button></DialogClose><form method="POST" action="?/delete" use:enhance><input type="hidden" name="id" value={deletingStudent?.id ?? ''} /><Button type="submit" variant="destructive">Archive</Button></form></div></DialogContent></Dialog>
 <style>:global(.field){width:100%;border:1px solid hsl(var(--border));background:white;border-radius:.5rem;padding:.55rem .7rem;font-size:.875rem;outline:none}:global(.field:focus){border-color:hsl(var(--primary));box-shadow:0 0 0 2px hsl(var(--primary)/.12)}</style>
