@@ -1,13 +1,10 @@
 import { countRecords } from '../_platform/query';
 import { getRecentAttendance } from '../_remedial/attendance';
-import { computeTrend, buildActivityFeed } from '../_dashboard/admin-dashboard';
+import { computeTrend, buildActivityFeed } from '../_dashboard';
 import { PAGE_OVERVIEW } from '$lib/config';
 
-// Remedial dashboard stats.
-//
-// NOTE: remedial_groups / group_members were collapsed into flat `sessions`
-// (see migration 20260716000002). Remedial fees are paid via M-Pesa and tracked
-// as payments (domain='remedial') — there is no invoice/balance lifecycle.
+// Remedial dashboard stats. This module owns remedial operational reporting;
+// shared trend/activity primitives are consumed only through _dashboard/index.
 export async function getReclassStats(sb: App.Locals['srv'], tenantId: string) {
   const since = new Date(Date.now() - 14 * 864e5).toISOString();
 
