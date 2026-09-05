@@ -4,6 +4,12 @@
 >
 > eShule is a multi-tenant school-management platform for schools that need one operational system across administration, teaching, finance, payroll, communication, governance and programme workflows.
 
+## Current SIS scope
+
+The current SIS foundation is intentionally focused on **admissions, enrollment, student lifecycle/history, retention, graduation/exit and Student 360**. ReClass remains the remedial-programme module linked to the canonical eShule student record. Operational school scheduling includes the school calendar, lesson management and teacher reminders.
+
+The SIS scope intentionally does **not** include screening, planner, homework, assignments, markbook, behaviour, LMS, online classes or learning-resource modules.
+
 ## What is eShule?
 
 eShule is designed around the way school responsibilities are actually divided. Users do not receive the same dashboard simply because they belong to the same institution: their experience is derived from their base role, assignments, responsibilities and rights.
@@ -57,13 +63,17 @@ The UI uses this model to reduce irrelevant navigation and make ownership visibl
 
 ## Core workflows
 
+### Student lifecycle
+
+Admissions move directly from application to admission decision, with no screening stage. Admission conversion creates the canonical student record; enrollment then records the student's relationship with the school for an academic year. Lifecycle events are append-only history, so progression, transfer, withdrawal and graduation do not overwrite the student's historical record.
+
 ### Teaching & attendance
 
 Teachers work within their assigned teaching scope and record attendance. Authorized remedial committee members can review/approve remedial attendance according to their assigned rights. Teaching access does not automatically grant governance approval.
 
 ### ReClass
 
-ReClass manages remedial programme operations, including remedial sessions, attendance and committee workflows. It remains separate from school-wide finance and teacher compensation.
+ReClass manages remedial programme operations, including remedial sessions, attendance and committee workflows. It remains separate from school-wide finance and teacher compensation while referencing the shared eShule student identity.
 
 ### Finance
 
