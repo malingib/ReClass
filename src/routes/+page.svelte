@@ -62,5 +62,5 @@
     <section class="bg-slate-900 px-5 py-16 text-white sm:px-8"><div class="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground/70">Ready to work</p><h2 class="mt-2 text-3xl font-bold">Start with today's work.</h2><p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">eShule keeps specialist tools available without making every user navigate the whole platform.</p></div><button onclick={goLogin} class="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-semibold text-slate-900 hover:bg-slate-100">Sign in <ArrowRight class="h-4 w-4" /></button></div></section>
   </main>
 
-  <footer class="border-t border-slate-200 bg-white px-5 py-6 text-center text-xs text-slate-400 sm:px-8">&copy; {new Date().getFullYear()} eShule — Mobiwave Innovations Ltd</footer>
+  <footer class="border-t border-slate-200 bg-white px-5 py-6 text-center text-xs text-slate-400 sm:px-8">© {new Date().getFullYear()} eShule — Mobiwave Innovations Ltd</footer>
 </div>
