@@ -2,6 +2,13 @@
   import { goto } from '$app/navigation';
   import { ArrowRight, Banknote, BookOpen, CheckCircle2, MessageSquare, ShieldCheck, Users } from 'lucide-svelte';
 
+  const roles = [
+    { name: 'School administrator', description: 'Run school operations, staff access, students, communication and specialist workspaces.' },
+    { name: 'Teacher', description: "Start with today's sessions, attendance and the classes or remedial responsibilities assigned to you." },
+    { name: 'Bursar', description: 'Own school-finance collections, reconciliation and payment evidence without mixing in remedial operations.' },
+    { name: 'Parent', description: 'See your children, outstanding balances, payments and school announcements — then pay when needed.' }
+  ];
+
   function goLogin() { goto('/login'); }
 </script>
 
@@ -26,7 +33,6 @@
         <p class="mt-6 max-w-2xl text-base leading-7 text-slate-500 sm:text-lg">eShule connects administrators, teachers, bursars, remedial teams and families around the work that matters every day — students, learning, attendance, fees and communication.</p>
         <div class="mt-8 flex flex-col gap-3 sm:flex-row"><button onclick={goLogin} class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-white shadow-sm hover:bg-primary/90">Sign in to eShule <ArrowRight class="h-4 w-4" /></button><a href="#roles" class="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50">See how it works</a></div>
       </div>
-
       <div class="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><Users class="h-5 w-5 text-primary" /><h2 class="mt-4 text-sm font-semibold">Students & families</h2><p class="mt-2 text-xs leading-5 text-slate-500">Keep learner records, family access and fee information connected.</p></div>
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><BookOpen class="h-5 w-5 text-primary" /><h2 class="mt-4 text-sm font-semibold">Teaching & attendance</h2><p class="mt-2 text-xs leading-5 text-slate-500">Give teachers a focused daily workspace for classes and delivery.</p></div>
@@ -39,25 +45,14 @@
       <div class="mx-auto max-w-6xl px-5 py-16 sm:px-8">
         <div class="max-w-2xl"><p class="text-xs font-bold uppercase tracking-[0.16em] text-primary">Role-first experience</p><h2 class="mt-2 text-3xl font-bold tracking-tight">The right work for the right person.</h2><p class="mt-3 text-sm leading-6 text-slate-500">Users don't need to understand the whole system. eShule puts their responsibilities and next actions first.</p></div>
         <div class="mt-10 grid gap-4 md:grid-cols-2">
-          {#each [
-            ['School administrator', 'Run school operations, staff access, students, communication and specialist workspaces.'],
-            ['Teacher', 'Start with today's sessions, attendance and the classes or remedial responsibilities assigned to you.'],
-            ['Bursar', 'Own school-finance collections, reconciliation and payment evidence without mixing in remedial operations.'],
-            ['Parent', 'See your children, outstanding balances, payments and school announcements — then pay when needed.']
-          ] as role}
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div class="flex items-start gap-3"><CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div><h3 class="text-sm font-semibold">{role[0]}</h3><p class="mt-1 text-sm leading-6 text-slate-500">{role[1]}</p></div></div></div>
+          {#each roles as role}
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div class="flex items-start gap-3"><CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div><h3 class="text-sm font-semibold">{role.name}</h3><p class="mt-1 text-sm leading-6 text-slate-500">{role.description}</p></div></div></div>
           {/each}
         </div>
       </div>
     </section>
 
-    <section class="mx-auto max-w-6xl px-5 py-16 sm:px-8">
-      <div class="grid gap-5 lg:grid-cols-3">
-        <div class="rounded-3xl border border-primary/15 bg-primary/5 p-7"><ShieldCheck class="h-6 w-6 text-primary" /><h2 class="mt-5 text-lg font-semibold">Secure by role</h2><p class="mt-2 text-sm leading-6 text-slate-500">Each user sees only the school information and actions their responsibilities allow.</p></div>
-        <div class="rounded-3xl border border-slate-200 bg-white p-7"><Banknote class="h-6 w-6 text-primary" /><h2 class="mt-5 text-lg font-semibold">Built for local payments</h2><p class="mt-2 text-sm leading-6 text-slate-500">Families can follow school payment instructions and use M-Pesa where enabled by the school.</p></div>
-        <div class="rounded-3xl border border-slate-200 bg-white p-7"><BookOpen class="h-6 w-6 text-primary" /><h2 class="mt-5 text-lg font-semibold">ReClass inside eShule</h2><p class="mt-2 text-sm leading-6 text-slate-500">Targeted remedial learning is a first-class programme while remaining separate from school-finance ownership.</p></div>
-      </div>
-    </section>
+    <section class="mx-auto max-w-6xl px-5 py-16 sm:px-8"><div class="grid gap-5 lg:grid-cols-3"><div class="rounded-3xl border border-primary/15 bg-primary/5 p-7"><ShieldCheck class="h-6 w-6 text-primary" /><h2 class="mt-5 text-lg font-semibold">Secure by role</h2><p class="mt-2 text-sm leading-6 text-slate-500">Each user sees only the school information and actions their responsibilities allow.</p></div><div class="rounded-3xl border border-slate-200 bg-white p-7"><Banknote class="h-6 w-6 text-primary" /><h2 class="mt-5 text-lg font-semibold">Built for local payments</h2><p class="mt-2 text-sm leading-6 text-slate-500">Families can follow school payment instructions and use M-Pesa where enabled by the school.</p></div><div class="rounded-3xl border border-slate-200 bg-white p-7"><BookOpen class="h-6 w-6 text-primary" /><h2 class="mt-5 text-lg font-semibold">ReClass inside eShule</h2><p class="mt-2 text-sm leading-6 text-slate-500">Targeted remedial learning is a first-class programme while remaining separate from school-finance ownership.</p></div></div></section>
 
     <section class="bg-slate-900 px-5 py-16 text-white sm:px-8"><div class="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground/70">Ready to work</p><h2 class="mt-2 text-3xl font-bold">Start with today's work.</h2><p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">eShule keeps specialist tools available without making every user navigate the whole platform.</p></div><button onclick={goLogin} class="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-semibold text-slate-900 hover:bg-slate-100">Sign in <ArrowRight class="h-4 w-4" /></button></div></section>
   </main>
