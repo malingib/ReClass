@@ -1,4 +1,0 @@
--- Retained as a historical placeholder.
--- The 20260901090000 migration version is owned by
--- 20260901090000_complete_operations_finance_comms.sql.
--- Keeping this file empty prevents Supabase migration replay collisions.
