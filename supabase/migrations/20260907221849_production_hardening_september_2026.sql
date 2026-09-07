@@ -1,5 +1,4 @@
--- ReClass Migration 20260908000001 — Production hardening and deployment reliability
-
+-- ReClass production hardening: FK indexes and restricted internal function execution
 CREATE INDEX IF NOT EXISTS idx_comm_announcements_created_by ON public.comm_announcements(created_by);
 CREATE INDEX IF NOT EXISTS idx_comm_templates_created_by ON public.comm_templates(created_by);
 CREATE INDEX IF NOT EXISTS idx_expenses_paid_by ON public.expenses(paid_by);
@@ -24,7 +23,6 @@ CREATE INDEX IF NOT EXISTS idx_teacher_attendance_reviewed_by ON public.teacher_
 CREATE INDEX IF NOT EXISTS idx_tenants_current_term_id ON public.tenants(current_term_id);
 CREATE INDEX IF NOT EXISTS idx_unmatched_payments_matched_by ON public.unmatched_payments(matched_by);
 CREATE INDEX IF NOT EXISTS idx_unmatched_payments_matched_to ON public.unmatched_payments(matched_to);
-
 REVOKE EXECUTE ON FUNCTION public.aggregate_payroll_counts(uuid,date,date) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.enforce_same_tenant_guardian() FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.enqueue_payment_reminders() FROM anon, authenticated;
@@ -35,38 +33,3 @@ REVOKE EXECUTE ON FUNCTION public.notify_unmatched_deposit() FROM anon, authenti
 REVOKE EXECUTE ON FUNCTION public.refresh_session_occurrences() FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.seed_tenant_modules_defaults() FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.set_tenant_context(uuid) FROM anon, authenticated;
-
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
-CREATE OR REPLACE FUNCTION public.cleanup_stale_checkout_requests()
-RETURNS integer
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  affected_rows integer;
-BEGIN
-  UPDATE public.checkout_requests
-  SET status = 'failed',
-      reason = 'TIMEOUT - Request was pending for too long and was automatically cancelled',
-      updated_at = NOW()
-  WHERE status = 'pending'
-    AND created_at < NOW() - INTERVAL '30 minutes';
-
-  GET DIAGNOSTICS affected_rows = ROW_COUNT;
-  RETURN affected_rows;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.cleanup_stale_checkout_requests() FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.cleanup_stale_checkout_requests() TO postgres;
-
-SELECT cron.schedule(
-  'cleanup-stale-checkouts',
-  '*/5 * * * *',
-  $$SELECT public.cleanup_stale_checkout_requests();$$
-)
-WHERE NOT EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'cleanup-stale-checkouts'
-);
