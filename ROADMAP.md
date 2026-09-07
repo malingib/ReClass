@@ -1,6 +1,6 @@
 # eShule Roadmap
 
-**Last reviewed:** 2026-09-01  
+**Last reviewed:** 2026-09-08  
 **Current package version:** `0.2.0`  
 **Status:** Active development / release-candidate hardening
 
@@ -10,90 +10,68 @@ This roadmap is the delivery plan for **eShule**, the school-operations platform
 
 eShule connects school administration, teaching and learning, school finance, payroll, ReClass remedial operations, communication, governance, receipts and audit into one tenant-isolated operating platform.
 
-The core operating rule is:
-
-> **User → base role → committee assignment → responsibilities → rights → navigation, dashboards and actions**
-
-The UI communicates responsibility. Server-side authorization is the security boundary.
-
-## Ownership model
-
-| Domain | Operational owner |
-|---|---|
-| School finance | Bursar |
-| Remedial operations | ReClass |
-| Teacher compensation | Payroll |
-| Actual payment evidence | Receipts |
-| Notifications | Shared service |
-| Audit/accountability | Shared service |
-| Cross-domain administration | School administration / platform administration |
-
-Committee governance remains explicit: teachers deliver and record sessions; committee members/chairman review attendance; the treasurer prepares and initiates remedial payroll; the chairman approves payroll and authorizes payout.
-
 ## Delivery sequence
 
-### Phase 1 — Production hardening
+### Phase 1 — Production infrastructure
 
-- Replay the complete Supabase migration chain from an empty database.
-- Verify hosted migration ledger and schema drift.
-- Execute tenant-isolation tests against a real database.
-- Verify financial idempotency, reconciliation and same-tenant foreign-key invariants.
-- Verify payroll domain separation and payout state transitions.
-- Validate M-Pesa callback authentication and retry/replay behaviour.
-- Verify notification queue, retry and audit behaviour.
-- Complete CI gates for lint, typecheck, unit tests, build, migrations, Edge Functions and critical E2E journeys.
+- Supabase migration chain and hosted schema verification.
+- Tenant-isolation and financial integrity verification.
+- Native Postgres scheduling for database-only jobs.
+- Edge Functions for external payment and messaging integrations.
+- CI/CD and production deployment gates.
 
-**Exit evidence:** clean migration replay, tenant negative tests, financial concurrency/idempotency tests, green CI and staging smoke evidence.
+**Exit evidence:** clean migrations, green CI, hosted verification and staging smoke evidence.
 
-### Phase 2 — Operational readiness
+### Phase 2 — Admissions & student lifecycle
 
-- Maintain separate staging and production Vercel/Supabase environments.
-- Version deployment configuration and remove obsolete deployment paths.
-- Establish backup/PITR verification and restore drills.
-- Define readiness/liveness probes and redacted structured logging.
-- Monitor payment reconciliation, notification queues, provider failures and job lag.
-- Document incident response, rollback and migration compatibility rules.
-- Verify secret rotation and environment ownership.
+- Admissions intake.
+- Enrollment and class placement.
+- Guardian linkage.
+- Student profile and operational record.
+- Lifecycle timeline: admission, enrollment, class movement, transfer, completion, withdrawal and reactivation.
+- Auditable lifecycle events and role-controlled actions.
 
-**Exit evidence:** staging promotion, rollback rehearsal, restore rehearsal and operational runbook sign-off.
+### Phase 3 — Teaching & ReClass operations
 
-### Phase 3 — Critical journey completion
+- Teacher Today workspace.
+- Class rosters and attendance.
+- Lesson/session management.
+- ReClass remedial sessions and attendance.
+- Remedial committee responsibilities according to assigned rights.
+- Teacher tasks and automated reminders.
+- School calendar and operational deadlines.
 
-- Teacher Today: attendance, teaching, remedial and committee actions according to rights.
-- Principal Command Center: oversight without assuming Bursar or committee operational ownership.
-- Bursar Finance Center: fees, payments, reconciliation and financial evidence.
-- Payroll: salary, allowances, remedial payments, committee payments and role-specific compensation.
-- Receipts: clear payment evidence and traceability.
-- Parent journey: child ledger, balances and Pay Now flow.
-- Communication: composer, templates, delivery state and account-backed notification state.
-- Accessibility, responsive behaviour and empty/error states across critical screens.
+### Phase 4 — Leadership, finance & parent journeys
 
-**Exit evidence:** role-based UAT with representative school workflows and no unauthorized actions exposed or executable.
+- Principal Command Center.
+- Bursar Finance Center.
+- Fees, payments and reconciliation.
+- Payroll and teacher compensation.
+- Receipts as actual-payment evidence.
+- Parent child ledger and Pay Now M-Pesa journey.
+- Communication composer, templates and delivery state.
 
-### Phase 4 — Scale and maintainability
+### Phase 5 — Production QA & scale
 
-- Replace unbounded reads with cursor/keyset pagination.
-- Move high-cardinality dashboard aggregates into SQL.
-- Add tenant-aware indexes and query-plan review.
-- Bound imports/exports and move large exports to asynchronous jobs.
-- Add provider timeouts, retry policies and circuit-breaker behaviour.
-- Remove stale code, weak `any` boundaries and duplicated utilities.
-- Consolidate design tokens where practical without breaking the existing bits-ui/app surface contract.
+- Role-based UAT across the complete school workflow.
+- Accessibility and responsive QA.
+- Empty/error/loading states.
+- Payment and notification end-to-end tests.
+- Tenant-isolation negative tests.
+- Pagination and high-cardinality query review.
+- Backup/restore rehearsal and rollback verification.
+- Observability, incident response and release gates.
 
-**Exit evidence:** production-like load/soak tests, performance budgets and measurable query/resource limits.
-
-### Phase 5 — Controlled commercial expansion
+### Phase 6 — Controlled commercial expansion
 
 - Guided tenant onboarding and suspension/offboarding.
 - Data export, retention and deletion workflows.
-- Consent/STOP handling, announcements and scheduled reports.
+- Consent/STOP handling and scheduled reports.
 - Offline attendance and sync-conflict handling where required.
 - Governed analytics with freshness and data-quality indicators.
 - Server-enforced plans, metering, billing evidence and entitlement audit.
 
-**Exit evidence:** pilot UAT, support procedures, retention/export evidence and governed commercial controls.
-
-### Phase 6 — Intelligent platform evolution
+### Phase 7 — Intelligent platform evolution
 
 Potential first uses:
 
@@ -104,21 +82,11 @@ Potential first uses:
 
 AI must remain out of autonomous decisions involving grades, attendance, payments, waivers, payroll, access or student welfare. Any AI feature requires tenant opt-in, data minimization, evaluation, human confirmation, cost controls and a kill switch.
 
-## Current priorities
+## Current execution order
 
-| Priority | Work | Gate |
-|---|---|---|
-| P0 | Migration replay + hosted schema verification | Empty-database replay and upgrade rehearsal |
-| P0 | Tenant isolation verification | Cross-tenant negative suite passes |
-| P0 | Financial integrity | Idempotency/concurrency/reconciliation suite passes |
-| P1 | CI and release gates | All required checks automated |
-| P1 | Deployment/operations | Staging-to-production promotion and rollback proven |
-| P1 | Critical role journeys | Teacher, Principal, Bursar, Payroll, ReClass and Parent UAT |
-| P2 | Pagination/performance | Production-like load evidence |
-| P2 | Accessibility/bilingual completion | Critical-flow accessibility and localization sign-off |
-| P2 | Notification/read-state maturity | Account-backed state + reliable retry/queue behaviour |
-| P3 | Advanced analytics/commercial features | Trusted metrics and entitlement model |
-| P3 | Constrained AI | Safety evaluation + opt-in pilot |
+**Admissions & enrollment → Student lifecycle → ReClass/remedials → School calendar & lessons → Teacher command center → Principal command center → Bursar/finance → Parent Pay Now → Production QA.**
+
+Discipline is intentionally **not part of the current delivery sequence**. Existing data/code is preserved unless explicitly scheduled for removal; no new discipline scope should be added while this sequence is being completed.
 
 ## Decision rules
 
@@ -128,8 +96,4 @@ AI must remain out of autonomous decisions involving grades, attendance, payment
 4. A domain owner must not silently absorb another domain's responsibilities.
 5. Database invariants should be enforced at the database boundary where practical, not only in UI code.
 6. Breaking schema changes use expand-and-contract and a tested forward/rollback strategy.
-7. No microservice, sharding or AI initiative should be used to compensate for missing fundamentals.
-
-## Historical audits
-
-Detailed dated audits such as [`AUDIT-2026-08.md`](AUDIT-2026-08.md) are historical evidence. They should remain useful for traceability but must not be copied into current status documents without re-verification.
+7. No microservice, sharding or AI initiative should compensate for missing fundamentals.
