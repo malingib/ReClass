@@ -91,7 +91,6 @@ create index if not exists receipts_tenant_paid_idx on public.payment_receipts(t
 create index if not exists receipts_teacher_idx on public.payment_receipts(teacher_user_id,paid_at desc);
 create index if not exists receipts_student_idx on public.payment_receipts(student_id,paid_at desc);
 
--- Receipt numbering is intentionally generated server-side and is independent of payroll numbering.
 create or replace function public.next_payment_receipt_number()
 returns text language plpgsql security definer set search_path=public as $$
 declare n bigint;
@@ -100,7 +99,6 @@ begin
   return 'RCT-' || to_char(now(),'YYYYMM') || '-' || lpad(n::text,6,'0');
 end; $$;
 
--- Explicit teacher confirmation: only the intended recipient can confirm their own payroll receipt.
 create or replace function public.confirm_teacher_payment_receipt(p_receipt_id uuid)
 returns public.payment_receipts language plpgsql security definer set search_path=public as $$
 declare r public.payment_receipts;
@@ -115,7 +113,6 @@ begin
   return r;
 end; $$;
 
--- Payment approval creates the individual receipt and queues the automatic teacher notification.
 create or replace function public.finalize_payroll_payment_approval(p_payment_id uuid)
 returns public.payroll_payments language plpgsql security definer set search_path=public as $$
 declare p public.payroll_payments; r public.payment_receipts; template_id uuid; begin
