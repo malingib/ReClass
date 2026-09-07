@@ -14,6 +14,20 @@ export type Database = {
   }
   public: {
     Tables: {
+      // Operational tables added by the eShule SIS lifecycle migration.
+      lessons: { Row: any; Insert: any; Update: any; Relationships: [] }
+      teacher_reminders: { Row: any; Insert: any; Update: any; Relationships: [] }
+      notification_templates: { Row: any; Insert: any; Update: any; Relationships: [] }
+      notification_triggers: { Row: any; Insert: any; Update: any; Relationships: [] }
+      notification_deliveries: { Row: any; Insert: any; Update: any; Relationships: [] }
+      audit_logs: { Row: any; Insert: any; Update: any; Relationships: [] }
+      teacher_payment_definitions: { Row: any; Insert: any; Update: any; Relationships: [] }
+      teacher_payment_lines: { Row: any; Insert: any; Update: any; Relationships: [] }
+      reclass_committee_roles: { Row: any; Insert: any; Update: any; Relationships: [] }
+      reclass_committee_assignments: { Row: any; Insert: any; Update: any; Relationships: [] }
+      reclass_committee_rights: { Row: any; Insert: any; Update: any; Relationships: [] }
+      reclass_fee_definition: { Row: any; Insert: any; Update: any; Relationships: [] }
+      reclass_obligations: { Row: any; Insert: any; Update: any; Relationships: [] }
       audit_log: {
         Row: {
           action: string
