@@ -3,7 +3,7 @@
   import DataTable from '$lib/components/DataTable.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '$lib/components/ui/dialog/index.js';
-  import { Plus, Trash2 } from 'lucide-svelte';
+  import { Plus, Trash2, Users, UserPlus } from 'lucide-svelte';
   import { enhance } from '$app/forms';
   import type { PageData } from './$types';
   import type { ActionResult } from '@sveltejs/kit';
@@ -99,11 +99,11 @@
   }
 </script>
 
-<DashboardContent title="Students" subtitle="All enrolled students">
+<DashboardContent title="Students" subtitle="Manage student records, enrollment and lifecycle information">
   {#snippet headerActions()}
-    <Button href="/admin/students/import" size="sm" variant="outline">Import</Button>
+    <Button href="/admin/students/import" size="sm" variant="outline">Import students</Button>
     <Button onclick={openCreate} size="sm">
-      <Plus class="h-3.5 w-3.5" /> Add Student
+      <Plus class="h-3.5 w-3.5" /> Add student
     </Button>
   {/snippet}
 
@@ -115,7 +115,7 @@
       { key: 'grade', label: 'Grade', sortable: true },
       { key: 'status', label: 'Status', sortable: true },
     ]}
-    emptyMessage="No students found"
+    emptyMessage="No students yet. Add your first student or import your school register."
     onEdit={openEdit}
     onDelete={openDelete}
     server={{
