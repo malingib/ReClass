@@ -67,7 +67,7 @@ DECLARE affected integer;
 BEGIN
   INSERT INTO public.notifications (tenant_id, related_type, related_id, channel, recipient_user_id, body, status, external_id)
   SELECT t.tenant_id, 'teacher_task', t.id, 'in_app', p.id,
-    'Reminder: ' || t.title || ' is due ' || to_char(t.due_at AT TIME ZONE COALESCE(te.timezone, 'Africa/Nairobi'), 'DD Mon HH24:MI'),
+    'Reminder: ' || t.title || ' is due ' || to_char(t.due_at AT TIME ZONE 'Africa/Nairobi', 'DD Mon HH24:MI'),
     'queued', 'teacher-task-reminder:' || t.id::text
   FROM public.teacher_tasks t
   JOIN public.teachers te ON te.id = t.teacher_id AND te.tenant_id = t.tenant_id
