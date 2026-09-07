@@ -74,7 +74,7 @@ async function cleanupPendingCheckouts(): Promise<CleanupResult> {
 // Deno.serve for scheduled function
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
+    return json({ error: 'Method not allowed' }, 405, req);
   }
   
   console.log('[cleanup] Starting pending checkout cleanup');
