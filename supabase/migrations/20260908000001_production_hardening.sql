@@ -37,17 +37,36 @@ REVOKE EXECUTE ON FUNCTION public.seed_tenant_modules_defaults() FROM anon, auth
 REVOKE EXECUTE ON FUNCTION public.set_tenant_context(uuid) FROM anon, authenticated;
 
 CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
+
+CREATE OR REPLACE FUNCTION public.cleanup_stale_checkout_requests()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  affected_rows integer;
+BEGIN
+  UPDATE public.checkout_requests
+  SET status = 'failed',
+      reason = 'TIMEOUT - Request was pending for too long and was automatically cancelled',
+      updated_at = NOW()
+  WHERE status = 'pending'
+    AND created_at < NOW() - INTERVAL '30 minutes';
+
+  GET DIAGNOSTICS affected_rows = ROW_COUNT;
+  RETURN affected_rows;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cleanup_stale_checkout_requests() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.cleanup_stale_checkout_requests() TO postgres;
+
 SELECT cron.schedule(
-  'reclass-cleanup-pending-checkouts',
+  'cleanup-stale-checkouts',
   '*/5 * * * *',
-  $$SELECT net.http_post(
-    url => (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cleanup_pending_checkouts_function_url' LIMIT 1),
-    headers := jsonb_build_object(
-      'Content-Type','application/json',
-      'Authorization','Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'service_role_key' LIMIT 1)
-    ),
-    body := '{}'
-  );$$
+  $$SELECT public.cleanup_stale_checkout_requests();$$
 )
-WHERE NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname='reclass-cleanup-pending-checkouts');
+WHERE NOT EXISTS (
+  SELECT 1 FROM cron.job WHERE jobname = 'cleanup-stale-checkouts'
+);
