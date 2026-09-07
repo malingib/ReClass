@@ -293,7 +293,7 @@
           {#each paginated as item (item.id)}
             <tr class="border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50">
         {#each columns as col}
-          <td class="border-b border-gray-200 p-2">
+          <td class="px-4 py-3 text-sm text-slate-700">
             {#if col.cell}
               {@render col.cell(item)}
             {:else if col.render}
