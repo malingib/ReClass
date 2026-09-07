@@ -20,8 +20,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     db.from('remedial_paybill_settings').select('*').eq('tenant_id', tenantId).maybeSingle(),
     db.from('user_roles').select('user_id').eq('tenant_id', tenantId).eq('role', 'teacher'),
   ]);
-  const ids = (teacherRoles ?? []).map((r: any) => r.user_id); const { data: teachers } = ids.length ? await db.from('profiles').select('id,full_name,phone').in('id', ids).order('full_name') : { data: [] };
-  const assignmentIds = (assignments ?? []).map((r: any) => r.id); const { data: rights } = assignmentIds.length ? await db.from('remedial_committee_rights').select('assignment_id,right_code,granted').in('assignment_id', assignmentIds).eq('granted', true) : { data: [] };
+  const ids = (teacherRoles ?? []).map((r: { user_id: string }) => r.user_id); const { data: teachers } = ids.length ? await db.from('profiles').select('id,full_name,phone').in('id', ids).eq('tenant_id', tenantId).order('full_name') : { data: [] };
+  const assignmentIds = (assignments ?? []).map((r: { id: string }) => r.id); const { data: rights } = assignmentIds.length ? await db.from('remedial_committee_rights').select('assignment_id,right_code,granted').in('assignment_id', assignmentIds).eq('tenant_id', tenantId).eq('granted', true) : { data: [] };
   const { data: governance } = await db.rpc('remedial_paybill_governance_status', { p_tenant_id: tenantId });
   return { roles: roles ?? [], assignments: assignments ?? [], teachers: teachers ?? [], operators: operators ?? [], rights: rights ?? [], rightCatalog: RIGHTS, settings: settings ?? { approval_levels: 1, minimum_web_operators: 2, maker_checker_required: true }, governance: governance ?? null };
 };
