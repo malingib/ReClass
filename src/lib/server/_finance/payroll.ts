@@ -38,7 +38,7 @@ export async function getTeachersList(sb: App.Locals['srv'], tenantId: string) {
 
 async function addPayrollComponents(sb: App.Locals['srv'], tenantId: string, components: PayrollComponentInsert[]) {
   if (components.length === 0) return null;
-  const { error } = await sb.from('payroll_components').insert(components).select('id').eq('tenant_id', tenantId);
+  const { error } = await (sb as any).from('payroll_components').insert(components).select('id').eq('tenant_id', tenantId);
   return error ?? null;
 }
 
