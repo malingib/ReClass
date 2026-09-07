@@ -2,8 +2,10 @@ import { redirect } from '@sveltejs/kit';
 import { getServerSupabase, getServiceClient } from '$lib/supabase/server';
 import { roleRoutes, isRole, type Role } from '$lib/auth';
 import type { Handle } from '@sveltejs/kit';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
+const PUBLIC_SUPABASE_URL = env.PUBLIC_SUPABASE_URL ?? '';
+const PUBLIC_SUPABASE_ANON_KEY = env.PUBLIC_SUPABASE_ANON_KEY ?? '';
+const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 import {
   COOKIE_USER_TTL_SECONDS, COOKIE_USER_NAME, COOKIE_ROLE_NAME,
   ROUTE_LOGIN, PUBLIC_ROUTES, CONTENT_SECURITY_POLICY, TENANT_ID,
