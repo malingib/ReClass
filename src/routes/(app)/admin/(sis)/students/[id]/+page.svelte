@@ -9,37 +9,38 @@
   let showExit = $state(false);
   function submit() { return async ({ result, update }: any) => { if (result.type === 'success') { showEvent = false; showExit = false; dispatchToast('Saved', result.data?.message ?? 'Saved'); } else if (result.type === 'failure') dispatchToast('Error', result.data?.message ?? 'Could not save'); await update(); }; }
   const displayName = $derived([s.first_name, s.middle_name, s.last_name].filter(Boolean).join(' '));
-  const current = $derived(data.enrollments?.[0]);
+  const current = $derived(data.enrollments?.find((e: any) => e.status === 'active') ?? data.enrollments?.[0]);
+  const currentClass = $derived(current?.sis_classes);
 </script>
 
 <DashboardContent title={displayName} subtitle={`Student ${s.student_no ?? '—'} · Admission ${s.admission_no}`}>
   {#snippet headerActions()}
-    <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{s.status}</span>
+    <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold capitalize text-primary">{s.status}</span>
     <Button size="sm" variant="outline" onclick={() => (showEvent = true)}>Record Event</Button>
     <Button size="sm" variant="outline" onclick={() => (showExit = true)}>Record Exit</Button>
   {/snippet}
 
   <div class="grid gap-4 lg:grid-cols-3">
     <section class="rounded-xl border border-border bg-white p-5 lg:col-span-2">
-      <h2 class="text-sm font-semibold">Overview</h2>
-      <div class="mt-4 grid gap-4 sm:grid-cols-3">
-        <div><p class="label">Current Enrollment</p><p class="value">{current?.year_groups?.name ?? 'Not enrolled'}</p><p class="sub">{current?.streams?.name ?? 'No stream'} · {current?.academic_years?.name ?? ''}</p></div>
-        <div><p class="label">Admission</p><p class="value">{s.admission_date ?? '—'}</p><p class="sub">{s.admission_no}</p></div>
-        <div><p class="label">Birth Date</p><p class="value">{s.date_of_birth ?? '—'}</p><p class="sub">{s.gender ?? 'Gender not recorded'}</p></div>
+      <div class="flex items-start justify-between gap-4"><div><h2 class="text-sm font-semibold">Student overview</h2><p class="mt-1 text-xs text-muted-foreground">Core identity and current school placement.</p></div><span class="text-xs text-muted-foreground">{s.admission_date ?? 'Admission date not recorded'}</span></div>
+      <div class="mt-5 grid gap-5 sm:grid-cols-3">
+        <div><p class="label">Current enrollment</p><p class="value">{currentClass?.name ?? 'Not enrolled'}</p><p class="sub">{currentClass?.stream ? `${currentClass.stream} · ` : ''}{current?.academic_year ?? 'No academic year'}</p></div>
+        <div><p class="label">Admission</p><p class="value">{s.admission_no ?? '—'}</p><p class="sub">Student no. {s.student_no ?? '—'}</p></div>
+        <div><p class="label">Date of birth</p><p class="value">{s.date_of_birth ?? '—'}</p><p class="sub">{s.gender ?? 'Gender not recorded'} · {s.nationality ?? 'Nationality not recorded'}</p></div>
       </div>
     </section>
-    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Family</h2><div class="mt-3 space-y-3">{#each data.guardians as g}<div><p class="text-sm font-medium">{g.parents?.full_name ?? 'Guardian'}</p><p class="text-xs text-muted-foreground">{g.relationship ?? 'Guardian'} · {g.parents?.phone ?? 'No phone'}</p></div>{:else}<p class="text-sm text-muted-foreground">No guardian linked.</p>{/each}</div></section>
+    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Family</h2><p class="mt-1 text-xs text-muted-foreground">Linked guardians and primary contacts.</p><div class="mt-4 space-y-3">{#each data.guardians as g}<div class="rounded-lg border border-border p-3"><p class="text-sm font-medium">{g.parents?.full_name ?? 'Guardian'}</p><p class="mt-1 text-xs text-muted-foreground">{g.relationship ?? 'Guardian'} · {g.parents?.phone ?? 'No phone'}</p>{#if g.parents?.email}<p class="mt-1 text-xs text-muted-foreground">{g.parents.email}</p>{/if}</div>{:else}<p class="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">No guardian linked.</p>{/each}</div></section>
   </div>
 
   <div class="mt-4 grid gap-4 lg:grid-cols-2">
-    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Enrollment History</h2><div class="mt-4 space-y-3">{#each data.enrollments as e}<div class="flex items-center justify-between border-b border-border pb-3 last:border-0"><div><p class="text-sm font-medium">{e.academic_years?.name ?? '—'} · {e.year_groups?.name ?? '—'} {e.streams?.name ?? ''}</p><p class="text-xs text-muted-foreground">Enrolled {e.enrolled_on}</p></div><span class="text-xs capitalize">{e.status}</span></div>{:else}<p class="text-sm text-muted-foreground">No enrollment history.</p>{/each}</div></section>
-    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Lifecycle</h2><div class="mt-4 space-y-3">{#each data.events as e}<div class="flex gap-3"><span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"></span><div><p class="text-sm font-medium capitalize">{e.event_type}</p><p class="text-xs text-muted-foreground">{e.effective_on}{e.reason ? ` · ${e.reason}` : ''}</p>{#if e.notes}<p class="mt-1 text-xs text-muted-foreground">{e.notes}</p>{/if}</div></div>{:else}<p class="text-sm text-muted-foreground">No lifecycle events.</p>{/each}</div></section>
+    <section class="rounded-xl border border-border bg-white p-5"><div class="flex items-center justify-between"><div><h2 class="text-sm font-semibold">Enrollment history</h2><p class="mt-1 text-xs text-muted-foreground">Historical records remain intact across academic years.</p></div><span class="text-xs text-muted-foreground">{data.enrollments.length} record(s)</span></div><div class="mt-4 space-y-3">{#each data.enrollments as e}<div class="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-0"><div><p class="text-sm font-medium">{e.sis_classes?.name ?? 'Class'}{e.sis_classes?.stream ? ` · ${e.sis_classes.stream}` : ''}</p><p class="text-xs text-muted-foreground">{e.academic_year ?? '—'} · Enrolled {e.enrolled_at?.slice(0,10) ?? '—'}{e.exited_at ? ` · Exited ${e.exited_at}` : ''}</p></div><span class="rounded-full bg-muted px-2.5 py-1 text-xs capitalize">{e.status}</span></div>{:else}<p class="text-sm text-muted-foreground">No enrollment history.</p>{/each}</div></section>
+    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Lifecycle</h2><p class="mt-1 text-xs text-muted-foreground">Append-only student history and status changes.</p><div class="mt-4 space-y-3">{#each data.events as e}<div class="flex gap-3"><span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"></span><div><p class="text-sm font-medium capitalize">{e.event_type}</p><p class="text-xs text-muted-foreground">{e.effective_on}{e.reason ? ` · ${e.reason}` : ''}</p>{#if e.notes}<p class="mt-1 text-xs text-muted-foreground">{e.notes}</p>{/if}</div></div>{:else}<p class="text-sm text-muted-foreground">No lifecycle events.</p>{/each}</div></section>
   </div>
 
   <div class="mt-4 grid gap-4 lg:grid-cols-3">
-    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">ReClass</h2><div class="mt-3 space-y-2">{#each data.remedial as r}<div class="rounded-lg bg-muted/50 p-3"><p class="text-sm font-medium">{r.remedial_groups?.name ?? 'Remedial group'}</p><p class="text-xs text-muted-foreground">Joined {r.enrolled_at?.slice(0,10) ?? '—'}</p></div>{:else}<p class="text-sm text-muted-foreground">No current remedial participation.</p>{/each}</div></section>
-    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Finance</h2><p class="mt-3 text-sm text-muted-foreground">{data.invoices.length} invoice record(s) linked to this student.</p></section>
-    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Documents</h2><p class="mt-3 text-sm text-muted-foreground">{data.documents.length} document record(s). Verification history is retained.</p></section>
+    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">ReClass</h2><p class="mt-1 text-xs text-muted-foreground">Remedial participation linked to this student.</p><div class="mt-4 space-y-2">{#each data.remedial as r}<div class="rounded-lg bg-muted/50 p-3"><p class="text-sm font-medium">{r.remedial_groups?.name ?? 'Remedial group'}</p><p class="text-xs text-muted-foreground">Joined {r.enrolled_at?.slice(0,10) ?? '—'}</p></div>{:else}<p class="text-sm text-muted-foreground">No current remedial participation.</p>{/each}</div></section>
+    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Finance</h2><p class="mt-1 text-xs text-muted-foreground">Student-linked billing records.</p><p class="mt-4 text-2xl font-semibold">{data.invoices.length}</p><p class="text-xs text-muted-foreground">invoice record(s)</p></section>
+    <section class="rounded-xl border border-border bg-white p-5"><h2 class="text-sm font-semibold">Documents</h2><p class="mt-1 text-xs text-muted-foreground">Retained student records and verification history.</p><p class="mt-4 text-2xl font-semibold">{data.documents.length}</p><p class="text-xs text-muted-foreground">document record(s)</p></section>
   </div>
 </DashboardContent>
 
