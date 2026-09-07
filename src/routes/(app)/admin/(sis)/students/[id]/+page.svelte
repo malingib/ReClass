@@ -3,7 +3,7 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { enhance } from '$app/forms';
   import { dispatchToast } from '$lib/notifications';
-  const { data } = $props();
+  const { data }: { data: any } = $props();
   const s = $derived(data.student);
   let showEvent = $state(false);
   let showExit = $state(false);
