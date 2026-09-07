@@ -39,7 +39,7 @@ export const actions = {
     return { success: true, message: 'Applicant admitted and student record created.' };
   },
   reject: async ({ locals, request }) => {
-    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin' });
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
     const v = parseForm(idSchema, await request.formData());
     if (!v.success) return fail(400, { errors: v.errors });
     const db = locals.srv as unknown as { from: (table: string) => any };
