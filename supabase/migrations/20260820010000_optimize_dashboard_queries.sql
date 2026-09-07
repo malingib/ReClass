@@ -18,31 +18,24 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     WITH 
-    -- Student counts
     student_counts AS (
         SELECT COUNT(*)::BIGINT as total_students_count
         FROM students 
         WHERE tenant_id = p_tenant_id 
         AND deleted_at IS NULL
     ),
-    
-    -- Teacher counts  
     teacher_counts AS (
         SELECT COUNT(*)::BIGINT as total_teachers_count
         FROM teachers 
         WHERE tenant_id = p_tenant_id 
         AND deleted_at IS NULL
     ),
-    
-    -- Session counts
     session_counts AS (
         SELECT COUNT(*)::BIGINT as total_sessions_count
         FROM sessions 
         WHERE tenant_id = p_tenant_id 
         AND active = true
     ),
-    
-    -- Due session occurrences (last 14 days, not cancelled)
     due_occurrences AS (
         SELECT COUNT(*)::BIGINT as count
         FROM session_occurrences 
@@ -50,8 +43,6 @@ BEGIN
         AND occurs_on BETWEEN p_since_date AND p_today_date
         AND status != 'cancelled'
     ),
-    
-    -- Delivered attendance (approved, present/late)
     delivered_attendance AS (
         SELECT COUNT(*)::BIGINT as count
         FROM teacher_attendance ta
@@ -61,8 +52,6 @@ BEGIN
         AND ta.status IN ('present', 'late')
         AND so.occurs_on BETWEEN p_since_date AND p_today_date
     ),
-    
-    -- Pending attendance count
     pending_attendance AS (
         SELECT COUNT(*)::BIGINT as count
         FROM teacher_attendance 
@@ -70,7 +59,6 @@ BEGIN
         AND approval_status = 'pending'
         AND deleted_at IS NULL
     )
-    
     SELECT 
         COALESCE((SELECT total_students_count FROM student_counts), 0),
         COALESCE((SELECT total_teachers_count FROM teacher_counts), 0),
@@ -96,7 +84,6 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     WITH 
-    -- Daily attendance data for the past 14 days
     daily_attendance AS (
         SELECT 
             so.occurs_on::DATE,
@@ -114,7 +101,6 @@ BEGIN
         GROUP BY so.occurs_on::DATE
         ORDER BY so.occurs_on::DATE
     )
-    
     SELECT 
         COALESCE(jsonb_agg(jsonb_build_object(
             'date', occurs_on::TEXT,
@@ -124,8 +110,6 @@ BEGIN
             'total', total_count,
             'rate', CASE WHEN total_count > 0 THEN ROUND((present_count + late_count) * 100.0 / total_count, 1) ELSE 0 END
         )), '[]') as attendance_data,
-        
-        -- Calculate trend (simplified)
         COALESCE(jsonb_build_object(
             'overall_rate', ROUND(
                 SUM(present_count + late_count) * 100.0 / 
@@ -151,8 +135,8 @@ SELECT
 FROM students s
 LEFT JOIN teachers t ON s.tenant_id = t.tenant_id AND t.deleted_at IS NULL
 LEFT JOIN sessions se ON s.tenant_id = se.tenant_id AND se.active = true
-LEFT JOIN sis_classes c ON s.tenant_id = c.tenant_id AND c.active = true
-LEFT JOIN admissions a ON s.tenant_id = a.tenant_id AND a.created_at >= NOW() - INTERVAL '30 days'
+LEFT JOIN sis_classes c ON s.tenant_id = c.tenant_id AND c.status = 'active'
+LEFT JOIN sis_admissions a ON s.tenant_id = a.tenant_id AND a.created_at >= NOW() - INTERVAL '30 days'
 LEFT JOIN sis_enrollments e ON s.tenant_id = e.tenant_id
 WHERE s.tenant_id = CURRENT_SETTING('app.tenant_id', true)::UUID
 AND s.deleted_at IS NULL
@@ -162,7 +146,6 @@ GROUP BY s.tenant_id;
 CREATE OR REPLACE FUNCTION create_optimized_dashboard_counts_function()
 RETURNS VOID AS $$
 BEGIN
-    -- Function created above, this is just a marker
     RETURN;
 END;
 $$ LANGUAGE plpgsql;
@@ -170,7 +153,6 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION create_optimized_attendance_function()
 RETURNS VOID AS $$
 BEGIN
-    -- Function created above, this is just a marker
     RETURN;
 END;
 $$ LANGUAGE plpgsql;
@@ -178,7 +160,6 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION create_sis_stats_view()
 RETURNS VOID AS $$
 BEGIN
-    -- View created above, this is just a marker
     RETURN;
 END;
 $$ LANGUAGE plpgsql;

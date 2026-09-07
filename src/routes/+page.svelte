@@ -2,7 +2,16 @@
   import { goto } from '$app/navigation';
   import { ArrowRight, Banknote, BookOpen, CheckCircle2, MessageSquare, ShieldCheck, Users } from 'lucide-svelte';
 
-  function goLogin() { goto('/login'); }
+  const roles = [
+    { name: 'School administrator', description: 'Run school operations, staff access, students, communication and specialist workspaces.' },
+    { name: 'Teacher', description: "Start with today's sessions, attendance and the classes or remedial responsibilities assigned to you." },
+    { name: 'Bursar', description: 'Own school-finance collections, reconciliation and payment evidence without mixing in remedial operations.' },
+    { name: 'Parent', description: 'See your children, outstanding balances, payments and school announcements — then pay when needed.' }
+  ];
+
+  function goLogin() {
+    goto('/login');
+  }
 </script>
 
 <svelte:head>
@@ -37,15 +46,10 @@
 
     <section id="roles" class="border-y border-slate-200 bg-white">
       <div class="mx-auto max-w-6xl px-5 py-16 sm:px-8">
-        <div class="max-w-2xl"><p class="text-xs font-bold uppercase tracking-[0.16em] text-primary">Role-first experience</p><h2 class="mt-2 text-3xl font-bold tracking-tight">The right work for the right person.</h2><p class="mt-3 text-sm leading-6 text-slate-500">Users don't need to understand the whole system. eShule puts their responsibilities and next actions first.</p></div>
+        <div class="max-w-2xl"><p class="text-xs font-bold uppercase tracking-[0.16em] text-primary">Role-first experience</p><h2 class="mt-2 text-3xl font-bold tracking-tight">The right work for the right person.</h2><p class="mt-3 text-sm leading-6 text-slate-500">Users do not need to understand the whole system. eShule puts their responsibilities and next actions first.</p></div>
         <div class="mt-10 grid gap-4 md:grid-cols-2">
-          {#each [
-            ['School administrator', 'Run school operations, staff access, students, communication and specialist workspaces.'],
-            ['Teacher', 'Start with today's sessions, attendance and the classes or remedial responsibilities assigned to you.'],
-            ['Bursar', 'Own school-finance collections, reconciliation and payment evidence without mixing in remedial operations.'],
-            ['Parent', 'See your children, outstanding balances, payments and school announcements — then pay when needed.']
-          ] as role}
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div class="flex items-start gap-3"><CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div><h3 class="text-sm font-semibold">{role[0]}</h3><p class="mt-1 text-sm leading-6 text-slate-500">{role[1]}</p></div></div></div>
+          {#each roles as role}
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div class="flex items-start gap-3"><CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div><h3 class="text-sm font-semibold">{role.name}</h3><p class="mt-1 text-sm leading-6 text-slate-500">{role.description}</p></div></div></div>
           {/each}
         </div>
       </div>
