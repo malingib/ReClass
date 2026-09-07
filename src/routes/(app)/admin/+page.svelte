@@ -1,5 +1,5 @@
 <script lang="ts">
-  const { data } = $props();
+  const { data }: { data: any } = $props();
   const work = [
     { title: 'Students', description: 'Add students, review records and manage enrolment.', href: '/admin/students', icon: 'M16 11a4 4 0 10-8 0 4 4 0 008 0zm-10 9a6 6 0 0112 0' },
     { title: 'Fees & finance', description: 'Track income, expenses, receipts and balances.', href: '/admin/finance', icon: 'M3 10h18M5 6h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z' },
