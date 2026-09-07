@@ -1,6 +1,7 @@
 import type { SupabaseClient, Session, User } from '@supabase/supabase-js';
 import type { Role } from '$lib/auth';
 import type { Database } from '$lib/supabase/database.types';
+import type { OperationsDatabase } from '$lib/supabase/operations.types';
 
 declare global {
   namespace App {
@@ -15,8 +16,8 @@ declare global {
       role: Role | null;
       roles: Role[] | null;
       tenantId: string;
-      srv: SupabaseClient<Database>;
-      adminSrv: SupabaseClient<Database>;
+      srv: SupabaseClient<OperationsDatabase>;
+      adminSrv: SupabaseClient<OperationsDatabase>;
       requestId: string;
     }
     interface PageData {
