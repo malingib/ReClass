@@ -36,9 +36,9 @@ export async function getTeachersList(sb: App.Locals['srv'], tenantId: string) {
   return data ?? [];
 }
 
-async function addPayrollComponents(sb: App.Locals['srv'], components: PayrollComponentInsert[]) {
+async function addPayrollComponents(sb: App.Locals['srv'], tenantId: string, components: PayrollComponentInsert[]) {
   if (components.length === 0) return null;
-  const { error } = await sb.from('payroll_components').insert(components);
+  const { error } = await sb.from('payroll_components').insert(components).eq('tenant_id', tenantId);
   return error ?? null;
 }
 
@@ -77,7 +77,7 @@ export async function generateRemedialPayroll(sb: App.Locals['srv'], tid: string
     const source = payrollRecords.find((p) => p.teacher_id === run.teacher_id)!;
     return { tenant_id: tid, payroll_run_id: run.id, teacher_id: run.teacher_id, component_type: 'remedial', description: `Remedial teaching: ${source.occurrences_count} attended sessions`, quantity: source.occurrences_count, rate: source.rate_per_session, amount: source.amount, source_type: 'teacher_attendance', metadata: { period_start: periodStart, period_end: periodEnd } };
   });
-  const componentError = await addPayrollComponents(sb, components);
+  const componentError = await addPayrollComponents(sb, tid, components);
   if (componentError) { logError('payroll_components_generate', componentError, { periodStart, periodEnd }); return fail(500, { error: 'Payroll was created but compensation lines could not be recorded. Do not pay until this is resolved.' }); }
 
   return { success: true as const, count: payrollRecords.length, totalAmount: payrollRecords.reduce((sum, r) => sum + r.amount, 0), periodStart, periodEnd };
@@ -104,7 +104,7 @@ export async function generateSchoolPayroll(sb: App.Locals['srv'], tid: string, 
     const source = payrollRecords.find((p) => p.teacher_id === run.teacher_id)!;
     return { tenant_id: tid, payroll_run_id: run.id, teacher_id: run.teacher_id, component_type: 'base_salary', description: 'Monthly contractual salary', quantity: 1, rate: source.amount, amount: source.amount, source_type: 'salary_contract', metadata: { period_start: periodStart, period_end: periodEnd } };
   });
-  const componentError = await addPayrollComponents(sb, components);
+  const componentError = await addPayrollComponents(sb, tid, components);
   if (componentError) { logError('payroll_components_generate_school', componentError, { periodStart, periodEnd }); return fail(500, { error: 'Payroll was created but compensation lines could not be recorded. Do not pay until this is resolved.' }); }
 
   return { success: true as const, count: payrollRecords.length, totalAmount: payrollRecords.reduce((sum, r) => sum + r.amount, 0), periodStart, periodEnd };
