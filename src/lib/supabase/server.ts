@@ -1,8 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import type { Cookies } from '@sveltejs/kit';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
+const PUBLIC_SUPABASE_URL = env.PUBLIC_SUPABASE_URL ?? '';
+const PUBLIC_SUPABASE_ANON_KEY = env.PUBLIC_SUPABASE_ANON_KEY ?? '';
+const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 import type { Database } from './database.types';
 
 // SvelteKit's dev-mode SSR replaces `globalThis.fetch` for the duration of a
