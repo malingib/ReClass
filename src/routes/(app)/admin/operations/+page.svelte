@@ -2,9 +2,9 @@
   import { ArrowRight, BookOpenCheck, CalendarDays, GraduationCap, LayoutDashboard, WalletCards, UsersRound } from 'lucide-svelte';
   const modules = [
     { title: 'Admissions & enrollment', text: 'Intake, learner records and enrollment follow-through.', href: '/admin/admissions', icon: UsersRound },
-    { title: 'Student lifecycle', text: 'Follow each learner from admission through movement and completion.', href: '/admin/admissions', icon: GraduationCap },
-    { title: 'ReClass remedials', text: 'Run remedial sessions, attendance and programme operations.', href: '/teacher/committee', icon: BookOpenCheck },
-    { title: 'School calendar', text: 'Coordinate school events, exams, meetings and deadlines.', href: '/principal/school', icon: CalendarDays },
+    { title: 'Student lifecycle', text: 'Follow each learner from admission through movement and completion.', href: '/admin/students', icon: GraduationCap },
+    { title: 'ReClass remedials', text: 'Run remedial sessions, attendance, learner support and programme operations.', href: '/admin/reclass', icon: BookOpenCheck },
+    { title: 'School calendar', text: 'Coordinate school events, exams, meetings and deadlines.', href: '/admin/calendar', icon: CalendarDays },
     { title: 'Teacher workspace', text: 'Today, classes, timetable and assigned tasks.', href: '/teacher', icon: LayoutDashboard },
     { title: 'Finance & parent payments', text: 'Keep fees, reconciliation, payroll and payment evidence connected.', href: '/bursar', icon: WalletCards }
   ];
@@ -22,5 +22,5 @@
       </a>
     {/each}
   </div>
-  <div class="rounded-2xl border border-primary/15 bg-primary/5 p-5 text-sm"><strong>Delivery rule:</strong> role ownership stays explicit. Teachers teach and record; ReClass handles remedial operations; Bursar owns school finance; Payroll owns compensation; parents see their children's records and payment actions.</div>
+  <div class="rounded-2xl border border-primary/15 bg-primary/5 p-5 text-sm"><strong>Delivery rule:</strong> role ownership stays explicit. Teachers teach and record; ReClass handles remedial operations; Bursar owns school finance; Payroll owns compensation; parents see their children's records and payment actions. Discipline is intentionally outside the active delivery sequence.</div>
 </div>
