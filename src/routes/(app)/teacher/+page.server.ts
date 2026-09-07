@@ -13,9 +13,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const from = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
   const through = new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
+  const calendarThrough = new Date(Date.now() + 30 * 864e5).toISOString();
 
-  // Remedial teachers see their whole-class remedial sessions.
-  const [{ data: timetable }, { data: occurrences }, { data: announcements }, { data: homeroomClasses }] = await Promise.all([
+  const [{ data: timetable }, { data: occurrences }, { data: announcements }, { data: homeroomClasses }, { data: calendarEvents }, { data: tasks }] = await Promise.all([
     canRemedial
       ? locals.srv
           .from('sessions')
@@ -52,6 +52,23 @@ export const load: PageServerLoad = async ({ locals }) => {
           .eq('homeroom_teacher_id', teacher.id)
           .eq('status', 'active')
       : Promise.resolve({ data: [] as unknown[], error: null }),
+    locals.srv
+      .from('school_calendar_events')
+      .select('id, title, event_type, starts_at, ends_at, all_day, audience, location')
+      .eq('tenant_id', tenantId)
+      .in('audience', ['teachers', 'all', 'staff'])
+      .gte('starts_at', new Date().toISOString())
+      .lte('starts_at', calendarThrough)
+      .order('starts_at')
+      .limit(8),
+    locals.srv
+      .from('teacher_tasks')
+      .select('id, title, description, due_at, priority, status, reminder_minutes')
+      .eq('tenant_id', tenantId)
+      .eq('teacher_id', teacher.id)
+      .in('status', ['open', 'in_progress'])
+      .order('due_at')
+      .limit(8),
   ]);
 
   const delivery = ((occurrences ?? []) as Record<string, unknown>[]).map((occurrence) => ({
@@ -78,13 +95,14 @@ export const load: PageServerLoad = async ({ locals }) => {
     timetable: timetable ?? [],
     occurrences: delivery,
     announcements: announcements ?? [],
+    calendarEvents: calendarEvents ?? [],
+    tasks: tasks ?? [],
   };
 };
 
 export const actions = {
   mark: async ({ locals, request }) => {
     const { user, tenantId, teacher } = await getTeacherOwnership(locals);
-    // Only teachers with remedial attendance capability may mark delivery.
     if (!hasCapability(locals.role, teacher.teacher_type, 'remedial:attendance_mark')) {
       return fail(403, { error: 'You do not have permission to mark remedial attendance' });
     }

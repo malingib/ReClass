@@ -10,7 +10,6 @@ type PayrollDraft = {
   occurrences_count: number; rate_per_session: number; amount: number; status: string;
   domain: 'school' | 'remedial'; salary_amount?: number | null;
 };
-
 type PayrollComponentInsert = {
   tenant_id: string; payroll_run_id: string; teacher_id: string;
   component_type: 'base_salary' | 'allowance' | 'remedial' | 'committee' | 'role_specific' | 'adjustment';
@@ -38,7 +37,8 @@ export async function getTeachersList(sb: App.Locals['srv'], tenantId: string) {
 
 async function addPayrollComponents(sb: App.Locals['srv'], components: PayrollComponentInsert[]) {
   if (components.length === 0) return null;
-  const { error } = await sb.from('payroll_components').insert(components);
+  const scopedComponents = components.map((component) => ({ tenant_id: component.tenant_id, ...component }));
+  const { error } = await sb.from('payroll_components').insert(scopedComponents);
   return error ?? null;
 }
 
@@ -46,17 +46,13 @@ async function addPayrollComponents(sb: App.Locals['srv'], components: PayrollCo
 export async function generateRemedialPayroll(sb: App.Locals['srv'], tid: string, periodStart: string, periodEnd: string) {
   if (!periodStart || !periodEnd) return fail(400, { error: 'Period start and end dates are required.' });
   if (new Date(periodEnd) < new Date(periodStart)) return fail(400, { error: 'Period end must be after period start.' });
-
   const { data: tenant } = await sb.from('tenants').select('payroll_rate_per_session').eq('id', tid).single();
   const ratePerSession = Number(tenant?.payroll_rate_per_session ?? 0);
   if (ratePerSession <= 0) return fail(400, { error: 'Payroll rate per session is not set. Configure it in Settings > Academic.' });
-
   const { data: teacherRates } = await sb.from('teachers').select('id, remedial_rate_per_session').eq('tenant_id', tid).is('deleted_at', null);
   const rateById = new Map<string, number>((teacherRates ?? []).map((t: { id: string; remedial_rate_per_session?: number | null }) => [t.id, Number(t.remedial_rate_per_session ?? 0)]));
-
   const { data: counts, error: countErr } = await rpc<{ teacher_id: string; occurrences_count: number }[]>(sb, 'aggregate_payroll_counts', { p_tenant_id: tid, p_period_start: periodStart, p_period_end: periodEnd });
   if (countErr) { logError('payroll_generate', countErr, { periodStart, periodEnd }); return fail(500, { error: 'Failed to count attendance. Please try again.' }); }
-
   const payrollRecords: PayrollDraft[] = [];
   for (const row of counts ?? []) {
     if (row.occurrences_count === 0) continue;
@@ -65,21 +61,18 @@ export async function generateRemedialPayroll(sb: App.Locals['srv'], tid: string
     payrollRecords.push({ tenant_id: tid, teacher_id: row.teacher_id, period_start: periodStart, period_end: periodEnd, occurrences_count: row.occurrences_count, rate_per_session: effectiveRate, amount: row.occurrences_count * effectiveRate, status: 'draft', domain: 'remedial' });
   }
   if (payrollRecords.length === 0) return fail(400, { error: 'No teacher attendance found in this period. Mark attendance first.' });
-
   const { data: insertedRuns, error: insertError } = await sb.from('payroll_runs').upsert(payrollRecords, { onConflict: 'tenant_id,teacher_id,period_start,period_end,domain', ignoreDuplicates: false }).select('id, teacher_id');
   if (insertError) {
     logError('payroll_generate', insertError, { periodStart, periodEnd });
     if (insertError.code === '23505') return fail(409, { error: 'Payroll for this period already exists. Delete existing runs first or choose a different period.' });
     return fail(500, { error: 'Failed to generate payroll records. Please try again.' });
   }
-
   const components: PayrollComponentInsert[] = (insertedRuns ?? []).map((run: { id: string; teacher_id: string }) => {
     const source = payrollRecords.find((p) => p.teacher_id === run.teacher_id)!;
     return { tenant_id: tid, payroll_run_id: run.id, teacher_id: run.teacher_id, component_type: 'remedial', description: `Remedial teaching: ${source.occurrences_count} attended sessions`, quantity: source.occurrences_count, rate: source.rate_per_session, amount: source.amount, source_type: 'teacher_attendance', metadata: { period_start: periodStart, period_end: periodEnd } };
   });
   const componentError = await addPayrollComponents(sb, components);
   if (componentError) { logError('payroll_components_generate', componentError, { periodStart, periodEnd }); return fail(500, { error: 'Payroll was created but compensation lines could not be recorded. Do not pay until this is resolved.' }); }
-
   return { success: true as const, count: payrollRecords.length, totalAmount: payrollRecords.reduce((sum, r) => sum + r.amount, 0), periodStart, periodEnd };
 }
 
@@ -87,11 +80,9 @@ export async function generateRemedialPayroll(sb: App.Locals['srv'], tid: string
 export async function generateSchoolPayroll(sb: App.Locals['srv'], tid: string, periodStart: string, periodEnd: string) {
   if (!periodStart || !periodEnd) return fail(400, { error: 'Period start and end dates are required.' });
   if (new Date(periodEnd) < new Date(periodStart)) return fail(400, { error: 'Period end must be after period start.' });
-
   const { data: salaried } = await sb.from('teachers').select('id, salary_monthly').eq('tenant_id', tid).is('deleted_at', null).not('salary_monthly', 'is', null).gt('salary_monthly', 0);
   const teachers = salaried ?? [];
   if (teachers.length === 0) return fail(400, { error: 'No salaried (B.O.M.) teachers found. Set a monthly salary on teacher records first.' });
-
   const payrollRecords: PayrollDraft[] = teachers.map((t: { id: string; salary_monthly?: number | null }) => ({ tenant_id: tid, teacher_id: t.id, period_start: periodStart, period_end: periodEnd, occurrences_count: 1, rate_per_session: 0, amount: Number(t.salary_monthly ?? 0), status: 'draft', domain: 'school', salary_amount: Number(t.salary_monthly ?? 0) }));
   const { data: insertedRuns, error: insertError } = await sb.from('payroll_runs').upsert(payrollRecords, { onConflict: 'tenant_id,teacher_id,period_start,period_end,domain', ignoreDuplicates: false }).select('id, teacher_id');
   if (insertError) {
@@ -99,14 +90,12 @@ export async function generateSchoolPayroll(sb: App.Locals['srv'], tid: string, 
     if (insertError.code === '23505') return fail(409, { error: 'School payroll for this period already exists. Delete existing runs first or choose a different period.' });
     return fail(500, { error: 'Failed to generate school payroll records. Please try again.' });
   }
-
   const components: PayrollComponentInsert[] = (insertedRuns ?? []).map((run: { id: string; teacher_id: string }) => {
     const source = payrollRecords.find((p) => p.teacher_id === run.teacher_id)!;
     return { tenant_id: tid, payroll_run_id: run.id, teacher_id: run.teacher_id, component_type: 'base_salary', description: 'Monthly contractual salary', quantity: 1, rate: source.amount, amount: source.amount, source_type: 'salary_contract', metadata: { period_start: periodStart, period_end: periodEnd } };
   });
   const componentError = await addPayrollComponents(sb, components);
   if (componentError) { logError('payroll_components_generate_school', componentError, { periodStart, periodEnd }); return fail(500, { error: 'Payroll was created but compensation lines could not be recorded. Do not pay until this is resolved.' }); }
-
   return { success: true as const, count: payrollRecords.length, totalAmount: payrollRecords.reduce((sum, r) => sum + r.amount, 0), periodStart, periodEnd };
 }
 

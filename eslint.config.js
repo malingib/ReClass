@@ -1,11 +1,11 @@
 import svelte from 'eslint-plugin-svelte';
 import ts from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
 import svelteParser from 'svelte-eslint-parser';
+import tsParser from '@typescript-eslint/parser';
 
 export default [
   {
-    ignores: ['**/.svelte-kit/**', '**/node_modules/**', '**/build/**'],
+    ignores: ['**/.svelte-kit/**', '**/node_modules/**', '**/build/**', 'autonomous-agent-system/**'],
   },
   {
     files: ['**/*.svelte'],
@@ -24,8 +24,6 @@ export default [
     },
   },
   {
-    // shadcn/ui boilerplate uses `let` with $props() for consistency — noisy
-    // `prefer-const` warnings here add no signal and drown real issues.
     files: ['src/lib/components/ui/**/*.svelte'],
     rules: {
       'prefer-const': 'off',
@@ -47,7 +45,6 @@ export default [
     },
   },
   {
-    // Tests use permissive mocks — `any` in fixtures is idiomatic.
     files: ['**/__tests__/**/*.ts'],
     languageOptions: {
       parser: tsParser,
