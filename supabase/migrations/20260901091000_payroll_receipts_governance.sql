@@ -119,13 +119,13 @@ end; $$;
 create or replace function public.finalize_payroll_payment_approval(p_payment_id uuid)
 returns public.payroll_payments language plpgsql security definer set search_path=public as $$
 declare p public.payroll_payments; r public.payment_receipts; template_id uuid; begin
-  select * into p from public.payroll_payments where id=p_payment_id for update;
+  select pp.* into p from public.payroll_payments pp join public.payroll_periods period on period.id=pp.payroll_id where pp.id=p_payment_id for update;
   if not found then raise exception 'Payment not found'; end if;
   if p.status not in ('initiated','pending') then raise exception 'Payment is not awaiting approval'; end if;
   if p.initiated_by is not null and p.initiated_by=auth.uid() then raise exception 'Payment initiator cannot approve the same payment'; end if;
   update public.payroll_payments set status='approved',approved_by=auth.uid(),approved_at=now() where id=p.id returning * into p;
   insert into public.payment_receipts(tenant_id,payment_id,payment_domain,recipient_user_id,teacher_user_id,amount,receipt_number,payment_reference,payment_method,confirmation_status,metadata)
-  select pp.tenant_id,p.id,'payroll',p.teacher_user_id,p.teacher_user_id,p.amount,public.next_payment_receipt_number(),p.payment_reference,'payroll',case when p.status='paid' then 'pending' else 'pending' end,jsonb_build_object('payroll_id',p.payroll_id)
+  select pp.tenant_id,p.id,'payroll',p.teacher_user_id,p.teacher_user_id,p.amount,public.next_payment_receipt_number(),p.payment_reference,'payroll','pending',jsonb_build_object('payroll_id',p.payroll_id)
   from public.payroll_periods pp where pp.id=p.payroll_id
   on conflict (payment_id) do nothing returning * into r;
   select id into template_id from public.notification_templates where key='PAYMENT_APPROVED_TEACHER' and channel='in_app' and active=true order by version desc limit 1;
