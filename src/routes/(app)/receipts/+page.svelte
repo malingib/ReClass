@@ -1,7 +1,7 @@
 <script lang="ts">
   import DashboardContent from '$lib/components/DashboardContent.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
-  const { data } = $props();
+  const { data }: { data: any } = $props();
   const receipts = $derived(data.receipts ?? []);
   function printReceipt(id: string) { window.open(`/receipts/${id}/print`, '_blank', 'noopener,noreferrer'); }
 </script>
