@@ -27,7 +27,7 @@
       <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary">Parent home</p>
-          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-ink-900 sm:text-4xl">Welcome{data.parent?.full_name ? `, ${data.parent.first_name}` : ''}.</h1>
+          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-ink-900 sm:text-4xl">Welcome{data.parent?.full_name ? `, ${data.parent.full_name}` : ''}.</h1>
           <p class="mt-3 max-w-xl text-sm leading-6 text-ink-500">Your children's school records, fee balances and payment history are together here.</p>
         </div>
         <div class="rounded-2xl border border-white/80 bg-white px-5 py-4 shadow-sm">
