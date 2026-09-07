@@ -23,9 +23,12 @@ import { join, relative, sep } from 'node:path';
 import {
   MODULES,
   KERNEL_MODULES,
-  PUBLIC_SURFACE,
   canImport,
 } from '../packages/shared/src/lib/modules.js';
+
+// Keep the boundary checker self-contained: modules.js is the canonical
+// registry, while this is a validation rule rather than registry metadata.
+const PUBLIC_SURFACE = ['index.ts', 'contracts.ts', 'api.ts'];
 
 const root = process.cwd();
 const serverRoot = join(root, 'src', 'lib', 'server');
@@ -125,7 +128,6 @@ if (!latestSeed) {
   seedWarnings.push('no migration contains a tenant_modules INSERT — seed mirror unverified');
 } else {
   const sql = latestSeed.sql;
-  // Only the tenant_modules backfill block, to avoid other ARRAY[...] literals.
   const start = sql.indexOf('INSERT INTO public.tenant_modules');
   const end = sql.indexOf('ON CONFLICT', start);
   const block = end === -1 ? sql.slice(start) : sql.slice(start, end);
