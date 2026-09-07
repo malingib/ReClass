@@ -1,5 +1,5 @@
 <script lang="ts">
-  const { data, form } = $props();
+  const { data, form }: { data: any; form: any } = $props();
   let roleId = $state(''); let teacherId = $state(''); let rightsAssignmentId = $state(''); let selectedRights = $state<string[]>([]); let operatorMember = $state(''); let operatorRole = $state('initiator'); let approvalLevel = $state(1);
   const toggleRight = (code: string) => selectedRights = selectedRights.includes(code) ? selectedRights.filter((r) => r !== code) : [...selectedRights, code];
   const rightsFor = (id: string) => data.rights.filter((r: any) => r.assignment_id === id).map((r: any) => r.right_code);
