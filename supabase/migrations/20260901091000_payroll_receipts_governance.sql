@@ -88,7 +88,7 @@ create index if not exists payroll_periods_tenant_idx on public.payroll_periods(
 create index if not exists payroll_lines_payroll_idx on public.payroll_lines(payroll_id);
 create index if not exists payroll_payments_teacher_idx on public.payroll_payments(teacher_user_id,created_at desc);
 create index if not exists receipts_tenant_paid_idx on public.payment_receipts(tenant_id,paid_at desc);
-create index if not exists receipts_teacher_idx on public.payment_receipts(teacher_user_id,paid_at desc);
+create index if not exists receipts_recipient_idx on public.payment_receipts(recipient_user_id,paid_at desc);
 create index if not exists receipts_student_idx on public.payment_receipts(student_id,paid_at desc);
 
 -- Receipt numbering is intentionally generated server-side and is independent of payroll numbering.
