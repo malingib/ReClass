@@ -1,6 +1,6 @@
 <script lang="ts">
  import DashboardContent from '$lib/components/DashboardContent.svelte';
- const {data}= $props();
+ const {data}: {data:any}= $props();
  const money=(v:number)=>`KES ${Number(v||0).toLocaleString()}`;
  const maxAtt=Math.max(1,...(data.attendance??[]).map((d:any)=>Number(d.total||0)));
  const maxPay=Math.max(1,...(data.payments??[]).map((p:any)=>Number(p.amount||0)));
