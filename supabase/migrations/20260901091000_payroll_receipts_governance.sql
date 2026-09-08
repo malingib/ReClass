@@ -16,6 +16,9 @@ create table if not exists public.payroll_payments (
 create table if not exists public.payment_receipts (
   id uuid primary key default gen_random_uuid(), tenant_id uuid not null, payment_id uuid, payment_domain text not null check (payment_domain in ('school_fee','reclass','payroll','other')), payer_user_id uuid, recipient_user_id uuid, student_id uuid, teacher_user_id uuid, amount numeric(12,2) not null, currency text not null default 'KES', receipt_number text not null unique, payment_reference text, payment_method text, paid_at timestamptz not null default now(), confirmation_status text not null default 'not_required' check (confirmation_status in ('not_required','pending','confirmed')), confirmed_by uuid, confirmed_at timestamptz, metadata jsonb not null default '{}'::jsonb, created_at timestamptz not null default now()
 );
+
+alter table public.payment_receipts add column if not exists teacher_user_id uuid;
+
 create index if not exists payroll_periods_tenant_idx on public.payroll_periods(tenant_id,period_start desc);
 create index if not exists payroll_lines_payroll_idx on public.payroll_lines(payroll_id);
 create index if not exists payroll_payments_teacher_idx on public.payroll_payments(teacher_user_id,created_at desc);
