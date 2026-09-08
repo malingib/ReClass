@@ -26,7 +26,7 @@
     role?:Role; roles?:Role[]|null; user?:{name?:string;email?:string}; brandName?:string; logoUrl?:string;
     tenantId?:string|null; canAccessCommittee?:boolean; children?:import('svelte').Snippet;
   };
-  const { title, subtitle='', headerActions, rightRail, role='school_admin', roles=null, user={name:'eShule Admin',email:'admin@eshule.app'}, brandName='eShule', logoUrl='', tenantId=null, canAccessCommittee=false, children } = $props<Props>();
+  let { title, subtitle='', headerActions, rightRail, role='school_admin', roles=null, user={name:'eSHule Admin',email:'admin@eshule.app'}, brandName='eShule', logoUrl='', tenantId=null, canAccessCommittee=false, children }: Props = $props();
 
   const adminNav: NavGroup[] = [
     {label:'Today',items:[{label:'Dashboard',href:'/admin',icon:'home'}]},
@@ -39,15 +39,15 @@
   ];
   const roleNav: Record<Role,NavGroup[]> = {
     school_admin:adminNav,
-    teacher:[{label:'Today',items:[{label:'Dashboard',href:'/teacher',icon:'home'},{label:'Timetable',href:'/teacher/timetable',icon:'calendar'},{label:'Classes',href:'/teacher/classes',icon:'class'}]},...(canAccessCommittee?[{label:'Responsibilities',items:[{label:'Committee',href:'/teacher/committee',icon:'teachers'}]}]:[]),{label:'Account',items:[{label:'Profile',href:'/account',icon:'settings'}]}],
+    teacher:[{label:'Today',items:[{label:'Dashboard',href:'/teacher',icon:'home'},{label:'Timetable',href:'/teacher/timetable',icon:'calendar'},{label:'Classes',href:'/teacher/classes',icon:'class'}]},...(canAccessCommittee?[{label:'Responsibilities',items:[{label:'Committee',href:'/teacher/committee',icon:'teachers'}]} as NavGroup]:[]),{label:'Account',items:[{label:'Profile',href:'/account',icon:'settings'}]}],
     parent:[{label:'My child',items:[{label:'Home',href:'/parent',icon:'home'},{label:'Profile',href:'/parent/child',icon:'students'},{label:'Timetable',href:'/parent/timetable',icon:'calendar'},{label:'Fees',href:'/parent/fees',icon:'finance'},{label:'Pay',href:'/parent/pay',icon:'receipt'},{label:'Payments',href:'/parent/payments',icon:'receipt'}]}],
     principal:[{label:'Today',items:[{label:'Overview',href:'/principal',icon:'home'}]},{label:'Insights',items:[{label:'Effectiveness',href:'/principal/effectiveness',icon:'report'},{label:'School overview',href:'/principal/school',icon:'students'},{label:'Reports',href:'/principal/reports',icon:'report'}]}],
     bursar:[{label:'Finance',items:[{label:'Workspace',href:'/bursar',icon:'home'},{label:'Receipts',href:'/bursar/receipts',icon:'receipt'}]}],
     super_admin:[{label:'Platform',items:[{label:'Dashboard',href:'/super-admin',icon:'home'},{label:'Tenants',href:'/super-admin/tenants',icon:'students'},{label:'Modules',href:'/super-admin/modules',icon:'class'},{label:'Audit',href:'/super-admin/audit',icon:'report'},{label:'Settings',href:'/super-admin/settings',icon:'settings'}]}]
   };
-  const nav = $derived(roleNav[role] ?? adminNav);
-  const allItems = $derived(nav.flatMap((group) => group.items));
-  const mobileItems = $derived(allItems.slice(0,4));
+  const nav: NavGroup[] = $derived(roleNav[role] ?? adminNav);
+  const allItems: NavItem[] = $derived(nav.flatMap((group: NavGroup) => group.items));
+  const mobileItems: NavItem[] = $derived(allItems.slice(0,4));
   let profileOpen=$state(false); let moreOpen=$state(false);
   function isActive(href:string){const roots=['/admin','/teacher','/parent','/principal','/bursar','/super-admin'];return roots.includes(href)?$page.url.pathname===href:$page.url.pathname.startsWith(href);}
   function handleLogout(){goto('/api/logout');}
