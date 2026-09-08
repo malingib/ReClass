@@ -3,7 +3,7 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ params, locals }) => {
   const { data: student, error: studentError } = await locals.supabase
     .from('students')
-    .select('id, admission_number, first_name, last_name, status, class_id, created_at')
+    .select('id, admission_no, first_name, last_name, class_id, created_at')
     .eq('id', params.id)
     .single();
 
