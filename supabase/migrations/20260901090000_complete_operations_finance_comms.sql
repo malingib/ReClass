@@ -148,12 +148,12 @@ ON CONFLICT DO NOTHING;
 
 -- Analytics views use live transactional data; no seeded/demo metrics.
 CREATE OR REPLACE VIEW public.v_teacher_attendance_daily AS
-SELECT tenant_id, occurs_on::date AS day,
+SELECT ta.tenant_id, so.occurs_on::date AS day,
   count(*) FILTER (WHERE status='attended') AS attended,
   count(*) FILTER (WHERE status='absent') AS absent,
   count(*) AS total
 FROM public.teacher_attendance ta JOIN public.session_occurrences so ON so.id=ta.occurrence_id
-WHERE ta.deleted_at IS NULL GROUP BY tenant_id,occurs_on::date;
+WHERE ta.deleted_at IS NULL GROUP BY ta.tenant_id,so.occurs_on::date;
 
 CREATE OR REPLACE VIEW public.v_payroll_weekly AS
 SELECT tenant_id, period_start, period_end, count(*) AS teacher_count,
