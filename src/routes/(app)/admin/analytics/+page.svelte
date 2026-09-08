@@ -4,7 +4,6 @@
  import DashboardContent from '$lib/components/DashboardContent.svelte';
  const {data}: {data:any}= $props();
  const money=(v:number)=>`KES ${Number(v||0).toLocaleString()}`;
- const admissionsMix = data.admissionsMix ?? [{label:'Paid',value:data.kpis.paidTransactions ?? 0},{label:'Other',value:Math.max(0,(data.kpis.invoices ?? 0)-(data.kpis.paidTransactions ?? 0))}];
 </script>
 <DashboardContent title="Analytics" subtitle="Interactive operational intelligence for students, attendance, finance and payroll.">
  {#snippet headerActions()}<div class="flex gap-2">{#each [7,30,90] as d}<a class={`rounded-lg border px-3 py-2 text-xs font-semibold ${data.days===d?'border-primary bg-primary text-primary-foreground':'border-slate-200 bg-white text-slate-600'}`} href={`?days=${d}`}>{d} days</a>{/each}</div>{/snippet}
