@@ -1,6 +1,9 @@
 import { createBrowserClient } from '@supabase/ssr';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 import type { Database } from './database.types';
+
+const PUBLIC_SUPABASE_URL = env.PUBLIC_SUPABASE_URL ?? '';
+const PUBLIC_SUPABASE_ANON_KEY = env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 let client: ReturnType<typeof createBrowserClient<Database>> | undefined;
 
