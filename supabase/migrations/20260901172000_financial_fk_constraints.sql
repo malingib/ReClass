@@ -1,17 +1,17 @@
 -- ReClass Migration 20260901172000 — explicit composite uniqueness for tenant-aware FKs
--- PostgreSQL foreign keys must target a primary key or a suitable non-partial
--- unique constraint/index. Keep explicit constraints for predictable migration replay.
+-- PostgreSQL foreign keys may target a suitable non-partial unique index. The
+-- legacy database already contains a relation named uq_payments_tenant_id_id,
+-- so use distinct idempotent index names rather than creating same-named
+-- constraints (which also create same-named backing indexes).
 
 DO $$
 BEGIN
-  IF to_regclass('public.payments') IS NOT NULL
-     AND NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_payments_tenant_id_id' AND conrelid = 'public.payments'::regclass) THEN
-    ALTER TABLE public.payments ADD CONSTRAINT uq_payments_tenant_id_id UNIQUE (tenant_id, id);
+  IF to_regclass('public.payments') IS NOT NULL THEN
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS uq_payments_tenant_id_id_key ON public.payments (tenant_id, id)';
   END IF;
 
-  IF to_regclass('public.invoices') IS NOT NULL
-     AND NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_invoices_tenant_id_id' AND conrelid = 'public.invoices'::regclass) THEN
-    ALTER TABLE public.invoices ADD CONSTRAINT uq_invoices_tenant_id_id UNIQUE (tenant_id, id);
+  IF to_regclass('public.invoices') IS NOT NULL THEN
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS uq_invoices_tenant_id_id_key ON public.invoices (tenant_id, id)';
   END IF;
 END;
 $$;
