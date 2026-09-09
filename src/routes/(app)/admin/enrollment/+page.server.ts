@@ -1,0 +1,32 @@
+import { fail } from '@sveltejs/kit';
+import { z } from 'zod/v3';
+import type { Actions, PageServerLoad } from './$types';
+import { requireTenantRole } from '$lib/server/_auth/auth';
+import { parseForm } from '$lib/server/_platform/validation';
+
+const schema = z.object({ student_id: z.string().uuid(), class_id: z.string().uuid(), academic_year: z.string().min(4).max(20), enrolled_at: z.string().min(10).max(10) });
+
+export const load: PageServerLoad = async ({ locals }) => {
+  const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
+  const [students, classes, enrollments] = await Promise.all([
+    locals.srv.from('students').select('id, first_name, last_name, admission_no').eq('tenant_id', tenantId).is('deleted_at', null).order('last_name'),
+    locals.srv.from('sis_classes').select('id, name, stream, code, academic_year').eq('tenant_id', tenantId).eq('status', 'active').order('name'),
+    locals.srv.from('sis_enrollments').select('id, student_id, class_id, academic_year, status, enrolled_at, sis_classes(name, stream, code), students(first_name, last_name, admission_no)').eq('tenant_id', tenantId).order('enrolled_at', { ascending: false }).limit(100)
+  ]);
+  if (students.error) throw new Error(students.error.message);
+  if (classes.error) throw new Error(classes.error.message);
+  if (enrollments.error) throw new Error(enrollments.error.message);
+  return { students: students.data ?? [], classes: classes.data ?? [], enrollments: enrollments.data ?? [] };
+};
+
+export const actions = {
+  create: async ({ locals, request }) => {
+    const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
+    const value = parseForm(schema, await request.formData());
+    if (!value.success) return fail(400, { errors: value.errors });
+    const { data, error } = await locals.srv.from('sis_enrollments').insert({ tenant_id: tenantId, student_id: value.data.student_id, class_id: value.data.class_id, academic_year: value.data.academic_year, status: 'active', enrolled_at: value.data.enrolled_at }).select('id').single();
+    if (error) return fail(error.code === '23505' ? 409 : 500, { message: error.message });
+    await locals.srv.from('student_lifecycle_events').insert({ tenant_id: tenantId, student_id: value.data.student_id, event_type: 'enrolled', event_date: value.data.enrolled_at, to_class_id: value.data.class_id });
+    return { success: true, id: data?.id };
+  }
+} satisfies Actions;
