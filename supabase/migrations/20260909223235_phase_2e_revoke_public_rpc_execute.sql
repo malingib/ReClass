@@ -1,0 +1,21 @@
+-- SECURITY DEFINER RPCs used by the authenticated application should never be callable anonymously.
+revoke execute on function public.claim_notifications(integer) from public;
+revoke execute on function public.current_user_has_any_permission(text[]) from public;
+revoke execute on function public.current_user_has_permission(text) from public;
+revoke execute on function public.current_user_has_role(text) from public;
+revoke execute on function public.current_user_is_staff() from public;
+revoke execute on function public.next_payment_receipt_number() from public;
+revoke execute on function public.appoint_reclass_committee_member(uuid,uuid,date,date,text) from public;
+revoke execute on function public.end_reclass_committee_assignment(uuid,date) from public;
+revoke execute on function public.can_manage_reclass_committee() from public;
+revoke execute on function public.can_view_reclass_committee() from public;
+grant execute on function public.current_user_has_any_permission(text[]) to authenticated;
+grant execute on function public.current_user_has_permission(text) to authenticated;
+grant execute on function public.current_user_has_role(text) to authenticated;
+grant execute on function public.current_user_is_staff() to authenticated;
+grant execute on function public.next_payment_receipt_number() to authenticated;
+grant execute on function public.appoint_reclass_committee_member(uuid,uuid,date,date,text) to authenticated;
+grant execute on function public.end_reclass_committee_assignment(uuid,date) to authenticated;
+grant execute on function public.can_manage_reclass_committee() to authenticated;
+grant execute on function public.can_view_reclass_committee() to authenticated;
+grant execute on function public.claim_notifications(integer) to authenticated;
