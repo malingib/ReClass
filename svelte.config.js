@@ -1,3 +1,5 @@
+// DEPRECATED — SvelteKit is no longer the deployment target (Vite SPA at apps/web-react/ is).
+// Kept for local `npm run dev:svelte` / `build:svelte` only. Do not use for production deploys.
 import adapter from '@sveltejs/adapter-vercel';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 

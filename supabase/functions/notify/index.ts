@@ -74,14 +74,15 @@ Deno.serve(async (req) => {
       const r = await fetch(`${MOBIWAVE_BASE}/sms/send`, {
         method: 'POST',
         signal: controller.signal,
-        headers: { Authorization: `Bearer ${s.api_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender_id: senderId, type: 'plain', mobile: n.recipient, service_id: 0, message: n.body }),
+        headers: { Authorization: `Bearer ${s.api_token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+        // Mobiwave API v3 shape: { recipient, sender_id, type, message }
+        body: JSON.stringify({ recipient: n.recipient, sender_id: senderId, type: 'plain', message: n.body }),
       }).then(r => r.json());
       clearTimeout(timeout);
 
-      if (r?.code === 1) {
+      if (r?.status === 'success') {
         await supabase.from('notifications').update(
-          { status: 'sent', claimed_at: null, external_id: r.data?.[0]?.message_id, attempts: n.attempts + 1, sent_at: now }).eq('id', n.id);
+          { status: 'sent', claimed_at: null, external_id: r.data?.uid ?? r.data?.[0]?.message_id, attempts: n.attempts + 1, sent_at: now }).eq('id', n.id);
         sent++;
       } else {
         throw new Error(r?.message ?? 'mobiwave_error');

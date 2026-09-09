@@ -1,7 +1,7 @@
 # eShule Deployment
 
-**Document status:** Current deployment standard  
-**Last reviewed:** 2026-09-01  
+**Document status:** Current deployment standard — Vite static SPA
+**Last reviewed:** 2026-09-09 (SvelteKit → Vite migration)
 **Product:** eShule — with ReClass as the remedial learning/programme-management module
 
 This document describes the supported deployment model. Historical audit findings are retained in [`AUDIT-2026-08.md`](AUDIT-2026-08.md); they are evidence of the state reviewed at that time and must not be read as the current release status.
@@ -10,13 +10,13 @@ This document describes the supported deployment model. Historical audit finding
 
 The supported production architecture is:
 
-- **Web application:** SvelteKit deployed to Vercel using `@sveltejs/adapter-vercel`.
+- **Web application:** Vite + React SPA (`apps/web-react/`) deployed to Vercel as **static** (`vercel.json` at repo root, `outputDirectory: apps/web-react/dist`, SPA rewrite `/(.*) → /index.html`). See `apps/web-react/vercel.json` for the app-level fallback.
 - **Database/Auth:** managed Supabase PostgreSQL and Supabase Auth.
-- **Server-side privileged operations:** narrow server/Edge Function paths using the Supabase service role where required; every operation must still enforce tenant and capability boundaries.
-- **Edge Functions:** Supabase Edge Functions for M-Pesa, notifications, scheduled/background integrations and other provider-facing operations.
+- **Server-side privileged operations:** Supabase Edge Functions using the service role (`supabase/functions/{payroll-ops,reports-csv,sms-campaign,notify,stk,b2c,…}`); every operation still enforces tenant and capability boundaries. No service-role key is shipped to the browser.
+- **Edge Functions:** Supabase Edge Functions for M-Pesa, notifications/Mobiwave SMS (API v3), scheduled/background integrations and other provider-facing operations.
 - **External providers:** M-Pesa/Daraja and Mobiwave SMS, with credentials stored through the application's encrypted credential/configuration model.
 
-Docker is **not** a supported production deployment path. The legacy Docker artifacts and VPS instructions should not be used to promote a release.
+SvelteKit (`svelte.config.js`, `src/routes/`) is **deprecated as a deployment target** and kept only for local `npm run dev:svelte` / `build:svelte` reference. Docker is also **not** a supported production path.
 
 ## 2. Environments
 
@@ -36,10 +36,10 @@ A release is deployable only when all applicable gates are green:
 ```bash
 npm ci
 npm run lint
-npm run typecheck
-npm run test
-npm run build
-npm run test:e2e
+npm run typecheck        # Vite SPA (apps/web-react/tsconfig.json); Svelte check is now `typecheck:svelte`
+npm run test --workspace=@eshule/web-react
+npm run build            # → apps/web-react/dist
+npx playwright test --config apps/web-react/playwright.config.ts
 ```
 
 Database changes additionally require:
@@ -72,7 +72,7 @@ Never use `supabase db reset` against a hosted production project.
 
 Build and deploy the exact commit that passed CI. Do not rebuild production from an unpinned working tree.
 
-The committed SvelteKit configuration is the source of truth for the web adapter. Do not mutate `svelte.config.js` during packaging.
+The committed Vite config (`apps/web-react/vite.config.ts`) and `vercel.json` (root `outputDirectory: apps/web-react/dist` + SPA rewrite) are the source of truth for the web build. `svelte.config.js` is deprecated and must not be used for production.
 
 Recommended promotion sequence:
 
@@ -94,15 +94,17 @@ Callback secrets, provider credentials and service-role credentials must fail cl
 
 ## 7. Required secrets/configuration
 
-Web runtime configuration includes:
+Web runtime (Vite SPA) uses `VITE_`-prefixed vars — set these in Vercel (and `.env` for local):
 
-- `PUBLIC_SUPABASE_URL`
-- `PUBLIC_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_URL` (also accepts `PUBLIC_SUPABASE_URL` fallback in CI)
+- `VITE_SUPABASE_ANON_KEY` (also accepts `PUBLIC_SUPABASE_ANON_KEY` fallback)
+- `VITE_SENTRY_DSN` where enabled
+
+Service-role and provider secrets stay server-side only (Edge Functions / Supabase secrets, never `VITE_`):
+
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `MOBIWAVE_API_TOKEN` / `MOBIWAVE_BASE` (Mobiwave API v3 — `https://sms.mobiwave.co.ke/api/v3`)
 - `IMPERSONATION_SECRET` where impersonation is enabled
-- Sentry configuration where enabled
-
-Edge Functions require the Supabase-provided runtime credentials plus the provider/configuration secrets documented in [`docs/integrations.md`](docs/integrations.md).
 
 Never commit secrets, place them in source-controlled Markdown, or print them in CI logs.
 

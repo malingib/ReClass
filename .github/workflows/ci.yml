@@ -16,7 +16,7 @@ jobs:
       - run: npm run check:boundaries
       - run: python3 scripts/verify_tenant_isolation.py src
       - run: npm run typecheck
-      - run: npm run test
+      - run: npm run test --workspace=@eshule/web-react
       - run: npm run build
 
   e2e:
@@ -46,19 +46,17 @@ jobs:
       - name: Build
         if: steps.guard.outputs.run == 'true'
         env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || secrets.PUBLIC_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run build
       - name: Run Playwright E2E
         if: steps.guard.outputs.run == 'true'
         env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || secrets.PUBLIC_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.PUBLIC_SUPABASE_ANON_KEY }}
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-        run: npm run test:e2e
+        run: npm run test:e2e --workspace=@eshule/web-react || npx playwright test --config apps/web-react/playwright.config.ts
       - name: Upload Playwright report
         if: ${{ always() && steps.guard.outputs.run == 'true' }}
         uses: actions/upload-artifact@v4
