@@ -10,7 +10,6 @@ import {
   TEACHER_ROLES, PARENT_ROLES, SUPER_ADMIN_ROLES,
 } from '@/lib/rbac';
 import { Stub } from '@/pages/Stub';
-
 import Login from '@/pages/Login';
 import AdminDashboard from '@/pages/admin/Dashboard';
 import StudentDetails from '@/pages/admin/StudentDetails';
@@ -51,7 +50,7 @@ export default function App() {
             <Route path="/admin/graduation" element={shell(MEMBER_MANAGEMENT_ROLES, <Stub title="Graduation" />)} />
             <Route path="/admin/retention" element={shell(MEMBER_MANAGEMENT_ROLES, <Stub title="Retention" />)} />
             <Route path="/admin/lessons" element={shell(MEMBER_MANAGEMENT_ROLES, <Stub title="Lessons" />)} />
-            <Route path="/admin/modules" element={shell(SETTINGS_ROLES, <Tables.Modules />)} />
+            <Route path="/admin/modules" element={<Navigate to="/admin/settings" replace />} />
             <Route path="/admin/operations" element={shell(MEMBER_MANAGEMENT_ROLES, <Stub title="Operations" />)} />
             <Route path="/admin/operations/calendar" element={shell(MEMBER_MANAGEMENT_ROLES, <Tables.Calendar />)} />
             <Route path="/admin/operations/discipline" element={shell(COMPLIANCE_ROLES, <Tables.Discipline />)} />
@@ -60,7 +59,7 @@ export default function App() {
             <Route path="/admin/calendar" element={shell(MEMBER_MANAGEMENT_ROLES, <Tables.Calendar />)} />
             <Route path="/admin/audit" element={shell(COMPLIANCE_ROLES, <Tables.Audit />)} />
             <Route path="/admin/reports" element={shell(REPORTS_ROLES, <Finance.FinanceReports />)} />
-            <Route path="/admin/settings" element={shell(SETTINGS_ROLES, <Ops.TenantSettings />)} />
+            <Route path="/admin/settings" element={shell(SETTINGS_ROLES, <Ops.SchoolSettings />)} />
             <Route path="/admin/users" element={shell(USER_MANAGEMENT_ROLES, <Ops.Users />)} />
             <Route path="/admin/students/:id" element={shell(MEMBER_MANAGEMENT_ROLES, <StudentDetails />)} />
             <Route path="/admin/payments/unmatched" element={shell(FINANCE_ROLES, <Finance.UnmatchedPayments />)} />
@@ -138,9 +137,7 @@ export default function App() {
 
             {/* Super admin */}
             <Route path="/super-admin" element={shell(SUPER_ADMIN_ROLES, <Misc.SuperAdminDashboard />)} />
-            <Route path="/super-admin/tenants" element={shell(SUPER_ADMIN_ROLES, <Tables.Tenants />)} />
-            <Route path="/super-admin/modules" element={shell(SUPER_ADMIN_ROLES, <Tables.Modules />)} />
-            <Route path="/super-admin/settings" element={shell(SUPER_ADMIN_ROLES, <Ops.TenantSettings />)} />
+            <Route path="/super-admin/settings" element={shell(SUPER_ADMIN_ROLES, <Ops.SchoolSettings />)} />
             <Route path="/super-admin/audit" element={shell(SUPER_ADMIN_ROLES, <Tables.Audit />)} />
 
             {/* Misc */}
