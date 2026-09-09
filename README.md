@@ -2,26 +2,26 @@
 
 > **School operations, connected and accountable.**
 >
-> eShule is a multi-tenant school-management platform for schools that need one operational system across administration, teaching, finance, payroll, communication, governance and programme workflows.
+> eShule is a multi-tenant school-operations platform for schools that need one operational system across administration, student lifecycle, teaching operations, finance, payroll, communication, governance and programme workflows.
 
-## What is eShule?
+## Product boundary
 
-eShule is designed around the way school responsibilities are actually divided. Users do not receive the same dashboard simply because they belong to the same institution: their experience is derived from their base role, assignments, responsibilities and rights.
+eShule is the platform. **ReClass is the remedial learning and programme-management module within eShule**, not the product identity.
 
-The platform brings together:
+Current student-operations scope includes:
 
-- **School administration** — students, guardians, teachers, classes, schedules and operational records.
-- **Teaching & learning** — teacher workspaces, attendance and academic workflows.
-- **School finance** — fees, invoices, receivables, reconciliation and financial reporting.
-- **Payroll** — teacher compensation, allowances, remedial payments, committee payments and role-specific compensation.
-- **ReClass** — the remedial learning and programme-management module.
-- **Communication** — parent/guardian and teacher messaging, notifications and delivery tracking.
-- **Governance & audit** — responsibilities, approvals, audit evidence and accountability workflows.
-- **Receipts** — evidence of successful payments, kept distinct from invoices, obligations and payroll sheets.
+- **Admissions** — application intake, admission decisions and admission records. There is no screening workflow in the current scope.
+- **Enrollment** — class/stream placement with preserved historical enrollments.
+- **Student lifecycle** — admission, enrollment, progression, transfer, withdrawal, completion and reactivation/exit history.
+- **Retention & history** — longitudinal student records and follow-up outcomes.
+- **Graduation & exit** — completion, clearance, approval and archive/alumni handoff records.
+- **ReClass** — remedial programmes, cohorts, sessions, attendance, progress and committee workflows.
+- **Calendar & lessons** — school events, teaching schedules, rooms, lesson status and operational scheduling.
+- **Teacher tasks/reminders** — upcoming lessons, attendance reminders, ReClass reminders, meetings and operational deadlines.
+
+The platform also contains established finance, payroll, receipts, communication, governance/audit and role-based staff/parent workspaces.
 
 ## Responsibility model
-
-The platform deliberately separates operational ownership:
 
 | Area | Owner / responsibility |
 |---|---|
@@ -37,14 +37,12 @@ A teacher's `teacher_type` can be `classroom`, `remedial`, or `both`. A remedial
 
 ### Rights-driven UX
 
-The intended interaction model is:
-
 ```text
 User
   ↓
 Base role
   ↓
-Committee / functional assignment
+Functional / committee assignment
   ↓
 Responsibilities
   ↓
@@ -53,31 +51,65 @@ Rights
 Navigation → Dashboard → Queues → Actions
 ```
 
-The UI uses this model to reduce irrelevant navigation and make ownership visible. **UI visibility is not a security boundary**: server-side authorization and database controls independently enforce every protected operation.
+UI visibility is not a security boundary. Server-side authorization and database controls independently enforce protected operations.
+
+## Student model
+
+A **Student** is the person record. An **Enrollment** represents that student's relationship with the school for a particular academic period.
+
+```text
+Student
+├── guardians
+├── admissions
+├── enrollments
+├── lifecycle events
+├── ReClass participation
+├── documents/history
+└── graduation / exit
+```
+
+Historical enrollments are preserved rather than overwritten. Student 360 should therefore provide the current enrollment alongside admission, guardian, programme and longitudinal history.
 
 ## Core workflows
 
-### Teaching & attendance
+### Admissions → Enrollment
 
-Teachers work within their assigned teaching scope and record attendance. Authorized remedial committee members can review/approve remedial attendance according to their assigned rights. Teaching access does not automatically grant governance approval.
+```text
+APPLICATION
+   ↓
+ADMISSION DECISION
+   ↓
+ADMITTED
+   ↓
+ENROLLMENT
+   ↓
+ACTIVE STUDENT
+```
+
+### Student lifecycle
+
+```text
+APPLICANT → ADMITTED → ENROLLED → ACTIVE → PROGRESSED → FINAL YEAR → GRADUATED
+                                             └────────────→ TRANSFER / WITHDRAW / OTHER EXIT
+```
+
+Lifecycle changes are recorded as dated, auditable events rather than silently replacing history.
 
 ### ReClass
 
-ReClass manages remedial programme operations, including remedial sessions, attendance and committee workflows. It remains separate from school-wide finance and teacher compensation.
+ReClass manages remedial programme operations, including cohorts, sessions, attendance, progress and committee responsibilities. ReClass participation is linked to the canonical student record; it does not create a second student identity.
 
-### Finance
+### Calendar & lessons
 
-The Bursar is the owner of school finance. Financial obligations, invoices, payments and reconciliation are treated as accounting records rather than being embedded inside unrelated programme workflows.
+School Calendar manages academic periods, holidays, meetings, ReClass sessions, deadlines and other school events. Lesson Management handles teacher/class/subject/date/time/room scheduling and lesson status. Teacher reminders support operations; these features are not an LMS or online-class system.
 
-### Payroll & teacher payments
+### Finance & payroll
 
-Payroll owns teacher compensation. A consolidated payroll run can contain base pay, allowances, remedial compensation, committee compensation, role-specific payments and other configured components. Individual successful payments generate individual receipts.
-
-The approval chain is designed to preserve separation of duties: preparation/submission, approval, payment initiation and payment approval are distinct responsibilities where configured by the school.
+The Bursar owns school finance. Payroll owns teacher compensation. Invoices/obligations, payment transactions, receipts and payroll runs remain separate accounting concepts. Separation of duties is enforced where configured.
 
 ### Communication
 
-The school is treated as a high-school environment: students are not direct messaging recipients. Student-list messaging resolves linked parents/guardians, while teachers can receive direct messages in their workspace. Audience selection, templates, personalization, recipient counts, delivery state and audit evidence belong to the communication workflow.
+Student-list messaging resolves linked parents/guardians, while teachers can receive direct messages in their workspace. Audience selection, templates, personalization, delivery state and audit evidence belong to the communication workflow.
 
 ## Architecture
 
@@ -98,9 +130,7 @@ flowchart LR
 
 ### Tenant isolation
 
-The application is multi-tenant. Privileged server operations must derive the tenant from the verified session and scope queries, mutations and referenced records to that tenant. RLS remains defense-in-depth; service-role operations must not rely on RLS as their primary isolation mechanism.
-
-The repository includes automated tenant-isolation checks intended to prevent unscoped privileged database access from silently returning to the codebase.
+The application is multi-tenant. Privileged server operations must derive the tenant from the verified session and scope queries, mutations and referenced records to that tenant. RLS is defense-in-depth; service-role operations must not rely on RLS as their primary isolation mechanism.
 
 ## Technology
 
@@ -116,15 +146,15 @@ The repository includes automated tenant-isolation checks intended to prevent un
 | Testing | Vitest, Playwright configuration, ESLint, `svelte-check` |
 | Delivery | GitHub Actions and Vercel adapter |
 
-## Project status
+## Current status
 
-**Status: active development / release candidate.**
+**Status: active development / release-candidate hardening.**
 
-The repository contains substantial implemented school-operations, finance, payroll, remedial, communication, governance and UX functionality. It should **not** be described as production-ready solely from source inspection.
+The current codebase contains the complete implementation sequence for **Admissions → Enrollment → Student Lifecycle → Retention/History → Graduation/Exit → ReClass → Calendar/Lessons/Teacher Reminders**, alongside the existing finance, payroll, communication and governance modules.
 
-Before a production release, the project still requires evidence for the live deployment path, database migration/replay and upgrade safety, privileged authorization against the actual hosted database, end-to-end workflows, provider integrations, observability, and backup/restore procedures.
+The repository's latest CI baseline is green for lint, static tenant-isolation checks, type checking, tests, production build, local Supabase startup, migration replay and database cross-tenant isolation. E2E workflow configuration is present, but browser execution still depends on a configured non-production E2E environment.
 
-The current `main` branch is the canonical integration branch. Recent work has been consolidated through a dedicated integration branch so that the complete source tree is preserved while today's UI, code, governance and operations changes are brought together.
+A green repository CI run is not a production-readiness certificate. Live Supabase configuration, hosted migration state, provider callbacks/credentials, backup/restore, observability, deployment configuration and role-based UAT still require environment-specific verification before unrestricted production use.
 
 ## Local development
 
@@ -141,7 +171,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Never use production credentials or real school/customer data in a development environment.
+Never use production credentials or real school/customer data in development or automated tests.
 
 ### Environment variables
 
@@ -163,11 +193,11 @@ Never use production credentials or real school/customer data in a development e
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase authentication/access |
 | `SUPABASE_SERVICE_ROLE_KEY` | Privileged Edge Function operations |
-| `PUBLIC_URL` | Application/callback base URL where currently required |
+| `PUBLIC_URL` | Application/callback base URL where required |
 | `MPESA_CALLBACK_SECRET` | Payment callback verification |
 | `MOBIWAVE_BASE` | Optional SMS provider base URL |
 
-Treat all provider credentials and secrets as sensitive. Do not commit them to Git.
+Treat all provider credentials and secrets as sensitive. Never commit them to Git.
 
 ## Checks
 
@@ -191,12 +221,9 @@ The authoritative application type gate is `svelte-check` via the project's conf
 ```text
 .
 ├── src/
-│   ├── routes/
-│   │   ├── (app)/              authenticated application workspaces
-│   │   ├── api/                application API/utility handlers
-│   │   └── login/              authentication entry point
+│   ├── routes/                authenticated pages, APIs and login
 │   ├── lib/
-│   │   ├── components/         shared Svelte UI and data components
+│   │   ├── components/        shared Svelte UI and data components
 │   │   ├── server/             auth, authorization, tenant and domain services
 │   │   ├── supabase/           browser/server clients and generated types
 │   │   └── __tests__/          automated application tests
@@ -216,10 +243,10 @@ The authoritative application type gate is `svelte-check` via the project's conf
 
 | Document | Purpose |
 |---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and major data/integration flows |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Current system architecture and major data/integration flows |
 | [API.md](API.md) | Implemented endpoints, form actions, validation and authorization |
 | [DATABASE.md](DATABASE.md) | Database schema, integrity, tenant isolation and migration analysis |
-| [SECURITY.md](SECURITY.md) | Threat model, security findings and release controls |
+| [SECURITY.md](SECURITY.md) | Security model, invariants and release controls |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Deployment process and production gates |
 | [OPERATIONS.md](OPERATIONS.md) | Health, observability, incident and recovery guidance |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development and review conventions |
@@ -227,7 +254,7 @@ The authoritative application type gate is `svelte-check` via the project's conf
 | [CHANGELOG.md](CHANGELOG.md) | Implementation-oriented change history |
 | [AUDIT-2026-08.md](AUDIT-2026-08.md) | Dated audit baseline and historical findings |
 
-Historical documents under `docs/` may describe earlier architecture or product assumptions. When they conflict with the current code, current root documentation and verified implementation take precedence.
+Historical documents under `docs/` are retained for traceability. They may describe earlier architecture, scope or implementation assumptions; when they conflict with the current code, the current root documentation and verified implementation take precedence.
 
 ## Security principles
 
