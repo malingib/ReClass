@@ -8,7 +8,7 @@ import {
   ADMIN_ROLES, MEMBER_MANAGEMENT_ROLES, FINANCE_ROLES, COMPLIANCE_ROLES,
   REPORTS_ROLES, SETTINGS_ROLES, USER_MANAGEMENT_ROLES, TRANSACTION_VIEW_ROLES,
   TEACHER_ROLES, PARENT_ROLES, RECLASS_ROLES, RECLASS_FINANCE_ROLES, RECLASS_COMMITTEE_ROLES, SUPER_ADMIN_ROLES,
-  PERMISSIONS,
+  PERMISSIONS, type Permission,
 } from '@/lib/rbac';
 import { Stub } from '@/pages/Stub';
 import Login from '@/pages/Login';
@@ -24,7 +24,7 @@ import * as Teacher from '@/pages/teacher/Teacher';
 import * as Comms from '@/pages/comms/Comms';
 import * as Misc from '@/pages/misc/Misc';
 
-function shell(roles: readonly string[], el: React.ReactNode, permissions: readonly Parameters<typeof ProtectedRoute>[0]['requiredPermissions'][number][] = []) {
+function shell(roles: readonly string[], el: React.ReactNode, permissions: readonly Permission[] = []) {
   return <ProtectedRoute allowedRoles={roles} requiredPermissions={permissions}><AuthenticatedLayout>{el}</AuthenticatedLayout></ProtectedRoute>;
 }
 
