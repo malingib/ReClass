@@ -1,68 +1,60 @@
 # eShule Roadmap
 
-**Last reviewed:** 2026-09-08  
+**Last reviewed:** 2026-09-09  
 **Current package version:** `0.2.0`  
 **Status:** Active development / release-candidate hardening
 
-This roadmap is the delivery plan for **eShule**, the school-operations platform. **ReClass is a domain module for remedial learning and programme operations**, not the name of the whole platform.
+This roadmap is the delivery plan for **eShule**, the school-operations platform. **ReClass is the remedial learning and programme-management module within eShule**, not the name of the whole platform.
 
 ## Product direction
 
-eShule connects school administration, teaching and learning, school finance, payroll, ReClass remedial operations, communication, governance, receipts and audit into one tenant-isolated operating platform.
+eShule connects school administration, student lifecycle, teaching operations, school finance, payroll, ReClass remedial operations, communication, governance, receipts and audit into one tenant-isolated operating platform.
 
-## Delivery sequence
+## Delivery status
 
-### Phase 1 — Production infrastructure
+### Completed foundation — Student Operations
 
-- Supabase migration chain and hosted schema verification.
-- Tenant-isolation and financial integrity verification.
-- Native Postgres scheduling for database-only jobs.
-- Edge Functions for external payment and messaging integrations.
-- CI/CD and production deployment gates.
+The current `main` branch contains the integrated operational sequence:
 
-**Exit evidence:** clean migrations, green CI, hosted verification and staging smoke evidence.
+- Admissions intake and admission decisions.
+- Enrollment and class/stream placement with historical records preserved.
+- Student lifecycle and dated history.
+- Retention/history records and follow-up outcomes.
+- Graduation and exit records.
+- ReClass remedial programmes, cohorts, sessions, attendance and progress workflows.
+- School calendar and operational events.
+- Lesson management for teacher/class/subject/date/time/room scheduling.
+- Teacher tasks and operational reminders.
+- Shared visual dashboard/reporting surfaces and responsive application shell.
 
-### Phase 2 — Admissions & student lifecycle
+**Completion evidence:** repository CI is green for lint, static tenant-isolation checks, type checking, tests, production build, local Supabase startup, migration replay and database cross-tenant isolation.
 
-- Admissions intake.
-- Enrollment and class placement.
-- Guardian linkage.
-- Student profile and operational record.
-- Lifecycle timeline: admission, enrollment, class movement, transfer, completion, withdrawal and reactivation.
-- Auditable lifecycle events and role-controlled actions.
+### Current phase — Release-candidate hardening
 
-### Phase 3 — Teaching & ReClass operations
+- Hosted Supabase migration and schema verification.
+- Live tenant-isolation and authorization verification.
+- Payment and notification provider sandbox/callback testing.
+- Role-based UAT across admissions, enrollment, lifecycle, ReClass, calendar, lessons, finance and parent journeys.
+- Accessibility and responsive QA.
+- Empty/loading/error state review.
+- E2E execution in a configured non-production environment.
+- Backup/restore rehearsal and rollback verification.
+- Observability and incident-response verification.
+- Production deployment configuration and release gates.
 
-- Teacher Today workspace.
-- Class rosters and attendance.
-- Lesson/session management.
-- ReClass remedial sessions and attendance.
-- Remedial committee responsibilities according to assigned rights.
-- Teacher tasks and automated reminders.
-- School calendar and operational deadlines.
-
-### Phase 4 — Leadership, finance & parent journeys
+### Next product phase — Leadership, finance & parent journeys
 
 - Principal Command Center.
 - Bursar Finance Center.
-- Fees, payments and reconciliation.
-- Payroll and teacher compensation.
+- Fees, payments and reconciliation hardening.
+- Payroll and teacher compensation hardening.
 - Receipts as actual-payment evidence.
 - Parent child ledger and Pay Now M-Pesa journey.
 - Communication composer, templates and delivery state.
 
-### Phase 5 — Production QA & scale
+Existing implementations in these areas should be hardened and verified before adding broad new product scope.
 
-- Role-based UAT across the complete school workflow.
-- Accessibility and responsive QA.
-- Empty/error/loading states.
-- Payment and notification end-to-end tests.
-- Tenant-isolation negative tests.
-- Pagination and high-cardinality query review.
-- Backup/restore rehearsal and rollback verification.
-- Observability, incident response and release gates.
-
-### Phase 6 — Controlled commercial expansion
+### Controlled commercial expansion
 
 - Guided tenant onboarding and suspension/offboarding.
 - Data export, retention and deletion workflows.
@@ -71,7 +63,7 @@ eShule connects school administration, teaching and learning, school finance, pa
 - Governed analytics with freshness and data-quality indicators.
 - Server-enforced plans, metering, billing evidence and entitlement audit.
 
-### Phase 7 — Intelligent platform evolution
+### Intelligent platform evolution
 
 Potential first uses:
 
@@ -82,11 +74,20 @@ Potential first uses:
 
 AI must remain out of autonomous decisions involving grades, attendance, payments, waivers, payroll, access or student welfare. Any AI feature requires tenant opt-in, data minimization, evaluation, human confirmation, cost controls and a kill switch.
 
-## Current execution order
+## Product boundaries
 
-**Admissions & enrollment → Student lifecycle → ReClass/remedials → School calendar & lessons → Teacher command center → Principal command center → Bursar/finance → Parent Pay Now → Production QA.**
+The current delivery sequence intentionally excludes:
 
-Discipline is intentionally **not part of the current delivery sequence**. Existing data/code is preserved unless explicitly scheduled for removal; no new discipline scope should be added while this sequence is being completed.
+- screening;
+- discipline as a new product workflow;
+- homework;
+- assignments;
+- markbook;
+- LMS/online classes;
+- learning-resource/library systems;
+- clubs and activities.
+
+Existing historical data/code may remain where required for compatibility, but no new scope should be added in these areas without an explicit product decision.
 
 ## Decision rules
 
@@ -97,3 +98,4 @@ Discipline is intentionally **not part of the current delivery sequence**. Exist
 5. Database invariants should be enforced at the database boundary where practical, not only in UI code.
 6. Breaking schema changes use expand-and-contract and a tested forward/rollback strategy.
 7. No microservice, sharding or AI initiative should compensate for missing fundamentals.
+8. Current root documentation describes the active implementation; dated audit material is historical evidence unless explicitly superseded.
