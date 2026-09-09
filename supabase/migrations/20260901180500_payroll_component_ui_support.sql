@@ -34,16 +34,31 @@ CREATE POLICY payroll_components_select_tenant ON public.payroll_components
 CREATE POLICY payroll_components_insert_treasurer ON public.payroll_components
   FOR INSERT WITH CHECK (
     tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-    AND public.has_capability('payroll:manage')
+    AND EXISTS (
+      SELECT 1 FROM public.user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.tenant_id = payroll_components.tenant_id
+        AND ur.role IN ('super_admin','school_admin','principal','bursar')
+    )
   );
 
 CREATE POLICY payroll_components_update_treasurer ON public.payroll_components
   FOR UPDATE USING (
     tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-    AND public.has_capability('payroll:manage')
+    AND EXISTS (
+      SELECT 1 FROM public.user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.tenant_id = payroll_components.tenant_id
+        AND ur.role IN ('super_admin','school_admin','principal','bursar')
+    )
   ) WITH CHECK (
     tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-    AND public.has_capability('payroll:manage')
+    AND EXISTS (
+      SELECT 1 FROM public.user_roles ur
+      WHERE ur.user_id = auth.uid()
+        AND ur.tenant_id = payroll_components.tenant_id
+        AND ur.role IN ('super_admin','school_admin','principal','bursar')
+    )
   );
 
 CREATE OR REPLACE FUNCTION public.add_payroll_component(
@@ -67,6 +82,15 @@ DECLARE
   v_component public.payroll_components;
   v_tenant_id uuid := coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid);
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    WHERE ur.user_id = auth.uid()
+      AND ur.tenant_id = v_tenant_id
+      AND ur.role IN ('super_admin','school_admin','principal','bursar')
+  ) THEN
+    RAISE EXCEPTION 'Not authorized to manage payroll';
+  END IF;
+
   SELECT * INTO v_run
   FROM public.payroll_runs
   WHERE id = p_payroll_run_id
@@ -74,7 +98,6 @@ BEGIN
   FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Payroll run not found'; END IF;
   IF v_run.status NOT IN ('draft','pending') THEN RAISE EXCEPTION 'Payroll run is not editable'; END IF;
-  IF NOT public.has_capability('payroll:manage') THEN RAISE EXCEPTION 'Not authorized to manage payroll'; END IF;
   IF p_component_type IN ('committee','role_specific') AND (p_role_code IS NULL OR p_role_label IS NULL) THEN RAISE EXCEPTION 'Role is required for this payment type'; END IF;
   IF p_amount <> round(p_quantity * p_rate, 2) THEN RAISE EXCEPTION 'Amount must equal quantity multiplied by rate'; END IF;
 
