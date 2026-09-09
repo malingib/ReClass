@@ -72,8 +72,11 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - name: Start local Supabase
-        run: supabase start
+      # Database-only CI does not need the full Supabase application stack.
+      # Using db start avoids pulling/health-checking Studio, realtime, storage,
+      # analytics and other services, making the test deterministic on runners.
+      - name: Start local database
+        run: supabase db start
       - name: Replay migrations and seed
         run: supabase db reset --local --yes
       - name: Run cross-tenant isolation checks
