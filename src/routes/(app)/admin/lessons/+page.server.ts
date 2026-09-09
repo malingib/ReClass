@@ -1,0 +1,22 @@
+import { fail } from '@sveltejs/kit';
+import { z } from 'zod/v3';
+import type { Actions, PageServerLoad } from './$types';
+import { requireTenantRole } from '$lib/server/_auth/auth';
+import { parseForm } from '$lib/server/_platform/validation';
+const schema = z.object({ teacher_id: z.string().uuid(), class_id: z.string().uuid(), subject_id: z.string().uuid().optional(), starts_at: z.string().min(16), ends_at: z.string().min(16), room: z.string().max(100).optional(), notes: z.string().max(1000).optional() });
+export const load: PageServerLoad = async ({ locals }) => {
+  const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin');
+  const [teachers, classes, subjects, lessons] = await Promise.all([
+    locals.srv.from('teachers').select('id, profile_id, profiles(first_name,last_name)').eq('tenant_id', tenantId).order('id'),
+    locals.srv.from('sis_classes').select('id,name,stream,code').eq('tenant_id', tenantId).eq('status','active').order('name'),
+    locals.srv.from('subjects').select('id,name,code').eq('tenant_id', tenantId).order('name'),
+    locals.srv.from('lessons').select('id,teacher_id,class_id,subject_id,starts_at,ends_at,room,status,notes, teachers(profiles(first_name,last_name)), sis_classes(name,stream,code), subjects(name,code)').eq('tenant_id', tenantId).order('starts_at').limit(100)
+  ]);
+  if (teachers.error) throw new Error(teachers.error.message); if (classes.error) throw new Error(classes.error.message); if (subjects.error) throw new Error(subjects.error.message); if (lessons.error) throw new Error(lessons.error.message);
+  return { teachers: teachers.data ?? [], classes: classes.data ?? [], subjects: subjects.data ?? [], lessons: lessons.data ?? [] };
+};
+export const actions = { create: async ({ locals, request }) => {
+  const { tenantId } = requireTenantRole(locals, 'school_admin', 'super_admin'); const v = parseForm(schema, await request.formData()); if (!v.success) return fail(400, { errors: v.errors });
+  const { error } = await locals.srv.from('lessons').insert({ tenant_id: tenantId, teacher_id: v.data.teacher_id, class_id: v.data.class_id, subject_id: v.data.subject_id || null, starts_at: new Date(v.data.starts_at).toISOString(), ends_at: new Date(v.data.ends_at).toISOString(), room: v.data.room || null, notes: v.data.notes || null });
+  if (error) return fail(500, { message: error.message }); return { success: true };
+} } satisfies Actions;
