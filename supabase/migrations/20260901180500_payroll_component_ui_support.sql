@@ -27,20 +27,22 @@ CREATE INDEX IF NOT EXISTS idx_payroll_components_type ON public.payroll_compone
 ALTER TABLE public.payroll_components ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY payroll_components_select_tenant ON public.payroll_components
-  FOR SELECT USING (tenant_id = public.get_current_tenant_id());
+  FOR SELECT USING (
+    tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+  );
 
 CREATE POLICY payroll_components_insert_treasurer ON public.payroll_components
   FOR INSERT WITH CHECK (
-    tenant_id = public.get_current_tenant_id()
+    tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
     AND public.has_capability('payroll:manage')
   );
 
 CREATE POLICY payroll_components_update_treasurer ON public.payroll_components
   FOR UPDATE USING (
-    tenant_id = public.get_current_tenant_id()
+    tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
     AND public.has_capability('payroll:manage')
   ) WITH CHECK (
-    tenant_id = public.get_current_tenant_id()
+    tenant_id = coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
     AND public.has_capability('payroll:manage')
   );
 
@@ -60,9 +62,16 @@ CREATE OR REPLACE FUNCTION public.add_payroll_component(
 RETURNS public.payroll_components
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
-DECLARE v_run public.payroll_runs; v_component public.payroll_components;
+DECLARE
+  v_run public.payroll_runs;
+  v_component public.payroll_components;
+  v_tenant_id uuid := coalesce(current_setting('app.tenant_id', true)::uuid, '00000000-0000-0000-0000-000000000000'::uuid);
 BEGIN
-  SELECT * INTO v_run FROM public.payroll_runs WHERE id = p_payroll_run_id AND tenant_id = public.get_current_tenant_id() FOR UPDATE;
+  SELECT * INTO v_run
+  FROM public.payroll_runs
+  WHERE id = p_payroll_run_id
+    AND tenant_id = v_tenant_id
+  FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Payroll run not found'; END IF;
   IF v_run.status NOT IN ('draft','pending') THEN RAISE EXCEPTION 'Payroll run is not editable'; END IF;
   IF NOT public.has_capability('payroll:manage') THEN RAISE EXCEPTION 'Not authorized to manage payroll'; END IF;
@@ -70,7 +79,7 @@ BEGIN
   IF p_amount <> round(p_quantity * p_rate, 2) THEN RAISE EXCEPTION 'Amount must equal quantity multiplied by rate'; END IF;
 
   INSERT INTO public.payroll_components (tenant_id,payroll_run_id,teacher_id,component_type,description,quantity,rate,amount,role_code,role_label,source_type,source_id,metadata,created_by)
-  VALUES (public.get_current_tenant_id(),v_run.id,v_run.teacher_id,p_component_type,p_description,p_quantity,p_rate,p_amount,p_role_code,p_role_label,p_source_type,p_source_id,p_metadata,auth.uid())
+  VALUES (v_tenant_id,v_run.id,v_run.teacher_id,p_component_type,p_description,p_quantity,p_rate,p_amount,p_role_code,p_role_label,p_source_type,p_source_id,p_metadata,auth.uid())
   RETURNING * INTO v_component;
   RETURN v_component;
 END;
