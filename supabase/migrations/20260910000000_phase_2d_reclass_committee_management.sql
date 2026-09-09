@@ -14,14 +14,6 @@ create unique index if not exists uq_reclass_committee_assignment_profile_role_a
   on public.reclass_committee_assignments (profile_id, role_id)
   where active = true;
 
-create unique index if not exists uq_reclass_committee_single_office_active
-  on public.reclass_committee_assignments (role_id)
-  where active = true
-    and role_id in (
-      select id from public.reclass_committee_roles
-      where name in ('ReClass Chair', 'ReClass Secretary', 'ReClass Treasurer')
-    );
-
 create unique index if not exists uq_reclass_committee_right_assignment_key
   on public.reclass_committee_rights (assignment_id, right_key);
 
@@ -55,10 +47,53 @@ alter table public.user_roles
     ])
   );
 
--- Preserve compatibility with the earlier generic remedial committee role.
 update public.user_roles
 set role = 'reclass_member'
 where role = 'remedial_committee_member';
+
+-- Only one active holder may occupy each officer seat. Committee members are not limited.
+create or replace function public.enforce_reclass_committee_office_uniqueness()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  role_name text;
+  existing_count integer;
+begin
+  if new.active is not true then
+    return new;
+  end if;
+
+  select name into role_name
+  from public.reclass_committee_roles
+  where id = new.role_id;
+
+  if role_name not in ('ReClass Chair', 'ReClass Secretary', 'ReClass Treasurer') then
+    return new;
+  end if;
+
+  select count(*) into existing_count
+  from public.reclass_committee_assignments a
+  join public.reclass_committee_roles r on r.id = a.role_id
+  where a.active = true
+    and r.name = role_name
+    and a.id <> new.id;
+
+  if existing_count > 0 then
+    raise exception 'An active % already exists. End the existing assignment before appointing a new holder.', role_name
+      using errcode = '23505';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_enforce_reclass_committee_office_uniqueness on public.reclass_committee_assignments;
+create trigger trg_enforce_reclass_committee_office_uniqueness
+before insert or update of role_id, active on public.reclass_committee_assignments
+for each row execute function public.enforce_reclass_committee_office_uniqueness();
 
 create or replace function public.seed_reclass_committee_rights()
 returns trigger
