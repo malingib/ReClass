@@ -24,31 +24,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const links = NAV.filter((n) => (role ? n.roles.includes(role) : false));
 
   return (
-    <div className="min-h-screen">
-      <header className="flex flex-wrap items-center gap-4 border-b p-3">
-        <Link to={role ? roleHome[role] : '/'} className="font-semibold">eShule</Link>
-        <nav className="flex flex-wrap gap-3 text-sm">
-          {links.map((l) => (
-            <Link key={l.to} to={l.to}>{l.label}</Link>
-          ))}
-          <Link to="/notifications">Alerts</Link>
-          <Link to="/account">Account</Link>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="flex flex-wrap items-center gap-4 border-b bg-card px-4 py-3">
+        <Link to={role ? roleHome[role] : '/'} className="font-semibold text-primary">eShule</Link>
+        <nav className="flex flex-wrap gap-1 text-sm">
+          {links.map((l) => <Link key={l.to} to={l.to} className="rounded-md px-2.5 py-1.5 hover:bg-accent">{l.label}</Link>)}
+          <Link to="/notifications" className="rounded-md px-2.5 py-1.5 hover:bg-accent">Alerts</Link>
+          <Link to="/account" className="rounded-md px-2.5 py-1.5 hover:bg-accent">Account</Link>
         </nav>
         {ctx && ctx.roles.length > 1 && (
-          <select
-            className="border p-1 text-sm"
-            value={role ?? ''}
-            onChange={(e) => switchRole(e.target.value as never, ctx.roles)}
-            aria-label="Active role"
-          >
-            {ctx.roles.map((r) => (
-              <option key={r} value={r}>{roleLabels[r]}</option>
-            ))}
+          <select className="h-9 rounded-md border bg-background px-2 text-sm" value={role ?? ''} onChange={(e) => switchRole(e.target.value as never, ctx.roles)} aria-label="Active role">
+            {ctx.roles.map((r) => <option key={r} value={r}>{roleLabels[r]}</option>)}
           </select>
         )}
-        <button onClick={logout} className="ml-auto text-sm underline">Logout</button>
+        <button onClick={logout} className="ml-auto rounded-md px-3 py-1.5 text-sm font-medium hover:bg-accent">Logout</button>
       </header>
-      <main className="mx-auto max-w-6xl p-4">{children}</main>
+      <main className="mx-auto w-full max-w-[1440px] p-4 md:p-6 lg:p-8">{children}</main>
     </div>
   );
 }

@@ -10,20 +10,18 @@ export function TrendChart({ data, kind = 'line' }: {
       <ResponsiveContainer>
         {kind === 'line' ? (
           <LineChart data={data}>
-            <XAxis dataKey="label" fontSize={11} />
-            <YAxis fontSize={11} />
+            <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis fontSize={11} tickLine={false} axisLine={false} />
             <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={2} dot={false} />
-            {data.some((d) => d.secondary !== undefined) && (
-              <Line type="monotone" dataKey="secondary" stroke="#94a3b8" strokeWidth={2} dot={false} />
-            )}
+            <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+            {data.some((d) => d.secondary !== undefined) && <Line type="monotone" dataKey="secondary" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} />}
           </LineChart>
         ) : (
           <BarChart data={data}>
-            <XAxis dataKey="label" fontSize={11} />
-            <YAxis fontSize={11} />
+            <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis fontSize={11} tickLine={false} axisLine={false} />
             <Tooltip />
-            <Bar dataKey="value" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="value" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
           </BarChart>
         )}
       </ResponsiveContainer>
