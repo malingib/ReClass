@@ -81,15 +81,12 @@ export default function CommitteeManagement() {
       if (!profileId) throw new Error('Select a committee member.');
       if (!roleId) throw new Error('Select a committee role.');
       if (effectiveTo && effectiveTo < effectiveFrom) throw new Error('End date cannot be before the effective date.');
-      const { data: auth } = await supabase.auth.getUser();
-      const { error } = await supabase.from('reclass_committee_assignments').insert({
-        profile_id: profileId,
-        role_id: roleId,
-        assigned_by: auth.user?.id ?? null,
-        effective_from: effectiveFrom,
-        effective_to: effectiveTo || null,
-        notes: notes.trim() || null,
-        active: true,
+      const { error } = await supabase.rpc('appoint_reclass_committee_member', {
+        p_profile_id: profileId,
+        p_role_id: roleId,
+        p_effective_from: effectiveFrom,
+        p_effective_to: effectiveTo || null,
+        p_notes: notes.trim() || null,
       });
       if (error) throw error;
     },
@@ -104,7 +101,10 @@ export default function CommitteeManagement() {
 
   const endAssignment = useMutation({
     mutationFn: async (assignment: Assignment) => {
-      const { error } = await supabase.from('reclass_committee_assignments').update({ active: false, effective_to: new Date().toISOString().slice(0, 10) }).eq('id', assignment.id).eq('active', true);
+      const { error } = await supabase.rpc('end_reclass_committee_assignment', {
+        p_assignment_id: assignment.id,
+        p_effective_to: new Date().toISOString().slice(0, 10),
+      });
       if (error) throw error;
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['reclass-committee-assignments'] }),
