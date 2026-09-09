@@ -7,7 +7,8 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import {
   ADMIN_ROLES, MEMBER_MANAGEMENT_ROLES, FINANCE_ROLES, COMPLIANCE_ROLES,
   REPORTS_ROLES, SETTINGS_ROLES, USER_MANAGEMENT_ROLES, TRANSACTION_VIEW_ROLES,
-  TEACHER_ROLES, PARENT_ROLES, RECLASS_ROLES, RECLASS_FINANCE_ROLES, SUPER_ADMIN_ROLES,
+  TEACHER_ROLES, PARENT_ROLES, RECLASS_ROLES, RECLASS_FINANCE_ROLES, RECLASS_COMMITTEE_ROLES, SUPER_ADMIN_ROLES,
+  PERMISSIONS,
 } from '@/lib/rbac';
 import { Stub } from '@/pages/Stub';
 import Login from '@/pages/Login';
@@ -23,8 +24,8 @@ import * as Teacher from '@/pages/teacher/Teacher';
 import * as Comms from '@/pages/comms/Comms';
 import * as Misc from '@/pages/misc/Misc';
 
-function shell(roles: readonly string[], el: React.ReactNode) {
-  return <ProtectedRoute allowedRoles={roles}><AuthenticatedLayout>{el}</AuthenticatedLayout></ProtectedRoute>;
+function shell(roles: readonly string[], el: React.ReactNode, permissions: readonly Parameters<typeof ProtectedRoute>[0]['requiredPermissions'][number][] = []) {
+  return <ProtectedRoute allowedRoles={roles} requiredPermissions={permissions}><AuthenticatedLayout>{el}</AuthenticatedLayout></ProtectedRoute>;
 }
 
 export default function App() {
@@ -72,18 +73,20 @@ export default function App() {
       <Route path="/finance/receipts/:id/print" element={shell(FINANCE_ROLES, <Finance.Receipts />)} />
       <Route path="/finance/reports" element={shell(REPORTS_ROLES, <Finance.FinanceReports />)} />
       <Route path="/receipts" element={shell(TRANSACTION_VIEW_ROLES, <Finance.Receipts />)} />
-      <Route path="/reclass" element={shell(RECLASS_ROLES, <Reclass.ReclassDashboard />)} />
-      <Route path="/admin/attendance" element={shell(RECLASS_ROLES, <Reclass.Attendance />)} />
-      <Route path="/admin/committee" element={shell(RECLASS_ROLES, <Reclass.Committee />)} />
-      <Route path="/admin/fee" element={shell(RECLASS_FINANCE_ROLES, <Reclass.RemedialFees />)} />
-      <Route path="/admin/remedial-fees" element={shell(RECLASS_FINANCE_ROLES, <Reclass.RemedialFees />)} />
-      <Route path="/admin/parent-payments" element={shell(RECLASS_FINANCE_ROLES, <Reclass.ParentPayments />)} />
-      <Route path="/admin/payroll" element={shell(RECLASS_FINANCE_ROLES, <Reclass.RemedialPayroll />)} />
-      <Route path="/admin/reclass" element={shell(RECLASS_ROLES, <Reclass.ReclassDashboard />)} />
-      <Route path="/admin/reclass/students" element={shell(RECLASS_ROLES, <Students />)} />
-      <Route path="/admin/reclass/students/:id" element={shell(RECLASS_ROLES, <StudentDetails />)} />
-      <Route path="/admin/remedial/receipts" element={shell(RECLASS_FINANCE_ROLES, <Reclass.ParentPayments />)} />
-      <Route path="/admin/scheduling" element={shell(RECLASS_ROLES, <Tables.Calendar />)} />
+
+      <Route path="/reclass" element={shell(RECLASS_ROLES, <Reclass.ReclassDashboard />, [PERMISSIONS.reclassProgramme.view])} />
+      <Route path="/admin/attendance" element={shell(RECLASS_ROLES, <Reclass.Attendance />, [PERMISSIONS.reclassAttendance.view])} />
+      <Route path="/admin/committee" element={shell(RECLASS_COMMITTEE_ROLES, <Reclass.Committee />, [PERMISSIONS.reclassCommittee.view])} />
+      <Route path="/admin/fee" element={shell(RECLASS_FINANCE_ROLES, <Reclass.RemedialFees />, [PERMISSIONS.reclassFinance.view])} />
+      <Route path="/admin/remedial-fees" element={shell(RECLASS_FINANCE_ROLES, <Reclass.RemedialFees />, [PERMISSIONS.reclassFinance.view])} />
+      <Route path="/admin/parent-payments" element={shell(RECLASS_FINANCE_ROLES, <Reclass.ParentPayments />, [PERMISSIONS.reclassPayments.view])} />
+      <Route path="/admin/payroll" element={shell(RECLASS_FINANCE_ROLES, <Reclass.RemedialPayroll />, [PERMISSIONS.reclassFinance.view])} />
+      <Route path="/admin/reclass" element={shell(RECLASS_ROLES, <Reclass.ReclassDashboard />, [PERMISSIONS.reclassProgramme.view])} />
+      <Route path="/admin/reclass/students" element={shell(RECLASS_COMMITTEE_ROLES, <Students />, [PERMISSIONS.reclassProgramme.view])} />
+      <Route path="/admin/reclass/students/:id" element={shell(RECLASS_COMMITTEE_ROLES, <StudentDetails />, [PERMISSIONS.reclassProgramme.view])} />
+      <Route path="/admin/remedial/receipts" element={shell(RECLASS_FINANCE_ROLES, <Reclass.ParentPayments />, [PERMISSIONS.reclassPayments.view])} />
+      <Route path="/admin/scheduling" element={shell(RECLASS_ROLES, <Tables.Calendar />, [PERMISSIONS.reclassTeaching.view])} />
+
       <Route path="/comms" element={shell(ADMIN_ROLES, <Comms.CommsOverview />)} />
       <Route path="/admin/communications" element={shell(ADMIN_ROLES, <Comms.CommsOverview />)} />
       <Route path="/admin/communications/announcements" element={shell(ADMIN_ROLES, <Comms.Announcements />)} />
@@ -101,8 +104,8 @@ export default function App() {
       <Route path="/teacher/classes" element={shell(TEACHER_ROLES, <Tables.Classes />)} />
       <Route path="/teacher/tasks" element={shell(TEACHER_ROLES, <Tables.Tasks />)} />
       <Route path="/teacher/timetable" element={shell(TEACHER_ROLES, <Parent.Timetable who="teacher" />)} />
-      <Route path="/teacher/committee" element={shell(TEACHER_ROLES, <Reclass.Committee />)} />
-      <Route path="/teacher/committee/payroll" element={shell(TEACHER_ROLES, <Reclass.RemedialPayroll />)} />
+      <Route path="/teacher/committee" element={shell(RECLASS_COMMITTEE_ROLES, <Reclass.Committee />, [PERMISSIONS.reclassCommittee.view])} />
+      <Route path="/teacher/committee/payroll" element={shell(RECLASS_FINANCE_ROLES, <Reclass.RemedialPayroll />, [PERMISSIONS.reclassFinance.view])} />
       <Route path="/teacher/attendance" element={shell(TEACHER_ROLES, <Teacher.MarkAttendance />)} />
       <Route path="/principal" element={shell(COMPLIANCE_ROLES, <Misc.PrincipalDashboard />)} />
       <Route path="/principal/school" element={shell(COMPLIANCE_ROLES, <Misc.SchoolOverview />)} />
