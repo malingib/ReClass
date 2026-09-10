@@ -1,18 +1,25 @@
 import { getServiceClient } from '../_shared/supabase.ts';
 import { handleOptions, internalError, json } from '../_shared/response.ts';
 
+type CallbackItem = { Name?: string; Value?: string | number };
 type DarajaCallback = {
   Body?: {
     stkCallback?: {
       ResultCode?: number;
       ResultDesc?: string;
       CheckoutRequestID?: string;
+      CallbackMetadata?: { Item?: CallbackItem[] };
     };
   };
 };
 
 function parseCallback(body: unknown): DarajaCallback {
   return body && typeof body === 'object' ? body as DarajaCallback : {};
+}
+
+function metadataValue(stk: DarajaCallback['Body']['stkCallback'], name: string): string | number | null {
+  const item = stk?.CallbackMetadata?.Item?.find((entry) => entry?.Name === name);
+  return item?.Value ?? null;
 }
 
 Deno.serve(async (req) => {
@@ -52,17 +59,29 @@ Deno.serve(async (req) => {
       return json({ ok: true, status: 'failed', transaction_id: tx.id }, 200, req);
     }
 
+    const receipt = metadataValue(stk, 'MpesaReceiptNumber');
+    const amount = metadataValue(stk, 'Amount');
+    const phone = metadataValue(stk, 'PhoneNumber');
+    if (typeof receipt !== 'string' || !receipt.trim() || typeof amount !== 'number') {
+      console.error('[reclass-mpesa-callback] successful callback missing required payment metadata');
+      return json({ error: 'INCOMPLETE_CALLBACK' }, 400, req);
+    }
+
     const { data, error } = await supabase.rpc('reconcile_reclass_paybill_transaction', {
       p_transaction_id: tx.id,
-      p_provider_reference: checkout,
-      p_metadata: raw,
+      p_checkout_id: checkout,
+      p_mpesa_receipt: receipt.trim(),
+      p_amount: amount,
+      p_phone: typeof phone === 'string' ? phone : tx.phone,
+      p_student_id: tx.student_id,
+      p_obligation_id: tx.obligation_id,
     });
     if (error) {
       console.error('[reclass-mpesa-callback] reconciliation failed:', error.message);
       return internalError(req);
     }
 
-    return json({ ok: true, status: 'completed', transaction: data }, 200, req);
+    return json({ ok: true, status: data?.status ?? 'completed', transaction: data }, 200, req);
   } catch (error) {
     console.error('[reclass-mpesa-callback] unexpected error:', error instanceof Error ? error.message : String(error));
     return internalError(req);
