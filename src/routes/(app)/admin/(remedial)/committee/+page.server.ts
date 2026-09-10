@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const [{ data: roles }, { data: assignments }, { data: operators }, { data: settings }, { data: teacherRoles }] = await Promise.all([
     db.from('reclass_committee_roles').select('id,name,description,active').eq('active', true).order('name'),
     db.from('reclass_committee_assignments').select('id,profile_id,role_id,active,effective_from,effective_to,assigned_at,notes,reclass_committee_roles!inner(name,description)').order('assigned_at', { ascending: false }),
-    db.from('remedial_paybill_operators').select('id,role_assignment_id,operator_role,approval_level,active,effective_from,effective_to'),
+    db.from('remedial_paybill_operators').select('id,role_assignment_id,operator_role,approval_level,active,effective_from,effective_to').eq('tenant_id', tenantId),
     db.from('remedial_paybill_settings').select('*').maybeSingle(),
     db.from('user_roles').select('user_id').eq('tenant_id', tenantId).eq('role', 'teacher')
   ]);
@@ -71,7 +71,7 @@ export const actions = {
     requireTenantRole(locals, 'school_admin', 'super_admin', 'principal');
     const v = parseForm(idSchema, await request.formData());
     if (!v.success) return fail(400, { message: 'Operator not found.' });
-    const { data: operator } = await locals.srv.from('remedial_paybill_operators').select('role_assignment_id,committee_member_id,operator_role,approval_level,effective_from').eq('id', v.data.id).maybeSingle();
+    const { data: operator } = await locals.srv.from('remedial_paybill_operators').select('role_assignment_id,committee_member_id,operator_role,approval_level,effective_from').eq('tenant_id', (requireTenantRole(locals, 'school_admin', 'super_admin', 'principal')).tenantId).eq('id', v.data.id).maybeSingle();
     if (!operator) return fail(404, { message: 'Operator not found.' });
     const { error } = await locals.srv.rpc('manage_reclass_paybill_operator', { p_operator_id: v.data.id, p_committee_member_id: operator.committee_member_id, p_role_assignment_id: operator.role_assignment_id, p_operator_role: operator.operator_role, p_approval_level: operator.approval_level ?? 1, p_active: false, p_effective_from: operator.effective_from, p_effective_to: new Date().toISOString() });
     if (error) return fail(400, { message: error.message });
