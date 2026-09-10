@@ -1,0 +1,13 @@
+alter table public.payments drop constraint if exists payments_status_check;
+alter table public.payments add constraint payments_status_check check (status is null or status in ('pending','paid','failed','cancelled','reversed'));
+
+create or replace function public.prevent_payment_reference_mutation() returns trigger language plpgsql security definer set search_path to 'public' as $$ begin if tg_op='UPDATE' then if old.mpesa_checkout_id is not null and new.mpesa_checkout_id is distinct from old.mpesa_checkout_id then raise exception 'M-Pesa checkout ID is immutable'; end if; if old.mpesa_receipt is not null and new.mpesa_receipt is distinct from old.mpesa_receipt then raise exception 'M-Pesa receipt is immutable'; end if; if old.amount is distinct from new.amount then raise exception 'Payment amount is immutable'; end if; end if; return new; end; $$;
+
+drop trigger if exists trg_prevent_payment_reference_mutation on public.payments;
+create trigger trg_prevent_payment_reference_mutation before update on public.payments for each row execute function public.prevent_payment_reference_mutation();
+
+drop function if exists public.reconcile_payment(text,numeric,text,uuid,uuid,uuid,text);
+create function public.reconcile_payment(p_checkout_id text,p_amount numeric,p_phone text,p_tenant_id uuid,p_student_id uuid,p_fee_type_id uuid,p_domain text) returns jsonb language plpgsql security definer set search_path to 'public' as $$ declare pid uuid; old_status text; begin if p_amount is null or p_amount<=0 then return jsonb_build_object('status','invalid_amount'); end if; if nullif(btrim(p_checkout_id),'') is null then return jsonb_build_object('status','invalid_checkout_id'); end if; select id,status into pid,old_status from payments where mpesa_checkout_id=p_checkout_id for update; if found then if old_status='paid' then return jsonb_build_object('status','duplicate','payment_id',pid); end if; update payments set status='paid',reconciled_at=now(),student_id=coalesce(student_id,p_student_id),fee_type_id=coalesce(fee_type_id,p_fee_type_id),domain=coalesce(domain,p_domain),updated_at=now() where id=pid; return jsonb_build_object('status','completed','payment_id',pid); end if; insert into payments(amount,phone,method,mpesa_checkout_id,status,reconciled_at,student_id,fee_type_id,domain) values(p_amount,p_phone,'mpesa',p_checkout_id,'paid',now(),p_student_id,p_fee_type_id,p_domain) returning id into pid; return jsonb_build_object('status','completed','payment_id',pid); end; $$;
+
+revoke execute on function public.reconcile_payment(text,numeric,text,uuid,uuid,uuid,text) from public,anon,authenticated;
+grant execute on function public.reconcile_payment(text,numeric,text,uuid,uuid,uuid,text) to service_role;
