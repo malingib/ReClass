@@ -2,22 +2,19 @@ import { getServiceClient } from '../_shared/supabase.ts';
 import { handleOptions, internalError, json } from '../_shared/response.ts';
 
 type CallbackItem = { Name?: string; Value?: string | number };
-type DarajaCallback = {
-  Body?: {
-    stkCallback?: {
-      ResultCode?: number;
-      ResultDesc?: string;
-      CheckoutRequestID?: string;
-      CallbackMetadata?: { Item?: CallbackItem[] };
-    };
-  };
+type StkCallback = {
+  ResultCode?: number;
+  ResultDesc?: string;
+  CheckoutRequestID?: string;
+  CallbackMetadata?: { Item?: CallbackItem[] };
 };
+type DarajaCallback = { Body?: { stkCallback?: StkCallback } };
 
 function parseCallback(body: unknown): DarajaCallback {
   return body && typeof body === 'object' ? body as DarajaCallback : {};
 }
 
-function metadataValue(stk: DarajaCallback['Body']['stkCallback'], name: string): string | number | null {
+function metadataValue(stk: StkCallback | undefined, name: string): string | number | null {
   const item = stk?.CallbackMetadata?.Item?.find((entry) => entry?.Name === name);
   return item?.Value ?? null;
 }
