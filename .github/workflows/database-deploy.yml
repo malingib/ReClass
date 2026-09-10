@@ -7,6 +7,8 @@ on:
       - 'supabase/migrations/**'
       - 'supabase/config.toml'
       - 'supabase/functions/mpesa-callback/**'
+      - 'supabase/functions/reclass-stk/**'
+      - 'supabase/functions/reclass-mpesa-callback/**'
   workflow_dispatch:
 
 concurrency:
@@ -45,7 +47,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase migration list
 
-  mpesa-callback:
+  functions:
     needs: database
     if: ${{ always() && needs.database.result == 'success' }}
     runs-on: ubuntu-latest
@@ -69,7 +71,15 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
-      - name: Deploy M-Pesa callback without gateway JWT
+      - name: Deploy legacy M-Pesa callback without gateway JWT
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy mpesa-callback --no-verify-jwt
+      - name: Deploy ReClass STK endpoint with gateway JWT
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy reclass-stk
+      - name: Deploy ReClass M-Pesa callback without gateway JWT
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy reclass-mpesa-callback --no-verify-jwt
