@@ -1,4 +1,36 @@
 -- Phase 2E: ReClass database authorization hardening
+-- Bootstrap helpers are defined before policies reference them. Later
+-- assignment-aware migrations replace these definitions with the stricter
+-- ReClass permission model.
+create or replace function public.can_view_reclass_committee()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_user_has_role('super_admin')
+      or public.current_user_has_role('school_admin')
+      or public.current_user_has_role('principal');
+$$;
+
+create or replace function public.can_manage_reclass_committee()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_user_has_role('super_admin')
+      or public.current_user_has_role('school_admin')
+      or public.current_user_has_role('principal');
+$$;
+
+revoke all on function public.can_view_reclass_committee() from public;
+grant execute on function public.can_view_reclass_committee() to authenticated;
+revoke all on function public.can_manage_reclass_committee() from public;
+grant execute on function public.can_manage_reclass_committee() to authenticated;
+
 alter table public.reclass_committee_roles enable row level security;
 alter table public.reclass_committee_assignments enable row level security;
 alter table public.reclass_committee_rights enable row level security;
