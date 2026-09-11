@@ -2,7 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getStoredActiveRole, isRole, setStoredActiveRole, type Permission, type Role } from '@/lib/rbac';
 
-export type SchoolContext = { userId: string; roles: Role[]; activeRole: Role | null; permissions: Permission[] };
+export type SchoolContext = {
+  userId: string;
+  /** Retained only for compatibility with legacy React hooks. The current eShule deployment is single-school. */
+  tenantId: string;
+  roles: Role[];
+  activeRole: Role | null;
+  permissions: Permission[];
+};
 
 /** Resolve identity, roles and explicit permissions. The eShule deployment is single-school. */
 export function useTenant() {
@@ -11,7 +18,7 @@ export function useTenant() {
     queryFn: async (): Promise<SchoolContext> => {
       const { data: session } = await supabase.auth.getSession();
       const uid = session.session?.user.id;
-      if (!uid) return { userId: '', roles: [], activeRole: null, permissions: [] };
+      if (!uid) return { userId: '', tenantId: '', roles: [], activeRole: null, permissions: [] };
 
       const { data: rows } = await supabase.from('user_roles').select('role').eq('user_id', uid);
       const roles = ((rows ?? []) as { role: string }[]).map((row) => row.role).filter(isRole);
@@ -30,7 +37,7 @@ export function useTenant() {
         const { data: all } = await supabase.from('permissions').select('code');
         permissions = ((all ?? []) as { code: string }[]).map((row) => row.code) as Permission[];
       }
-      return { userId: uid, roles, activeRole, permissions: [...new Set(permissions)] };
+      return { userId: uid, tenantId: '', roles, activeRole, permissions: [...new Set(permissions)] };
     },
     staleTime: 60_000,
   });
