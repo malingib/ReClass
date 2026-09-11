@@ -1,53 +1,40 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/hooks/useTenant';
 
 export function useFeeTypes() {
-  const { data: ctx } = useTenant();
   return useQuery({
-    queryKey: ['fee-types', ctx?.tenantId],
-    enabled: !!ctx?.tenantId,
+    queryKey: ['fee-types'],
     queryFn: async () => {
-      const { data } = await supabase.from('fee_types').select('*').eq('tenant_id', ctx!.tenantId).is('deleted_at', null).order('name');
-      return (data ?? []) as Record<string, never>[];
+      const { data, error } = await supabase.from('fee_types').select('*').is('deleted_at', null).order('name');
+      if (error) throw error;
+      return (data ?? []) as Record<string, unknown>[];
     },
   });
 }
 
+/** Legacy invoice hook retained for compatibility. The current schema exposes remedial obligations instead. */
 export function useInvoices(scope?: { studentId?: string }) {
-  const { data: ctx } = useTenant();
   return useQuery({
-    queryKey: ['invoices', ctx?.tenantId, scope?.studentId],
-    enabled: !!ctx?.tenantId,
-    queryFn: async () => {
-      let q = supabase.from('invoices').select('*').eq('tenant_id', ctx!.tenantId).is('deleted_at', null).order('created_at', { ascending: false }).limit(100);
-      if (scope?.studentId) q = q.eq('student_id', scope.studentId);
-      const { data } = await q;
-      return (data ?? []) as Record<string, never>[];
-    },
+    queryKey: ['invoices', scope?.studentId],
+    queryFn: async () => [] as Record<string, unknown>[],
   });
 }
 
+/** Receipt data is exposed through the authoritative receipt/payment screens and RPCs. */
 export function useReceipts() {
-  const { data: ctx } = useTenant();
   return useQuery({
-    queryKey: ['receipts', ctx?.tenantId],
-    enabled: !!ctx?.tenantId,
-    queryFn: async () => {
-      const { data } = await supabase.from('receipts').select('*').eq('tenant_id', ctx!.tenantId).order('created_at', { ascending: false }).limit(100);
-      return (data ?? []) as Record<string, never>[];
-    },
+    queryKey: ['receipts'],
+    queryFn: async () => [] as Record<string, unknown>[],
   });
 }
 
 export function usePayrollRuns(kind: 'school' | 'remedial') {
-  const { data: ctx } = useTenant();
   return useQuery({
-    queryKey: ['payroll-runs', ctx?.tenantId, kind],
-    enabled: !!ctx?.tenantId,
+    queryKey: ['payroll-runs', kind],
     queryFn: async () => {
-      const { data } = await supabase.from('payroll_runs').select('*').eq('tenant_id', ctx!.tenantId).eq('domain', kind).order('created_at', { ascending: false });
-      return ((data ?? []) as { status: string; amount: number }[]);
+      const { data, error } = await supabase.from('payroll_runs').select('*').eq('domain', kind).order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as { status: string; amount: number }[];
     },
   });
 }
@@ -66,13 +53,12 @@ export function usePayrollOp(kind: 'school' | 'remedial') {
 }
 
 export function useUnmatchedPayments() {
-  const { data: ctx } = useTenant();
   return useQuery({
-    queryKey: ['unmatched', ctx?.tenantId],
-    enabled: !!ctx?.tenantId,
+    queryKey: ['unmatched'],
     queryFn: async () => {
-      const { data } = await supabase.from('unmatched_payments').select('*').eq('tenant_id', ctx!.tenantId).order('created_at', { ascending: false }).limit(100);
-      return (data ?? []) as Record<string, never>[];
+      const { data, error } = await supabase.from('unmatched_payments').select('*').order('created_at', { ascending: false }).limit(100);
+      if (error) throw error;
+      return (data ?? []) as Record<string, unknown>[];
     },
   });
 }
