@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     // Fast path: app-initiated STK push — the checkout row already knows the
     // student + fee. (Manual paybill deposits have NO checkout row.)
     const { data: cr, error: e } = await supabase.from('checkout_requests')
-      .select('id, fee_type_id, student_id, tenant_id, amount, phone, status').eq('checkout_id', CheckoutRequestID).single();
+      .select('id, fee_type_id, student_id, amount, phone, status').eq('checkout_id', CheckoutRequestID).single();
 
     if (!e && cr) {
       if (cr.status === 'completed')
@@ -86,13 +86,12 @@ Deno.serve(async (req) => {
         const { data: ft } = await supabase.from('fee_types')
           .select('domain')
           .eq('id', cr.fee_type_id)
-          .eq('tenant_id', cr.tenant_id)
           .maybeSingle();
         if (ft?.domain === 'school' || ft?.domain === 'remedial') checkoutDomain = ft.domain;
       }
       const { data: rec } = await supabase.rpc('reconcile_payment', {
         p_checkout_id: CheckoutRequestID, p_amount: cr.amount,
-        p_phone: phone, p_tenant_id: cr.tenant_id,
+        p_phone: phone,
         p_student_id: cr.student_id, p_fee_type_id: cr.fee_type_id, p_domain: checkoutDomain,
       });
 
@@ -106,7 +105,6 @@ Deno.serve(async (req) => {
         .from('payments')
         .select('id')
         .eq('mpesa_checkout_id', CheckoutRequestID)
-        .eq('tenant_id', cr.tenant_id)
         .maybeSingle();
       if (payment) {
         // Deterministic receipt number so a retried callback can't mint a
@@ -115,31 +113,30 @@ Deno.serve(async (req) => {
           student_id: cr.student_id,
           fee_type_id: cr.fee_type_id,
           domain: checkoutDomain,
-          receipt_no: `RCP-${cr.tenant_id.slice(0, 6).toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${CheckoutRequestID.slice(0, 5).toUpperCase()}`,
+          receipt_no: `RCP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${CheckoutRequestID.slice(0, 5).toUpperCase()}`,
         }).eq('id', payment.id);
       }
 
       await supabase.from('checkout_requests').update({ status: 'completed' }).eq('id', cr.id);
 
-      await enqueueReceiptSms(cr.tenant_id, payment?.id ?? cr.id, phone, cr.amount);
+      await enqueueReceiptSms(payment?.id ?? cr.id, phone, cr.amount);
       return json(rec, 200, req);
     }
 
     // ── Manual paybill deposit (no checkout row) — route by BillRefNumber ──
     // BillRefNumber = admission number (eShule convention). Resolve the student
-    // and reconcile in one shot. Unresolvable account references are logged but
-    // NOT recorded (payments.tenant_id is NOT NULL) — the money sits at the
-    // paybill and the school reconciles it manually from the M-Pesa statement.
+    // and reconcile in one shot. Unresolvable account references are parked in
+    // the unmatched queue (admin/bursar UI) so no money is lost — the school
+    // reconciles them manually from the M-Pesa statement.
     if (billRef) {
       const { data: student } = await supabase.from('students')
-        .select('id, tenant_id')
+        .select('id')
         .eq('admission_no', billRef)
         .maybeSingle();
       if (student) {
         // Best-effort fee context: try a fee type matching the amount.
         const { data: feeType } = await supabase.from('fee_types')
           .select('id, domain')
-          .eq('tenant_id', student.tenant_id)
           .eq('amount', amount)
           .is('deleted_at', null)
           .limit(1)
@@ -148,32 +145,28 @@ Deno.serve(async (req) => {
         const domain = feeType?.domain === 'school' ? 'school' : 'remedial';
         const { data: rec } = await supabase.rpc('reconcile_payment', {
           p_checkout_id: CheckoutRequestID, p_amount: amount,
-          p_phone: phone, p_tenant_id: student.tenant_id,
+          p_phone: phone,
           p_student_id: student.id, p_fee_type_id: feeTypeId, p_domain: domain,
         });
         if (rec?.status !== 'completed' && rec?.status !== 'duplicate') {
           return json(rec ?? { status: 'reconciliation_failed' }, 409, req);
         }
         const { data: payment } = await supabase
-          .from('payments').select('id, tenant_id')
+          .from('payments').select('id')
           .eq('mpesa_checkout_id', CheckoutRequestID).maybeSingle();
         if (payment) {
           await supabase.from('payments').update({
-            receipt_no: `RCP-${payment.tenant_id.slice(0, 6).toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${CheckoutRequestID.slice(0, 5).toUpperCase()}`,
+            receipt_no: `RCP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${CheckoutRequestID.slice(0, 5).toUpperCase()}`,
           }).eq('id', payment.id);
-          await enqueueReceiptSms(payment.tenant_id, payment.id, phone, amount);
+          await enqueueReceiptSms(payment.id, phone, amount);
         }
         return json(rec, 200, req);
       }
-      // Unknown admission number → cannot attribute a tenant. Park the deposit
-      // in the unmatched queue so the school can match it from the M-Pesa
-      // statement (admin/bursar UI), without losing the money. In this
-      // single-tenant deployment the tenant is the active school, so stamp it
-      // for attribution + the unmatched-deposit alert trigger.
+      // Unknown admission number → park the deposit in the unmatched queue so
+      // the school can match it from the M-Pesa statement (admin/bursar UI),
+      // without losing the money.
       const mpesaReceipt = String(getMeta('MpesaReceiptNumber') ?? '');
-      const { data: activeTenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
       await supabase.from('unmatched_payments').insert({
-        tenant_id: activeTenant?.id ?? null,
         checkout_id: CheckoutRequestID, mpesa_receipt: mpesaReceipt || null,
         amount, phone, bill_ref: billRef || null,
       }).then((r) => {
@@ -191,11 +184,11 @@ Deno.serve(async (req) => {
   }
 });
 
-/** Enqueue an SMS receipt notification when the tenant has the toggle on. */
-async function enqueueReceiptSms(tenantId: string, relatedId: string, phone: string, amount: number) {
+/** Enqueue an SMS receipt notification when the school has the toggle on. */
+async function enqueueReceiptSms(relatedId: string, phone: string, amount: number) {
   try {
-    const { data: receiptOn } = await supabase.rpc('tenant_setting_enabled',
-      { p_tenant: tenantId, p_key: 'sms_payment_receipt' });
+    const { data: receiptOn } = await supabase.rpc('school_setting_enabled',
+      { p_key: 'sms_payment_receipt' });
     if (!receiptOn) return;
     const externalId = `mpesa-receipt:${relatedId}`;
     const { data: existing } = await supabase
@@ -209,7 +202,7 @@ async function enqueueReceiptSms(tenantId: string, relatedId: string, phone: str
     if (existing) return;
 
     const { error } = await supabase.from('notifications').insert({
-      tenant_id: tenantId, related_type: 'payment', related_id: relatedId, channel: 'sms',
+      related_type: 'payment', related_id: relatedId, channel: 'sms',
       external_id: externalId,
       recipient: phone,
       body: `eShule: Payment of KES ${amount} received. Receipt: ${relatedId.slice(0, 8)}`,

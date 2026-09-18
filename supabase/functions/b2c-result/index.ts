@@ -61,10 +61,10 @@ Deno.serve(async (req) => {
     const receipt = param(result.ResultParameters, 'TransactionReceipt')
       ?? param(result.ResultParameters, 'MpesaReceiptNumber');
 
-    // Resolve the run to learn its tenant (idempotency is enforced in the RPC).
+    // Resolve the run (idempotency is enforced in the RPC).
     const { data: run } = await supabase
       .from('payroll_runs')
-      .select('id, tenant_id, teacher_id, amount')
+      .select('id, teacher_id, amount')
       .eq('b2c_checkout_id', OriginatorConversationID)
       .maybeSingle();
     if (!run) {
@@ -74,7 +74,6 @@ Deno.serve(async (req) => {
 
     const success = ResultCode === 0;
     const { data: res, error } = await supabase.rpc('finalize_payroll_b2c', {
-      p_tenant_id: run.tenant_id,
       p_b2c_checkout_id: OriginatorConversationID,
       p_result_code: success ? 0 : ResultCode,
       p_result_desc: ResultDesc,
@@ -86,7 +85,7 @@ Deno.serve(async (req) => {
     }
 
     if (res?.status === 'paid') {
-      await enqueuePaidSms(run.tenant_id, run.id, run.teacher_id, run.amount);
+      await enqueuePaidSms(run.id, run.teacher_id, run.amount);
     }
 
     return json({ status: res?.status ?? 'processed' }, 200, req);
@@ -97,13 +96,13 @@ Deno.serve(async (req) => {
 });
 
 /** SMS to the teacher when their remedial payout clears (toggle-gated). */
-async function enqueuePaidSms(tenantId: string, runId: string, teacherId: string, amount: number) {
+async function enqueuePaidSms(runId: string, teacherId: string, amount: number) {
   try {
-    const { data: on } = await supabase.rpc('tenant_setting_enabled', { p_tenant: tenantId, p_key: 'sms_teacher_payout' });
+    const { data: on } = await supabase.rpc('school_setting_enabled', { p_key: 'sms_teacher_payout' });
     if (!on) return;
     const { data: teacher } = await supabase
       .from('teachers').select('phone, first_name, last_name')
-      .eq('id', teacherId).eq('tenant_id', tenantId).maybeSingle();
+      .eq('id', teacherId).maybeSingle();
     if (!teacher?.phone) return;
 
     const externalId = `b2c-paid:${runId}`;
@@ -114,7 +113,7 @@ async function enqueuePaidSms(tenantId: string, runId: string, teacherId: string
     if (existing) return;
 
     const { error } = await supabase.from('notifications').insert({
-      tenant_id: tenantId, related_type: 'payroll_run', related_id: runId,
+      related_type: 'payroll_run', related_id: runId,
       channel: 'sms', external_id: externalId,
       recipient: teacher.phone,
       body: `eShule: Your remedial payout of KES ${Number(amount).toLocaleString()} has been sent to your M-Pesa. Effort received.`,

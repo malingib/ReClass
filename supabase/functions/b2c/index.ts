@@ -10,7 +10,7 @@ import { getPlatformConfig } from '../_shared/platform-config.ts';
 // The async result (paid/failed) is finalized by `b2c-result` via the ResultURL.
 //
 // Pre-flight checks BEFORE any Daraja request:
-//   - run is processing and belongs to the tenant   (claim already enforced)
+//   - run is processing                                   (claim already enforced)
 //   - mpesa credential resolves + decrypts           (CREDS_NOT_FOUND)
 //   - credential carries initiator_name + security_credential (B2C required)
 //   - teacher has a valid M-Pesa number (2541/2547)  (TEACHER_PHONE_REQUIRED)
@@ -41,9 +41,8 @@ function cleanPhone(raw: string): string {
   return digits.replace(/^254(7|1)/, '254$1');
 }
 
-async function finalizeFailure(supabase: ReturnType<typeof getServiceClient>, tenantId: string, checkoutId: string, reason: string) {
+async function finalizeFailure(supabase: ReturnType<typeof getServiceClient>, checkoutId: string, reason: string) {
   const { error } = await supabase.rpc('finalize_payroll_b2c', {
-    p_tenant_id: tenantId,
     p_b2c_checkout_id: checkoutId,
     p_result_code: 1,
     p_result_desc: reason,
@@ -71,15 +70,13 @@ Deno.serve(async (req) => {
 
     const supabase = getServiceClient();
     const body = await req.json().catch(() => null);
-    const tenantId = body?.tenant_id;
     const runId = body?.run_id;
-    if (typeof tenantId !== 'string' || typeof runId !== 'string') {
-      return badRequest('run_id_and_tenant_id_required', req);
+    if (typeof runId !== 'string') {
+      return badRequest('run_id_required', req);
     }
 
     // Claim atomically: approved→processing, idempotent checkout id minted inside.
     const { data: claim, error: claimError } = await supabase.rpc('claim_payroll_run', {
-      p_tenant_id: tenantId,
       p_run_id: runId,
       p_profile_id: body?.actor_id ?? null,
     });
@@ -96,38 +93,37 @@ Deno.serve(async (req) => {
     // ── Pre-flight checks (before Daraja) ────────────────────────────────
     const amountNum = Number(amount);
     if (!amountNum || amountNum <= 0) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'INVALID_AMOUNT');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'INVALID_AMOUNT');
       return json({ error: 'INVALID_AMOUNT', message: 'Payroll amount must be greater than zero.' }, 400, req);
     }
     const phone = cleanPhone(String(teacher_phone ?? ''));
     if (!/^254(7|1)\d{8}$/.test(phone)) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'TEACHER_PHONE_REQUIRED');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'TEACHER_PHONE_REQUIRED');
       return json({ error: 'TEACHER_PHONE_REQUIRED', message: `Teacher (${teacher_name ?? 'unknown'}) has no valid Kenyan M-Pesa number on file. Add it under SIS → Teachers before paying.` }, 400, req);
     }
     if (typeof teacher_id_number !== 'string' || !String(teacher_id_number).trim()) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'TEACHER_ID_REQUIRED');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'TEACHER_ID_REQUIRED');
       return json({ error: 'TEACHER_ID_REQUIRED', message: `Teacher (${teacher_name ?? 'unknown'}) has no National ID on file. Add it under SIS → Teachers before paying.` }, 400, req);
     }
 
-    // Resolve + decrypt the tenant's M-Pesa credential.
+    // Resolve + decrypt the school's M-Pesa credential.
     const { data: credId } = await supabase.rpc('resolve_credential', {
-      p_tenant: tenantId,
       p_provider: 'mpesa',
       p_allow_sandbox: false,
     });
     if (!credId) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'CREDS_NOT_FOUND');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'CREDS_NOT_FOUND');
       return json({ error: 'CREDS_NOT_FOUND', message: 'No active M-Pesa credential configured. Add one in Admin → Credentials.' }, 400, req);
     }
-    const { data: s } = await supabase.rpc('decrypt_tenant_credential', { p_id: credId, p_tenant: tenantId });
+    const { data: s } = await supabase.rpc('decrypt_credential', { p_id: credId });
     if (!s?.consumer_key || !s?.consumer_secret) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'CREDS_INVALID');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'CREDS_INVALID');
       return json({ error: 'CREDS_INVALID', message: 'M-Pesa credential is malformed.' }, 400, req);
     }
     const initiatorName = s.initiator_name;
     const securityCred = s.security_credential;
     if (typeof initiatorName !== 'string' || !initiatorName || typeof securityCred !== 'string' || !securityCred) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'B2C_CREEDS_REQUIRED');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'B2C_CREEDS_REQUIRED');
       return json({ error: 'B2C_CREEDS_REQUIRED', message: 'The M-Pesa credential is missing initiator_name or security_credential. Add both in Admin → Credentials.' }, 400, req);
     }
 
@@ -139,7 +135,7 @@ Deno.serve(async (req) => {
     // BusinessShortCode/PartyB).
     const partyA = String(s.shortcode ?? '');
     if (!partyA) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'SHORTCODE_REQUIRED');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'SHORTCODE_REQUIRED');
       return json({ error: 'SHORTCODE_REQUIRED', message: 'The M-Pesa credential has no shortcode.' }, 400, req);
     }
 
@@ -149,13 +145,13 @@ Deno.serve(async (req) => {
       { headers: { Authorization: `Basic ${authHdr}` } },
     ).then(r => r.json());
     if (!access_token) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'DARAJAAUTH_FAILED');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'DARAJAAUTH_FAILED');
       return json({ error: 'DARAJAAUTH_FAILED', message: 'Could not authenticate with Daraja (check consumer key/secret).' }, 401, req);
     }
 
     const { public_url } = await getPlatformConfig(supabase, ['public_url']);
     if (!public_url) {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), 'PUBLIC_URL_REQUIRED');
+      await finalizeFailure(supabase, String(b2c_checkout_id), 'PUBLIC_URL_REQUIRED');
       return json({ error: 'PUBLIC_URL_REQUIRED', message: 'PUBLIC_URL is not configured. Set it in Platform Settings.' }, 400, req);
     }
     const resultUrl = `${public_url}/functions/v1/b2c-result`;
@@ -179,7 +175,7 @@ Deno.serve(async (req) => {
     }).then(r => r.json());
 
     if (resp.ResponseCode !== '0') {
-      await finalizeFailure(supabase, tenantId, String(b2c_checkout_id), resp.ResponseDescription ?? 'DARAJAA_REJECTED');
+      await finalizeFailure(supabase, String(b2c_checkout_id), resp.ResponseDescription ?? 'DARAJAA_REJECTED');
       return json(
         { status: 'rejected', message: resp.ResponseDescription ?? 'Daraja rejected the payout request.' },
         409, req,

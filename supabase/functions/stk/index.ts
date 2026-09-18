@@ -59,15 +59,14 @@ Deno.serve(async (req) => {
       return badRequest('INVALID_REQUEST', req);
 
     const { data: parent } = await supabase.from('parents')
-      .select('id, tenant_id, phone')
+      .select('id, phone')
       .eq('profile_id', user.id)
       .maybeSingle();
     if (!parent) return forbidden(req);
 
     const { data: feeType } = await supabase.from('fee_types')
-      .select('id, tenant_id, name, amount, domain')
+      .select('id, name, amount, domain')
       .eq('id', fee_type_id)
-      .eq('tenant_id', parent.tenant_id)
       .is('deleted_at', null)
       .maybeSingle();
     if (!feeType) return notFound('FEE_TYPE_NOT_FOUND', req);
@@ -79,17 +78,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!link) return forbidden(req);
 
-    // Resolve the tenant's payment channel for THIS domain (one per domain:
+    // Resolve the school's payment channel for THIS domain (one per domain:
     // bank OR mpesa). If the domain is on bank (KCB), refuse STK — the client
     // shows bank details instead.
-    const { data: tenant } = await supabase.from('tenants')
+    const { data: school } = await supabase.from('school_settings')
       .select('school_payment_channel, remedial_payment_channel')
-      .eq('id', parent.tenant_id)
-      .single();
+      .limit(1)
+      .maybeSingle();
     const domain = feeType.domain === 'school' ? 'school' : 'remedial';
     const channel = domain === 'school'
-      ? tenant?.school_payment_channel ?? 'bank'
-      : tenant?.remedial_payment_channel ?? 'mpesa';
+      ? (school as { school_payment_channel?: string } | null)?.school_payment_channel ?? 'bank'
+      : (school as { remedial_payment_channel?: string } | null)?.remedial_payment_channel ?? 'mpesa';
     if (channel !== 'mpesa') {
       return json({ error: 'BANK_CHANNEL', message: 'This fee is paid by bank transfer. Use the bank payment details instead.' }, 400, req);
     }
@@ -99,7 +98,6 @@ Deno.serve(async (req) => {
     const { data: student } = await supabase.from('students')
       .select('admission_no')
       .eq('id', student_id)
-      .eq('tenant_id', parent.tenant_id)
       .maybeSingle();
     if (!student?.admission_no) return notFound('STUDENT_NOT_FOUND', req);
     const accountRef = student.admission_no.slice(0, 12);
@@ -114,7 +112,13 @@ Deno.serve(async (req) => {
       return json({ error: 'DUPLICATE_REQUEST', message: 'A payment request for this fee is already being processed.' }, 429, req);
     }
 
-    const tenant_id = parent.tenant_id;
+    const { data: cred_id } = await supabase.rpc('resolve_credential',
+      { p_provider: 'mpesa', p_allow_sandbox: false });
+    if (!cred_id) return badRequest('CREDS_NOT_FOUND', req);
+
+    const { data: secrets } = await supabase.rpc('decrypt_credential', {
+      p_id: cred_id,
+    });
     // Normalize to international 254 format: strip separators, then convert a
     // leading 0 (0712… → 254712…) or bare 7xx (712… → 254712…) so phone numbers
     // stored in local formats still pass the Daraja phone validation.
@@ -131,14 +135,6 @@ Deno.serve(async (req) => {
     }
     const payPhone = normalizedPhone;
 
-    const { data: cred_id } = await supabase.rpc('resolve_credential',
-      { p_tenant: tenant_id, p_provider: 'mpesa', p_allow_sandbox: false });
-    if (!cred_id) return badRequest('CREDS_NOT_FOUND', req);
-
-    const { data: secrets } = await supabase.rpc('decrypt_tenant_credential', {
-      p_id: cred_id,
-      p_tenant: tenant_id,
-    });
     const base = secrets.environment === 'sandbox'
       ? 'https://sandbox.safaricom.co.ke' : 'https://api.safaricom.co.ke';
 
@@ -180,7 +176,7 @@ Deno.serve(async (req) => {
     // provider acceptance still has local tracking for reconciliation.
     const checkoutId = crypto.randomUUID();
     const { error: checkoutInsertError } = await supabase.from('checkout_requests').insert({
-      tenant_id, fee_type_id, student_id, checkout_id: checkoutId,
+      fee_type_id, student_id, checkout_id: checkoutId,
       amount, phone: payPhone, status: 'pending',
     });
     if (checkoutInsertError) {

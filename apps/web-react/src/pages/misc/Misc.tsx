@@ -1,10 +1,9 @@
 import { useAdminDashboard } from '@/hooks/useDashboard';
 import { KpiCard } from '@/components/KpiCard';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { useSchool } from '@/hooks/useSchool';
 import { DataTable } from '@/components/DataTable';
-import { Tenants, Modules } from '@/pages/admin/Tables';
+import { Modules } from '@/pages/admin/Tables';
 
 export function PrincipalDashboard() {
   const { data } = useAdminDashboard(30);
@@ -22,19 +21,18 @@ export function PrincipalDashboard() {
 }
 
 export function SchoolOverview() {
-  const { data: ctx } = useTenant();
-  const { data: tenant } = useQuery({
-    queryKey: ['tenant', ctx?.tenantId],
-    enabled: !!ctx?.tenantId,
-    queryFn: async () => {
-      const { data } = await supabase.from('tenants').select('*').eq('id', ctx!.tenantId).maybeSingle();
-      return data as Record<string, unknown> | null;
-    },
-  });
+  const { data: school } = useSchool();
+  const rows: [string, string][] = [
+    ['School', school?.name ?? '—'],
+    ['Code', school?.slug ?? '—'],
+    ['School-fee channel', school?.school_payment_channel ?? '—'],
+    ['Remedial-fee channel', school?.remedial_payment_channel ?? '—'],
+    ['SMS sender', school?.sms_sender_id ?? '—'],
+  ];
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">School</h1>
-      <DataTable columns={['Field', 'Value']} rows={Object.entries(tenant ?? {}).slice(0, 15).map(([k, v]) => [k, String(v ?? '—')])} />
+      <DataTable columns={['Field', 'Value']} rows={rows} pagination="none" />
     </div>
   );
 }
@@ -58,7 +56,6 @@ export function SuperAdminDashboard() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">System administration</h1>
-      <Tenants />
       <Modules />
     </div>
   );
@@ -69,7 +66,7 @@ export function Account() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Account</h1>
-      <DataTable columns={['Field', 'Value']} rows={[['User', ctx?.userId], ['Active role', ctx?.activeRole], ['Roles', ctx?.roles.join(', ')], ['Tenant', ctx?.tenantId]]} />
+      <DataTable columns={['Field', 'Value']} rows={[['User', ctx?.userId], ['Active role', ctx?.activeRole], ['Roles', ctx?.roles.join(', ')]]} />
     </div>
   );
 }
@@ -78,7 +75,7 @@ export function About() {
   return (
     <div className="space-y-2">
       <h1 className="text-xl font-semibold">About eShule</h1>
-      <p className="text-sm">Multi-tenant school-operations platform. ReClass is the remedial learning module.</p>
+      <p className="text-sm">Single-school operations platform. ReClass is the remedial learning module.</p>
     </div>
   );
 }

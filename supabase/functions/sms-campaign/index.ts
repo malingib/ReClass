@@ -20,7 +20,7 @@ function normalizePhone(phone: string): string {
  * - { recipients: [...], message, trigger? } → enqueue into notifications queue
  *   (delivery itself is performed by the `notify` worker)
  * - { contact_list_id, message } → POST /sms/campaign bulk send
- * Caller must hold an staff role; tenant is resolved from user_roles.
+ * Caller must hold a staff role (single-school deployment, no tenancy).
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return handleOptions(req);
@@ -31,12 +31,11 @@ Deno.serve(async (req) => {
   const supabase = getServiceClient();
   const { data: roleRows } = await supabase
     .from('user_roles')
-    .select('role, tenant_id')
+    .select('role')
     .eq('user_id', user.id);
-  const held = (roleRows ?? []) as { role: string; tenant_id: string }[];
-  const staff = held.filter((r) => ALLOWED_ROLES.includes(r.role));
+  const held = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);
+  const staff = held.filter((role) => ALLOWED_ROLES.includes(role));
   if (staff.length === 0) return forbidden(req);
-  const tenantId = staff[0].tenant_id;
 
   let body: Record<string, unknown> = {};
   try {
@@ -46,7 +45,6 @@ Deno.serve(async (req) => {
   }
 
   const { data: credId } = await supabase.rpc('resolve_credential', {
-    p_tenant: tenantId,
     p_provider: 'mobiwave_sms',
     p_allow_sandbox: false,
   });
@@ -54,7 +52,7 @@ Deno.serve(async (req) => {
 
   let apiToken = '';
   if (credId) {
-    const { data: s } = await supabase.rpc('decrypt_tenant_credential', { p_id: credId, p_tenant: tenantId });
+    const { data: s } = await supabase.rpc('decrypt_credential', { p_id: credId });
     apiToken = (s as { api_token?: string } | null)?.api_token ?? '';
   }
 
@@ -66,8 +64,8 @@ Deno.serve(async (req) => {
     return json({ balance: r }, 200, req);
   }
 
-  const { data: tenant } = await supabase.from('tenants').select('sms_sender_id').eq('id', tenantId).maybeSingle();
-  const senderId = (tenant as { sms_sender_id?: string } | null)?.sms_sender_id || 'ESHULE';
+  const { data: school } = await supabase.from('school_settings').select('sms_sender_id').limit(1).maybeSingle();
+  const senderId = ((school as { sms_sender_id?: string } | null)?.sms_sender_id) || 'ESHULE';
   const message = String(body.message ?? '');
   if (!message) return badRequest('MESSAGE_REQUIRED', req);
 
@@ -91,7 +89,6 @@ Deno.serve(async (req) => {
   const recipients = ((body.recipients ?? []) as string[]).map(normalizePhone).filter(Boolean);
   if (recipients.length === 0) return badRequest('RECIPIENTS_REQUIRED', req);
   const rows = recipients.map((recipient) => ({
-    tenant_id: tenantId,
     channel: 'sms',
     recipient,
     body: message,

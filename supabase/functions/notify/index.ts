@@ -27,7 +27,6 @@ Deno.serve(async (req) => {
 
   if (!batch?.length) return json({ processed: 0 }, 200, req);
 
-  const senderCache = new Map<string, string>();
   let sent = 0, failed = 0;
   const now = new Date().toISOString();
   for (const n of batch) {
@@ -45,28 +44,26 @@ Deno.serve(async (req) => {
       failed++; continue;
     }
 
-    let senderId = senderCache.get(n.tenant_id);
+    let senderId: string | null = null;
     if (!senderId) {
-      const { data: tenant } = await supabase
-        .from('tenants')
+      const { data: school } = await supabase
+        .from('school_settings')
         .select('sms_sender_id')
-        .eq('id', n.tenant_id)
+        .limit(1)
         .maybeSingle();
-      senderId = tenant?.sms_sender_id || 'ESHULE';
-      senderCache.set(n.tenant_id, senderId);
+      senderId = (school as { sms_sender_id?: string } | null)?.sms_sender_id || 'ESHULE';
     }
 
     const { data: credId } = await supabase.rpc('resolve_credential',
-      { p_tenant: n.tenant_id, p_provider: 'mobiwave_sms', p_allow_sandbox: false });
+      { p_provider: 'mobiwave_sms', p_allow_sandbox: false });
     if (!credId) {
       await supabase.from('notifications').update(
         { status: 'failed', claimed_at: null, last_error: 'CREDS_NOT_FOUND', attempts: n.attempts + 1 }).eq('id', n.id);
       failed++; continue;
     }
 
-    const { data: s } = await supabase.rpc('decrypt_tenant_credential', {
+    const { data: s } = await supabase.rpc('decrypt_credential', {
       p_id: credId,
-      p_tenant: n.tenant_id,
     });
     try {
       const controller = new AbortController();

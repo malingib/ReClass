@@ -45,13 +45,13 @@ export async function verifyAuth(authorization: string | null): Promise<Verified
 export async function verifyAdmin(
   authorization: string | null,
   serviceClient: ReturnType<typeof getUserClient>,
-): Promise<{ user: VerifiedUser; roles: { role: string; tenant_id: string }[] } | null> {
+): Promise<{ user: VerifiedUser; roles: { role: string }[] } | null> {
   const user = await verifyAuth(authorization);
   if (!user) return null;
 
   const { data: roles } = await serviceClient
     .from('user_roles')
-    .select('role, tenant_id')
+    .select('role')
     .eq('user_id', user.id);
 
   const isAdmin = roles?.some(r => r.role === 'school_admin' || r.role === 'super_admin');

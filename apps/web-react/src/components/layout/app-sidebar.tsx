@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronRight, LogOut, PanelLeft, Moon, Sun, Bell } from 'lucide-react';
+import { ChevronRight, LogOut, PanelLeft, Moon, Sun, Bell, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navGroups, filterNavByRole } from './nav-data';
 import { useTenant } from '@/hooks/useTenant';
@@ -76,10 +76,10 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
       </div>
 
       <div className="border-t border-sidebar-border p-2">
-        {!collapsed && ctx && (
+        {!collapsed && ctx && ctx.activeRole && (
           <div className="mb-2 rounded-md border border-sidebar-border bg-sidebar-accent/60 p-2 text-xs">
-            <div className="font-medium text-sidebar-accent-foreground">{roleLabels[ctx.activeRole!]}</div>
-            <div className="truncate text-muted-foreground">Tenant {ctx.tenantId?.slice(0, 8)}…</div>
+            <div className="font-medium text-sidebar-accent-foreground">{roleLabels[ctx.activeRole]}</div>
+            <div className="truncate text-muted-foreground">Single-school deployment</div>
           </div>
         )}
         <SidebarFooter collapsed={collapsed} />
@@ -113,15 +113,31 @@ function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-export function Header({ onToggleSidebar, title }: { onToggleSidebar: () => void; title?: string }) {
+export function Header({ onToggleSidebar, title, onSearch }: { onToggleSidebar: () => void; title?: string; onSearch?: () => void }) {
   const { theme, setTheme } = useTheme();
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-3 backdrop-blur-sm transition-all duration-200 sm:px-6 md:h-16 md:px-8">
       <button onClick={onToggleSidebar} className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden" aria-label="Open navigation">
         <PanelLeft className="size-4" />
       </button>
-      {title && <h1 className="text-sm font-semibold tracking-tight">{title}</h1>}
+      {title && <p className="truncate text-sm font-semibold tracking-tight" aria-hidden="true">{title}</p>}
+      {/* Welfare-connect style search — opens the command palette */}
+      <div className="ml-4 hidden max-w-md flex-1 md:block">
+        <button
+          type="button"
+          onClick={onSearch}
+          className="flex h-9 w-full items-center gap-2 rounded-md border border-transparent bg-muted px-3 text-sm text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-accent-foreground md:h-10"
+          aria-label="Search (Ctrl+K)"
+        >
+          <Search className="size-4 shrink-0" />
+          <span className="flex-1 text-left">Search…</span>
+          <kbd className="hidden rounded border bg-background px-1.5 py-0.5 text-[10px] font-medium lg:inline-block">Ctrl K</kbd>
+        </button>
+      </div>
       <div className="ml-auto flex items-center gap-1">
+        <button onClick={onSearch} className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden" aria-label="Search">
+          <Search className="size-4" />
+        </button>
         <NotificationBell />
         <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground" aria-label="Toggle theme">
           {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}

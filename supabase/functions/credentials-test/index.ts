@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
 
     const { data: roles } = await supabase
       .from('user_roles')
-      .select('role, tenant_id')
+      .select('role')
       .eq('user_id', user.id);
     const isAdmin = roles?.some(r => r.role === 'school_admin' || r.role === 'super_admin');
     if (!isAdmin) return forbidden(req);
@@ -21,30 +21,17 @@ Deno.serve(async (req) => {
     const { credential_id } = await req.json();
     if (!credential_id) return badRequest('credential_id_required', req);
 
-    const adminTenantIds = new Set(roles.filter(r => r.role === 'school_admin').map(r => r.tenant_id));
-    const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
-    if (!isSuperAdmin) {
-      const { data: cred } = await supabase
-        .from('credentials')
-        .select('tenant_id')
-        .eq('id', credential_id)
-        .maybeSingle();
-      if (!cred || !adminTenantIds.has(cred.tenant_id)) {
-        return forbidden(req);
-      }
-    }
-
     const { data: credential } = await supabase
       .from('credentials')
-      .select('tenant_id, scope')
+      .select('scope')
       .eq('id', credential_id)
       .maybeSingle();
+    if (!credential) return forbidden(req);
     let s;
     let error;
     if (credential?.scope === 'tenant') {
-      const r = await supabase.rpc('decrypt_tenant_credential', {
+      const r = await supabase.rpc('decrypt_credential', {
         p_id: credential_id,
-        p_tenant: credential.tenant_id,
       });
       s = r.data; error = r.error;
     } else {

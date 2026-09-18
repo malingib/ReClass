@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/hooks/useTenant';
 import { useFeeTypes } from '@/hooks/useFinance';
 import { Button, Input, LoadingButton } from './ui';
 import { ConfirmDelete } from './ConfirmDelete';
@@ -9,7 +8,6 @@ import { DataTable } from './DataTable';
 
 /** Port of FeeManager.svelte — Bursar-owned fee type CRUD. */
 export function FeeManager() {
-  const { data: ctx } = useTenant();
   const { data: fees = [], isLoading } = useFeeTypes();
   const qc = useQueryClient();
   const [name, setName] = useState('');
@@ -17,7 +15,7 @@ export function FeeManager() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('fee_types').insert({ name, amount: Number(amount), tenant_id: ctx!.tenantId });
+      const { error } = await supabase.from('fee_types').insert({ name, amount: Number(amount) });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -30,6 +28,19 @@ export function FeeManager() {
   async function remove(id: string) {
     await supabase.from('fee_types').update({ deleted_at: new Date().toISOString() }).eq('id', id);
     qc.invalidateQueries({ queryKey: ['fee-types'] });
+  }
+
+  function exportCsv() {
+    const lines = ['Name,Amount', ...fees.map((f) => {
+      const row = f as { name?: string; amount?: number };
+      return `"${String(row.name ?? '').replace(/"/g, '""')}",${row.amount ?? ''}`;
+    })];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `fee-types-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   return (
@@ -59,7 +70,7 @@ export function FeeManager() {
         />
       )}
       <div className="flex gap-2">
-        <Button onClick={() => {}}>Export</Button>
+        <Button variant="outline" onClick={exportCsv} disabled={fees.length === 0}>Export CSV</Button>
       </div>
     </div>
   );

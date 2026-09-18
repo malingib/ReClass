@@ -39,3 +39,4 @@ export const Calendar = table('school_calendar_events', 'Calendar', ['Title', 'D
 export const Discipline = table('discipline_cases', 'Discipline', ['Student', 'Status'], (r) => { const x = r as unknown as { student_id?: string; status?: string }; return [x.student_id, x.status]; });
 export const Lifecycle = table('student_lifecycle_events', 'Lifecycle', ['Event', 'Date'], (r) => { const x = r as unknown as { event?: string; created_at?: string }; return [x.event, x.created_at]; });
 export const Terms = table('terms', 'Terms', ['Name', 'Current'], (r) => { const x = r as unknown as { name?: string; is_current?: boolean }; return [x.name, x.is_current ? 'Current' : '—']; });
+export const Modules = table('modules', 'Modules', ['Name', 'Key', 'Status'], (r) => { const x = r as unknown as { name?: string; key?: string; slug?: string; active?: boolean }; return [x.name, x.key ?? x.slug, x.active === false ? 'inactive' : 'active']; });

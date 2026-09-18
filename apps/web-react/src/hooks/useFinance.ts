@@ -12,19 +12,57 @@ export function useFeeTypes() {
   });
 }
 
-/** Legacy invoice hook retained for compatibility. The current schema exposes remedial obligations instead. */
-export function useInvoices(scope?: { studentId?: string }) {
+export type InvoiceRow = {
+  id: string;
+  student_id: string;
+  amount_due: number;
+  amount_paid: number;
+  status: string;
+  created_at?: string;
+  student?: { first_name?: string | null; last_name?: string | null; admission_no?: string | null } | null;
+};
+
+/** Paginated school-finance invoices with student names joined. */
+export function useInvoices(page = 1, pageSize = 20) {
   return useQuery({
-    queryKey: ['invoices', scope?.studentId],
-    queryFn: async () => [] as Record<string, unknown>[],
+    queryKey: ['invoices', page, pageSize],
+    queryFn: async () => {
+      const { data, count, error } = await supabase
+        .from('invoices')
+        .select('id,student_id,amount_due,amount_paid,status,created_at,student:students(first_name,last_name,admission_no)', { count: 'exact' })
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+      if (error) throw error;
+      return { rows: (data ?? []) as InvoiceRow[], total: count ?? 0 };
+    },
   });
 }
 
-/** Receipt data is exposed through the authoritative receipt/payment screens and RPCs. */
-export function useReceipts() {
+export type ReceiptRow = {
+  id: string;
+  receipt_no?: string | null;
+  amount: number;
+  status: string;
+  created_at?: string;
+  student_id?: string | null;
+  student?: { first_name?: string | null; last_name?: string | null; admission_no?: string | null } | null;
+};
+
+/** Actual payment evidence: payments carrying a receipt number, newest first. */
+export function useReceipts(page = 1, pageSize = 20) {
   return useQuery({
-    queryKey: ['receipts'],
-    queryFn: async () => [] as Record<string, unknown>[],
+    queryKey: ['receipts', page, pageSize],
+    queryFn: async () => {
+      const { data, count, error } = await supabase
+        .from('payments')
+        .select('id,receipt_no,amount,status,created_at,student_id,student:students(first_name,last_name,admission_no)', { count: 'exact' })
+        .not('receipt_no', 'is', null)
+        .order('created_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+      if (error) throw error;
+      return { rows: (data ?? []) as ReceiptRow[], total: count ?? 0 };
+    },
   });
 }
 
@@ -59,6 +97,50 @@ export function useUnmatchedPayments() {
       const { data, error } = await supabase.from('unmatched_payments').select('*').order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
       return (data ?? []) as Record<string, unknown>[];
+    },
+  });
+}
+
+export type FeeCollectionSlice = {
+  id: string;
+  name: string;
+  term?: string | null;
+  due: number;
+  paid: number;
+  count: number;
+};
+
+/** Term collection progress: fee types joined with invoice aggregates. */
+export function useFeeCollection() {
+  return useQuery({
+    queryKey: ['fee-collection'],
+    queryFn: async () => {
+      const [fees, invoices] = await Promise.all([
+        supabase.from('fee_types').select('id,name,term').is('deleted_at', null).order('name'),
+        supabase.from('invoices').select('fee_type_id,amount_due,amount_paid').is('deleted_at', null).limit(2000),
+      ]);
+      if (fees.error) throw fees.error;
+      if (invoices.error) throw invoices.error;
+      const byFee = new Map<string, { due: number; paid: number; count: number }>();
+      for (const inv of (invoices.data ?? []) as { fee_type_id?: string | null; amount_due?: number; amount_paid?: number }[]) {
+        const key = inv.fee_type_id ?? '__none__';
+        const agg = byFee.get(key) ?? { due: 0, paid: 0, count: 0 };
+        agg.due += Number(inv.amount_due ?? 0);
+        agg.paid += Number(inv.amount_paid ?? 0);
+        agg.count += 1;
+        byFee.set(key, agg);
+      }
+      const perFee: FeeCollectionSlice[] = ((fees.data ?? []) as { id: string; name: string; term?: string | null }[]).map((f) => ({
+        id: f.id,
+        name: f.name,
+        term: f.term ?? null,
+        ...(byFee.get(f.id) ?? { due: 0, paid: 0, count: 0 }),
+      }));
+      const unlinked = byFee.get('__none__');
+      const totalDue = perFee.reduce((n, f) => n + f.due, 0) + (unlinked?.due ?? 0);
+      const totalPaid = perFee.reduce((n, f) => n + f.paid, 0) + (unlinked?.paid ?? 0);
+      const totalCount = perFee.reduce((n, f) => n + f.count, 0) + (unlinked?.count ?? 0);
+      return { perFee, totalDue, totalPaid, totalCount };
     },
   });
 }
