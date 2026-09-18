@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -13,9 +14,11 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.035 255);
 
-  /* Indigo primary */
-  --primary: oklch(0.49 0.22 275);
-  --primary-foreground: oklch(0.99 0.005 250);
+  /* Brand primary. Keep these aliases as the single source for action color. */
+  --brand-primary: oklch(0.49 0.22 275);
+  --brand-primary-foreground: oklch(0.99 0.005 250);
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-primary-foreground);
 
   /* Teal operational secondary */
   --secondary: oklch(0.94 0.045 178);
@@ -56,8 +59,10 @@
   --popover: oklch(0.20 0.04 255);
   --popover-foreground: oklch(0.96 0.012 245);
 
-  --primary: oklch(0.68 0.18 275);
-  --primary-foreground: oklch(0.16 0.035 260);
+  --brand-primary: oklch(0.68 0.18 275);
+  --brand-primary-foreground: oklch(0.16 0.035 260);
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-primary-foreground);
   --secondary: oklch(0.24 0.055 180);
   --secondary-foreground: oklch(0.88 0.055 178);
   --muted: oklch(0.23 0.03 255);
@@ -93,6 +98,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-foreground: var(--brand-primary-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -124,8 +131,24 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
+  html,
+  body {
+    @apply m-0 min-h-full w-full overflow-x-hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    @apply min-h-screen w-full;
   }
 
   button:not(:disabled) {
@@ -136,4 +159,175 @@
     background: var(--primary);
     color: var(--primary-foreground);
   }
+
+  /* Custom scrollbar — stolen from welfare-connect */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-secondary rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/50 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/70;
+  }
+
+  /* Mobile touch improvements — 44px targets, no iOS zoom */
+  @media (hover: none) and (pointer: coarse) {
+    button,
+    a,
+    [role="button"],
+    [role="tab"] {
+      @apply min-h-[44px] min-w-[44px];
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      @apply min-h-[44px];
+      font-size: 16px; /* Prevents iOS zoom-on-input */
+    }
+  }
+
+  /* Responsive typography */
+  @media (max-width: 640px) {
+    body {
+      font-size: 14px;
+    }
+
+    h1 {
+      @apply text-2xl;
+    }
+
+    h2 {
+      @apply text-xl;
+    }
+
+    h3 {
+      @apply text-lg;
+    }
+
+    h4 {
+      @apply text-base;
+    }
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible;
+  }
+  .print-receipt {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    max-width: none;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+@layer components {
+  /* Responsive helpers — stolen from welfare-connect */
+  .btn-responsive {
+    @apply px-3 py-2 sm:px-4 sm:py-2.5;
+  }
+
+  .container-responsive {
+    @apply w-full px-3 sm:px-4 md:px-6 lg:px-8;
+  }
+
+  .p-responsive-sm {
+    @apply p-2 sm:p-3 md:p-4;
+  }
+
+  .p-responsive {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+
+  .p-responsive-lg {
+    @apply p-4 sm:p-6 md:p-8;
+  }
+
+  .gap-responsive-sm {
+    @apply gap-2 sm:gap-3 md:gap-4;
+  }
+
+  .gap-responsive {
+    @apply gap-3 sm:gap-4 md:gap-6;
+  }
+
+  .mobile-overlay {
+    @apply fixed inset-0 bg-black/50 z-40 md:hidden;
+  }
+
+  .safe-area {
+    padding-left: max(env(safe-area-inset-left), 1rem);
+    padding-right: max(env(safe-area-inset-right), 1rem);
+    padding-top: max(env(safe-area-inset-top), 1rem);
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+
+  /* Card polish */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md border shadow-lg;
+  }
+
+  .neo-card {
+    @apply bg-card rounded-xl shadow-lg p-6;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  .page-transition {
+    animation: fade-in 0.3s ease-in-out;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-lift,
+  .page-transition {
+    animation: none;
+    transition: none;
+  }
+
+  .animate-pulse,
+  .animate-spin {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slide-down {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
