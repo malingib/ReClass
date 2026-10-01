@@ -35,6 +35,43 @@ export const PERMISSIONS = {
 export function hasPermission(permissions: readonly string[], permission: Permission) { return permissions.includes(permission); }
 export function hasAnyPermission(permissions: readonly string[], required: readonly Permission[]) { return required.some((permission) => permissions.includes(permission)); }
 
+const ALL_PERMISSIONS: Permission[] = [
+  'school.finance.view', 'school.finance.manage', 'school.finance.approve', 'school.finance.reconcile', 'school.finance.report',
+  'reclass.programme.view', 'reclass.programme.manage',
+  'reclass.teaching.view', 'reclass.teaching.manage',
+  'reclass.attendance.view', 'reclass.attendance.manage',
+  'reclass.committee.view', 'reclass.committee.manage',
+  'reclass.finance.view', 'reclass.finance.manage', 'reclass.finance.approve', 'reclass.finance.reconcile', 'reclass.finance.report',
+  'reclass.payments.view', 'reclass.payments.manage',
+  'reclass.reports.view',
+  'users.manage', 'settings.manage', 'audit.view',
+];
+
+/**
+ * Canonical role → permission map. The `role_permissions` / `permissions`
+ * contractor tables do not exist in the database (referenced by RLS helpers
+ * but never created), so code is the source of truth until a migration ships
+ * them. Keep in sync with route guards in App.tsx.
+ */
+export const rolePermissions: Record<Role, Permission[]> = {
+  super_admin: ALL_PERMISSIONS,
+  school_admin: ['school.finance.view', 'school.finance.manage', 'school.finance.report', 'reclass.programme.view', 'reclass.programme.manage', 'reclass.teaching.view', 'reclass.teaching.manage', 'reclass.attendance.view', 'reclass.attendance.manage', 'reclass.committee.view', 'reclass.committee.manage', 'reclass.finance.view', 'reclass.finance.manage', 'reclass.finance.report', 'reclass.payments.view', 'reclass.payments.manage', 'reclass.reports.view', 'users.manage', 'settings.manage', 'audit.view'],
+  principal: ['school.finance.view', 'school.finance.report', 'reclass.programme.view', 'reclass.teaching.view', 'reclass.attendance.view', 'reclass.committee.view', 'reclass.finance.view', 'reclass.finance.report', 'reclass.payments.view', 'reclass.reports.view', 'audit.view'],
+  teacher: ['reclass.teaching.view', 'reclass.attendance.view'],
+  remedial_teacher: ['reclass.programme.view', 'reclass.teaching.view', 'reclass.teaching.manage', 'reclass.attendance.view', 'reclass.attendance.manage'],
+  bursar: ['school.finance.view', 'school.finance.manage', 'school.finance.approve', 'school.finance.reconcile', 'school.finance.report'],
+  payroll: ['school.finance.view', 'school.finance.report'],
+  reclass_chair: ['reclass.programme.view', 'reclass.programme.manage', 'reclass.teaching.view', 'reclass.attendance.view', 'reclass.attendance.manage', 'reclass.committee.view', 'reclass.committee.manage', 'reclass.finance.view', 'reclass.finance.approve', 'reclass.finance.report', 'reclass.payments.view', 'reclass.reports.view'],
+  reclass_secretary: ['reclass.programme.view', 'reclass.attendance.view', 'reclass.committee.view', 'reclass.committee.manage', 'reclass.reports.view'],
+  reclass_treasurer: ['reclass.programme.view', 'reclass.finance.view', 'reclass.finance.manage', 'reclass.finance.reconcile', 'reclass.finance.report', 'reclass.payments.view', 'reclass.payments.manage', 'reclass.reports.view'],
+  reclass_member: ['reclass.programme.view', 'reclass.attendance.view', 'reclass.committee.view', 'reclass.reports.view'],
+  parent: [],
+};
+
+export function permissionsForRoles(roles: readonly Role[]): Permission[] {
+  return [...new Set(roles.flatMap((r) => rolePermissions[r] ?? []))];
+}
+
 export const ADMIN_ROLES: Role[] = ['school_admin', 'super_admin', 'principal', 'bursar'];
 export const MEMBER_MANAGEMENT_ROLES: Role[] = ['school_admin', 'super_admin', 'principal'];
 export const FINANCE_ROLES: Role[] = ['school_admin', 'super_admin', 'bursar', 'payroll'];

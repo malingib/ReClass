@@ -8,7 +8,7 @@ This roadmap is the delivery plan for **eShule**, the school-operations platform
 
 ## Product direction
 
-eShule connects school administration, student lifecycle, teaching operations, school finance, payroll, ReClass remedial operations, communication, governance, receipts and audit into one tenant-isolated operating platform.
+eShule connects school administration, student lifecycle, teaching operations, school finance, payroll, ReClass remedial operations, communication, governance, receipts and audit into one single-school operating platform (ADR-002).
 
 ## Delivery status
 

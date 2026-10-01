@@ -70,7 +70,7 @@ export default function CommitteeManagement() {
         .order('active', { ascending: false })
         .order('effective_from', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Assignment[];
+      return (data ?? []) as unknown as Assignment[];
     },
   });
 

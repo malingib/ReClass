@@ -4,7 +4,7 @@
 
 ## Product boundary
 
-eShule is a multi-tenant school-operations platform. **ReClass is the remedial learning and programme-management module within eShule**, not the global product identity.
+eShule is a single-school school-operations platform (ADR-002: one Supabase project per school, multi-tenancy deferred). **ReClass is the remedial learning and programme-management module within eShule**, not the global product identity.
 
 Core domains:
 
@@ -46,7 +46,7 @@ The Principal provides oversight and approval where assigned. The Principal does
 
 ```mermaid
 flowchart LR
-    U[Staff / Parent browser] --> W[SvelteKit web application]
+    U[Staff / Parent browser] --> W[React + Vite web application]
     W --> A[Supabase Auth]
     W --> DB[(Supabase PostgreSQL)]
     W --> E[Supabase Edge Functions]
@@ -58,7 +58,7 @@ flowchart LR
     W --> OBS[Optional Sentry]
 ```
 
-The application is a **modular monolith**. SvelteKit routes, server services and shared UI deploy together. Edge Functions isolate external payment/SMS integrations and scheduled workers. PostgreSQL is the durable system of record.
+The application is a **modular monolith**. The React app (routes, hooks, shared UI) deploys as a static bundle to Vercel. Edge Functions isolate external payment/SMS integrations and scheduled workers. PostgreSQL is the durable system of record. One deployment serves one school (ADR-002).
 
 ## Application layers
 
@@ -139,7 +139,7 @@ The database-backed notification queue is suitable for the current architecture 
 
 ## Deployment boundary
 
-The authoritative web deployment direction is SvelteKit/Vercel with Supabase for database, authentication and Edge Functions. Historical Docker/VPS material should not be treated as the active deployment path unless deliberately reintroduced and validated.
+The authoritative web deployment direction is the React 18 SPA in `apps/web-react` (Vite build, react-router-dom) with Supabase for database, authentication and Edge Functions. The legacy SvelteKit frontend was removed. Historical Docker/VPS material should not be treated as the active deployment path unless deliberately reintroduced and validated.
 
 Production readiness requires evidence for clean migration replay, live authorization/RLS verification, provider sandbox/callback testing, backup/restore drills, CI/build/type/test gates, observability and rollback procedures.
 

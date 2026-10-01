@@ -20,6 +20,7 @@ audit-screenshots/
 e2e/audit-screenshots/
 e2e/audit-findings.json
 e2e/audit-results.json
+.playwright-mcp/
 
 # Python build artifacts
 __pycache__/

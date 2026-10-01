@@ -46,17 +46,20 @@ export type ReceiptRow = {
   status: string;
   created_at?: string;
   student_id?: string | null;
+  domain?: string | null;
   student?: { first_name?: string | null; last_name?: string | null; admission_no?: string | null } | null;
 };
 
-/** Actual payment evidence: payments carrying a receipt number, newest first. */
+/** Actual payment evidence: payments carrying a receipt number, newest first.
+ *  Covers both domains — school fees and remedial (ReClass) fees share the
+ *  ledger; callers separate them with paymentDomainLabel/isSchoolPayment. */
 export function useReceipts(page = 1, pageSize = 20) {
   return useQuery({
     queryKey: ['receipts', page, pageSize],
     queryFn: async () => {
       const { data, count, error } = await supabase
         .from('payments')
-        .select('id,receipt_no,amount,status,created_at,student_id,student:students(first_name,last_name,admission_no)', { count: 'exact' })
+        .select('id,receipt_no,amount,status,created_at,student_id,domain,student:students(first_name,last_name,admission_no)', { count: 'exact' })
         .not('receipt_no', 'is', null)
         .order('created_at', { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1);
@@ -72,7 +75,7 @@ export function usePayrollRuns(kind: 'school' | 'remedial') {
     queryFn: async () => {
       const { data, error } = await supabase.from('payroll_runs').select('*').eq('domain', kind).order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as { status: string; amount: number }[];
+      return (data ?? []) as { id: string; period_start: string; period_end: string; amount: number; status: string }[];
     },
   });
 }

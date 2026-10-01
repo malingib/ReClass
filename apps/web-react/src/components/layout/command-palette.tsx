@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { filterNavByRole, navGroups } from './nav-data';
@@ -12,7 +12,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const { data: ctx } = useTenant();
   const [query, setQuery] = useState('');
   const [index, setIndex] = useState(0);
-  useEscape(onClose);
+  // Guard: only fire onClose when the palette is actually open, so a stray
+  // Escape can't close other UI (e.g. the mobile drawer) while closed.
+  const handleEscape = useCallback(() => {
+    if (open) onClose();
+  }, [open, onClose]);
+  useEscape(handleEscape);
 
   const items = useMemo(() => {
     const out: { title: string; hint: string; to: string }[] = [];

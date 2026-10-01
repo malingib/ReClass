@@ -78,11 +78,11 @@ export function KpiCard({
                 >
                   {trendObj.isPositive ? '↑' : '↓'} {trendObj.value}%
                 </span>
-                <span className="whitespace-nowrap text-[10px] font-medium text-muted-foreground sm:text-[11px]">Last week</span>
+                <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">Last week</span>
               </div>
             )}
             {(description ?? trendText) && !trendObj && (
-              <p className="break-words text-[10px] font-medium text-muted-foreground sm:text-[11px]">{description ?? trendText}</p>
+              <p className="break-words text-xs font-medium text-muted-foreground">{description ?? trendText}</p>
             )}
           </div>
 

@@ -113,11 +113,11 @@ Student-list messaging resolves linked parents/guardians, while teachers can rec
 
 ## Architecture
 
-eShule is a **modular monolith**. The SvelteKit application contains authenticated pages, server loads/actions and domain services, while Supabase provides authentication and PostgreSQL persistence. Edge Functions isolate external payment and messaging integrations.
+eShule is a **React SPA + Supabase backend**. The web app in `apps/web-react` (React 18, react-router-dom, TanStack Query) talks to Supabase for authentication and PostgreSQL persistence (anon key in the browser; RLS enforced server-side). Edge Functions isolate external payment and messaging integrations.
 
 ```mermaid
 flowchart LR
-    U[Staff and parent browsers] --> W[SvelteKit web application]
+    U[Staff and parent browsers] --> W[React SPA (apps/web-react)]
     W --> A[Supabase Auth]
     W --> D[(Supabase PostgreSQL)]
     W --> E[Supabase Edge Functions]
@@ -136,14 +136,14 @@ The application is multi-tenant. Privileged server operations must derive the te
 
 | Layer | Implementation |
 |---|---|
-| Web | SvelteKit 2, Svelte 5, TypeScript 5, Vite 6, Tailwind CSS 4 |
-| UI | bits-ui, Lucide Svelte, shared Svelte components |
-| Validation | Zod, SvelteKit form actions/server loads |
+| Web | React 18, react-router-dom, TypeScript 5, Vite 6, Tailwind CSS 4 |
+| UI | shared React components, lucide-react |
+| Validation | Zod, react-hook-form |
 | Identity & data | Supabase Auth, PostgREST/RPC, PostgreSQL, RLS migrations |
 | Integrations | Supabase Edge Functions, M-Pesa Daraja STK/callback, Mobiwave SMS |
 | Scheduling | `pg_cron`, `pg_net` where configured |
 | Observability | Optional Sentry integration and request IDs |
-| Testing | Vitest, Playwright configuration, ESLint, `svelte-check` |
+| Testing | Vitest, Playwright configuration, ESLint, `tsc --noEmit` |
 | Delivery | GitHub Actions and Vercel adapter |
 
 ## Current status
@@ -214,27 +214,25 @@ npx playwright test
 
 Playwright requires an appropriate non-production test environment and is not equivalent to the unit/static checks.
 
-The authoritative application type gate is `svelte-check` via the project's configured check/typecheck script. Do not introduce a raw `tsc --noEmit` requirement for Svelte component exports without first validating the Svelte 5 toolchain behavior.
+The authoritative application type gate is `tsc --noEmit` via the web-react `typecheck` script (`npm run typecheck --workspace=@eshule/web-react`).
 
 ## Repository structure
 
 ```text
 .
-├── src/
-│   ├── routes/                authenticated pages, APIs and login
-│   ├── lib/
-│   │   ├── components/        shared Svelte UI and data components
-│   │   ├── server/             auth, authorization, tenant and domain services
-│   │   ├── supabase/           browser/server clients and generated types
-│   │   └── __tests__/          automated application tests
-│   ├── hooks.server.ts         server auth/middleware composition
-│   └── hooks.client.ts         optional client instrumentation
+├── apps/web-react/
+│   ├── src/
+│   │   ├── pages/               role-scoped pages (admin, finance, teacher, parent, …)
+│   │   ├── components/          shared React UI and layout
+│   │   ├── hooks/               data hooks (TanStack Query + Supabase)
+│   │   ├── lib/                 rbac, legacy redirects, formatting, utils
+│   │   └── contexts/            auth/session context
+│   └── e2e/                     Playwright specifications
 ├── supabase/
 │   ├── migrations/             ordered database migrations
 │   ├── functions/              payment, messaging and integration functions
 │   ├── config.toml             local Supabase configuration
 │   └── seed_comprehensive.sql  development seed data
-├── e2e/                        Playwright specifications
 ├── scripts/                    audit and developer tooling
 └── .github/workflows/          CI automation
 ```

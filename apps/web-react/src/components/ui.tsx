@@ -65,7 +65,7 @@ const buttonVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-9 px-4 py-2', sm: 'h-8 rounded-md px-3 text-xs', lg: 'h-10 rounded-md px-8', icon: 'h-9 w-9',
+        default: 'h-9 px-4 py-2', sm: 'h-9 rounded-md px-3 text-xs', lg: 'h-10 rounded-md px-8', icon: 'h-9 w-9',
       },
     }, defaultVariants: { variant: 'default', size: 'default' },
   }
@@ -236,4 +236,159 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
 export function useDisclosure(initial = false) {
   const [open, setOpen] = useState(initial);
   return { open, show: () => setOpen(true), hide: () => setOpen(false) };
+}
+
+/** Page container — single operational width + rhythm for all pages. */
+export function PageContainer({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={cn('mx-auto w-full max-w-[1280px] space-y-6', className)}>{children}</div>;
+}
+
+/** Breadcrumbs — Home / Section / Page. Rendered by the shell from the route. */
+export function Breadcrumbs({ trail }: { trail: { label: string; to?: string }[] }) {
+  if (trail.length === 0) return null;
+  return (
+    <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
+      <ol className="flex flex-wrap items-center gap-1">
+        {trail.map((crumb, i) => (
+          <li key={`${crumb.label}-${i}`} className="flex items-center gap-1">
+            {i > 0 && <span aria-hidden="true">/</span>}
+            {crumb.to && i < trail.length - 1 ? (
+              <Link to={crumb.to} className="rounded hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                {crumb.label}
+              </Link>
+            ) : (
+              <span aria-current={i === trail.length - 1 ? 'page' : undefined} className={i === trail.length - 1 ? 'font-medium text-foreground' : undefined}>
+                {crumb.label}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+/** Search input with leading icon — standard filter-bar search. */
+export function SearchInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className="relative flex-1">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+      </span>
+      <Input className={cn('pl-9', props.className)} {...props} />
+    </div>
+  );
+}
+
+/** Filter bar — horizontal wrap for search + selects + clear. */
+export function FilterBar({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={cn('flex flex-col gap-3 sm:flex-row sm:items-center', className)}>{children}</div>;
+}
+
+/** Loading state — skeleton + status text for data-heavy surfaces. */
+export function LoadingState({ title = 'Loading…', rows = 5 }: { title?: string; rows?: number }) {
+  return (
+    <div className="space-y-3" role="status" aria-label={title}>
+      <span className="sr-only">{title}</span>
+      <TableSkeleton rows={rows} />
+    </div>
+  );
+}
+
+/** Error state — recovery message without provider/DB detail. */
+export function ErrorState({ title, description, onRetry }: { title: string; description?: string; onRetry?: () => void }) {
+  return (
+    <div className="rounded-xl border bg-card p-8 text-center" role="alert">
+      <p className="text-sm font-medium">{title}</p>
+      {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+      {onRetry && <div className="mt-4 flex justify-center"><Button variant="outline" onClick={onRetry}>Try again</Button></div>}
+    </div>
+  );
+}
+
+/** Section header — H2 + optional description + optional action. */
+export function SectionHeader({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/** Stat — single KPI for dashboards (label/value/description + icon). */
+export function Stat({ label, value, description, icon }: { label: string; value: ReactNode; description?: string; icon?: ReactNode }) {
+  return (
+    <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+        {icon}
+      </div>
+      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
+      {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
+    </div>
+  );
+}
+
+/** Pagination — server-driven prev/next pager. */
+export function Pagination({ page, totalPages, total, label = 'rows', onPrev, onNext }: { page: number; totalPages: number; total: number; label?: string; onPrev: () => void; onNext: () => void }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground">Page {page} of {totalPages} · {total.toLocaleString()} {label}</span>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" disabled={page <= 1} onClick={onPrev}>Previous</Button>
+        <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={onNext}>Next</Button>
+      </div>
+    </div>
+  );
+}
+
+/** User avatar — initials with accessible label. */
+export function UserAvatar({ name, className = '' }: { name: string; className?: string }) {
+  const initials = name.trim().split(/\s+/).map((w) => w.charAt(0)).join('').slice(0, 2).toUpperCase() || '?';
+  return (
+    <span aria-label={name} role="img" className={cn('grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary', className)}>
+      {initials}
+    </span>
+  );
+}
+
+/** Tabs — accessible tab list with keyboard arrow support. */
+export function Tabs({ tabs, value, onChange }: { tabs: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) {
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const idx = tabs.findIndex((t) => t.value === value);
+    const dir = e.key === 'ArrowRight' ? 1 : -1;
+    const next = tabs[(idx + dir + tabs.length) % tabs.length];
+    if (next) {
+      onChange(next.value);
+      const el = document.querySelector<HTMLElement>(`[role="tab"][data-value="${next.value}"]`);
+      el?.focus();
+    }
+  }
+  return (
+    <div role="tablist" aria-label="Sections" onKeyDown={onKeyDown} className="flex flex-wrap gap-1 rounded-lg border bg-card p-1">
+      {tabs.map((t) => (
+        <button
+          key={t.value}
+          role="tab"
+          data-value={t.value}
+          aria-selected={value === t.value}
+          tabIndex={value === t.value ? 0 : -1}
+          onClick={() => onChange(t.value)}
+          className={cn(
+            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            value === t.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          )}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
 }

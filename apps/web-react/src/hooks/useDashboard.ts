@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { isSchoolPayment } from '@/lib/format';
 
 /** Port of (app)/admin/+page.server.ts dashboard load. */
 export function useAdminDashboard(days = 30) {
@@ -16,15 +17,19 @@ export function useAdminDashboard(days = 30) {
           return { data: [] as unknown as T, count: 0 };
         }
       };
-      const [attendance, payments, invoices, students, activeStudents, admissions] = await Promise.all([
+      const [attendance, payments, invoices, students, activeStudents, admissions, teachers] = await Promise.all([
         settle(supabase.from('v_teacher_attendance_daily').select('day,attended,absent,total').gte('day', since).order('day')),
-        settle(supabase.from('payments').select('created_at,amount,status,method').gte('created_at', `${since}T00:00:00`).order('created_at')),
+        settle(supabase.from('payments').select('created_at,amount,status,method,domain').gte('created_at', `${since}T00:00:00`).order('created_at')),
         settle(supabase.from('invoices').select('amount_due,amount_paid,status').is('deleted_at', null)),
         settle(supabase.from('students').select('id', { count: 'exact', head: true }).is('deleted_at', null)),
         settle(supabase.from('sis_enrollments').select('id', { count: 'exact', head: true }).eq('status', 'active')),
         settle(supabase.from('sis_admissions').select('id', { count: 'exact', head: true }).gte('created_at', `${since}T00:00:00`)),
+        settle(supabase.from('teachers').select('id', { count: 'exact', head: true }).is('deleted_at', null)),
       ]);
-      const payRows = ((payments.data ?? []) as { status: string; amount: number; created_at: string }[]);
+      // School-fee money only: remedial (ReClass) fees are paid, managed and
+      // logged through a separate path (reclass_* tables, treasurer-owned) and
+      // must not inflate school revenue. Invoices are school-only already.
+      const payRows = ((payments.data ?? []) as { status: string; amount: number; created_at: string; domain?: string | null }[]).filter((p) => isSchoolPayment(p.domain));
       const invRows = ((invoices.data ?? []) as { amount_due: number; amount_paid: number; status?: string }[]);
       const attRows = ((attendance.data ?? []) as { day: string; attended: number; absent: number; total: number }[]);
       const collected = payRows.filter((p) => p.status === 'paid').reduce((n, p) => n + Number(p.amount || 0), 0);
@@ -42,17 +47,32 @@ export function useAdminDashboard(days = 30) {
         waived: 'var(--info)',
         overpaid: 'var(--primary)',
       };
+      // Group paid payments by real calendar month (YYYY-MM) from created_at,
+      // so monthly revenue never depends on MM-DD display labels.
+      const monthlyTotals = new Map<string, number>();
+      for (const p of payRows) {
+        if (p.status !== 'paid') continue;
+        const month = String(p.created_at).slice(0, 7);
+        if (!/^\d{4}-\d{2}$/.test(month)) continue;
+        monthlyTotals.set(month, (monthlyTotals.get(month) ?? 0) + Number(p.amount || 0));
+      }
+      const paymentTrend = [...monthlyTotals.entries()]
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .slice(-12)
+        .map(([label, value]) => ({ label, value }));
       return {
         kpis: {
           students: students.count ?? 0,
           activeStudents: activeStudents.count ?? 0,
           admissions: admissions.count ?? 0,
+          teachers: teachers.count ?? 0,
           collected,
           outstanding: Math.max(0, invoiced - paidLedger),
           attendanceRate: total ? (present / total) * 100 : 0,
         },
         attendanceTrend: attRows.slice(-14).map((d) => ({ label: String(d.day).slice(5), value: Number(d.attended || 0), secondary: Number(d.absent || 0) })),
-        paymentTrend: payRows.slice(-12).map((p) => ({ label: String(p.created_at).slice(5, 10), value: Number(p.amount || 0) })),
+        paymentTrend,
+        monthlyRevenue: paymentTrend.map((p) => ({ month: p.label, amount: p.value, count: 1 })),
         recentPayments: payRows.slice(-6).reverse(),
         feeStatus: [...feeStatusMap.entries()].map(([label, value]) => ({ label, value, color: STATUS_COLORS[label] })),
         attendanceSplit: [

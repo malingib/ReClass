@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     });
     if (!credId) {
       await finalizeFailure(supabase, String(b2c_checkout_id), 'CREDS_NOT_FOUND');
-      return json({ error: 'CREDS_NOT_FOUND', message: 'No active M-Pesa credential configured. Add one in Admin → Credentials.' }, 400, req);
+      return json({ error: 'CREDS_NOT_FOUND', message: 'No active M-Pesa credential configured. Ask the platform team to configure it server-side (encrypted credentials table).' }, 400, req);
     }
     const { data: s } = await supabase.rpc('decrypt_credential', { p_id: credId });
     if (!s?.consumer_key || !s?.consumer_secret) {
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     const securityCred = s.security_credential;
     if (typeof initiatorName !== 'string' || !initiatorName || typeof securityCred !== 'string' || !securityCred) {
       await finalizeFailure(supabase, String(b2c_checkout_id), 'B2C_CREEDS_REQUIRED');
-      return json({ error: 'B2C_CREEDS_REQUIRED', message: 'The M-Pesa credential is missing initiator_name or security_credential. Add both in Admin → Credentials.' }, 400, req);
+      return json({ error: 'B2C_CREEDS_REQUIRED', message: 'The M-Pesa credential is missing initiator_name or security_credential. Ask the platform team to add both server-side (encrypted credentials table).' }, 400, req);
     }
 
     const base = s.environment === 'sandbox'

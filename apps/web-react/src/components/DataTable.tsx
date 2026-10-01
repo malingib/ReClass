@@ -22,7 +22,7 @@ type Cell = unknown;
  * without rewrites. Server-driven tables (students, attendance) keep their
  * own pager and pass pagination="server".
  */
-export function DataTable({ columns, rows, empty = 'No records.', searchPlaceholder = 'Search…', pageSize = 10, pagination = 'client', mobileCard }: {
+export function DataTable({ columns, rows, empty = 'No records found.', searchPlaceholder = 'Search…', pageSize = 10, pagination = 'client', mobileCard }: {
   columns: string[];
   rows: Cell[][];
   empty?: string;
@@ -75,7 +75,7 @@ export function DataTable({ columns, rows, empty = 'No records.', searchPlacehol
       </div>
       {isMobile && mobileCard ? (
         <div className="space-y-3">
-          {bodyRows.length === 0 && <p className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">{empty}</p>}
+          {bodyRows.length === 0 && <p role="status" className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">{empty}</p>}
           {bodyRows.map((r, i) => (
             <div key={r.id}>{mobileCard(r.original, i)}</div>
           ))}
@@ -114,7 +114,7 @@ export function DataTable({ columns, rows, empty = 'No records.', searchPlacehol
             </tbody>
           </table>
         </div>
-        {bodyRows.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">{empty}</p>}
+        {bodyRows.length === 0 && <p role="status" className="p-8 text-center text-sm text-muted-foreground">{empty}</p>}
       </div>
       )}
       {pagination === 'client' && total > pageSize && (

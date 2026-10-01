@@ -12,6 +12,21 @@ export type ReceiptView = {
   student_name?: string | null;
 };
 
+/** Shared modal dialog — reused by Finance and HRM pages instead of local duplicates. */
+export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  useEscape(onClose);
+  const dialogRef = useDialogFocus();
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose} role="presentation">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-4 text-base font-semibold">{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** Official payment receipt — print-friendly, no internal field names. */
 export function ReceiptModal({ receipt, schoolName = 'eShule', onClose }: { receipt: Record<string, unknown>; schoolName?: string; onClose: () => void }) {
   useEscape(onClose);

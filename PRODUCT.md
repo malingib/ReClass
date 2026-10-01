@@ -32,8 +32,8 @@ Full-suite school management with remedial-class management as a first-class fea
 ## Operating Context
 
 - Kenyan school environment: M-Pesa payments (Safaricom Daraja API), Mobiwave SMS, mobile-first parent experience
-- Multi-tenant architecture: one Supabase project, row-per-tenant PostgreSQL, application-level tenant isolation
-- Modular monolith: SvelteKit web app + Supabase Edge Functions for payments/SMS
+- Single-school deployment (ADR-002): one Supabase project per school, no tenant scoping; multi-tenancy deferred
+- Modular monolith: React/Vite web app + Supabase Edge Functions for payments/SMS
 - Pre-production status: audit-tracked, 138 tests passing, not deployment-proven
 - Bilingual history: English primary, Swahili support removed 2026-08-05
 
@@ -53,11 +53,13 @@ Full-suite school management with remedial-class management as a first-class fea
 - Audit logging
 
 **Constraints:**
-- No versioned public REST API — form actions + RPC only
+- No versioned public REST API — RPC + Edge Functions only
 - No student login
 - No reliable offline attendance
 - No complete consent/STOP workflow
-- Supabase service-role client used broadly (bypasses RLS) — tenant isolation depends on application convention
+- Service-role confined to Edge Functions (bypasses RLS by design); browser uses anon key only
+- `reclass-stk` / `reclass-mpesa-callback` not yet deployed live — parent Pay Now calls a missing function
+- Migration history diverged from live DB (163 applied vs 137 files, duplicate versions) — fresh-project replay unproven
 - No production-proven deployment
 - No implemented AI feature
 
@@ -74,10 +76,10 @@ Full-suite school management with remedial-class management as a first-class fea
 
 ## Evidence on Hand
 
-- Repository: `D:\Projects\eShule` — SvelteKit 2/Svelte 5 multi-tenant school admin app
+- Repository: `ReClass` — React 18 SPA (`apps/web-react`, react-router-dom) + Supabase backend (single-school deployment)
 - Live Supabase project: ReClass, ref `rlswdeswlkuaigwtojxw`, region `eu-west-1`
 - Remote: `https://github.com/malingib/ReClass.git`
-- 138 tests passing, svelte-check 0 errors, lint 0 errors
+- QA: vitest unit tests, `tsc --noEmit` 0 errors, eslint 0 errors, Playwright e2e (smoke + role access + core journeys)
 - 8 migrations applied to live DB
 - 5 audit findings resolved (scheduling conflicts, bank idempotency, comms CTAs, reports filters, HR exclusion)
 - Audit docs: `AUDIT-2026-08.md`, `FINAL_REPORT.md`, `ARCHITECTURE.md`, `API.md`, `DATABASE.md`, `SECURITY.md`, `DEPLOYMENT.md`, `OPERATIONS.md`
@@ -87,7 +89,7 @@ Full-suite school management with remedial-class management as a first-class fea
 
 1. **Remedial-first, not remedial-only.** Remedial-class management is the primary focus, but the full school suite must work as a coherent whole.
 2. **Kenya-native integration.** M-Pesa and SMS are first-class, not bolted on. Payment and communication flows must work for Kenyan schools without adaptation.
-3. **Tenant isolation is non-negotiable.** Every query, mutation, and check must respect the active tenant. Application-level conventions must be enforced, not trusted.
+3. **One school per deployment.** Single-school Supabase projects (ADR-002) remove the cross-tenant leakage class entirely. Multi-tenancy is deferred until a second-school requirement reopens it.
 4. **School ecosystem, not single user.** The product serves six roles that must coexist. No role's experience should be degraded to serve another.
 5. **Audit-tracked, not audit-avoidant.** Security findings are resolved, not deferred. The product is pre-production and honest about it.
 

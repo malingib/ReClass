@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { getStoredActiveRole, isRole, setStoredActiveRole, type Permission } from '@/lib/rbac';
+import { getStoredActiveRole, isRole, setStoredActiveRole, permissionsForRoles, type Permission } from '@/lib/rbac';
 
 export function ProtectedRoute({
   allowedRoles,
@@ -31,12 +31,17 @@ export function ProtectedRoute({
       if (!roleAllowed) { if (live) setState('deny'); return; }
 
       if (requiredPermissions.length) {
-        const { data: roleRows } = await supabase.from('role_permissions').select('permission_id').in('role', held);
-        const ids = [...new Set(((roleRows ?? []) as { permission_id: string }[]).map((r) => r.permission_id))];
-        const { data: permissionRows } = ids.length
-          ? await supabase.from('permissions').select('code').in('id', ids)
-          : { data: [] as { code: string }[] };
-        const permissions = new Set(((permissionRows ?? []) as { code: string }[]).map((r) => r.code));
+        const permissions = new Set<string>(permissionsForRoles(held));
+        try {
+          const { data: roleRows } = await supabase.from('role_permissions').select('permission_id').in('role', held);
+          const ids = [...new Set(((roleRows ?? []) as { permission_id: string }[]).map((r) => r.permission_id))];
+          if (ids.length) {
+            const { data: permissionRows } = await supabase.from('permissions').select('code').in('id', ids);
+            for (const r of ((permissionRows ?? []) as { code: string }[])) permissions.add(r.code);
+          }
+        } catch {
+          // Tables absent — code map stands.
+        }
         const authorized = held.includes('super_admin') || requiredPermissions.some((permission) => permissions.has(permission));
         if (!authorized) { if (live) setState('deny'); return; }
       }
@@ -61,11 +66,13 @@ export function useAuthorization() {
       const { data: rows } = await supabase.from('user_roles').select('role').eq('user_id', uid);
       const held = ((rows ?? []) as { role: string }[]).map((r) => r.role);
       setRoles(held);
+      const merged = new Set<string>(permissionsForRoles(held.filter(isRole)));
       const { data: roleRows } = await supabase.from('role_permissions').select('permission_id').in('role', held);
       const ids = [...new Set(((roleRows ?? []) as { permission_id: string }[]).map((r) => r.permission_id))];
-      if (!ids.length) return;
+      if (!ids.length) { setPermissions([...merged]); return; }
       const { data: permissionRows } = await supabase.from('permissions').select('code').in('id', ids);
-      setPermissions([...new Set(((permissionRows ?? []) as { code: string }[]).map((r) => r.code))]);
+      for (const r of ((permissionRows ?? []) as { code: string }[])) merged.add(r.code);
+      setPermissions([...merged]);
     })();
   }, []);
   return {

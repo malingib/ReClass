@@ -1,5 +1,10 @@
 # Documentation
 
+## Target-state package
+
+- [`requirements-architecture-package.md`](requirements-architecture-package.md) — complete requirements, product, UX, database, API, security, delivery and development baseline
+- [`adr-001-frontend-and-deployment.md`](adr-001-frontend-and-deployment.md) — decision record for the current React/Vite/Vercel baseline versus the supplied Next.js/VPS request
+
 The authoritative project documentation lives at the repository root. This directory contains supporting guides, historical audits and implementation notes.
 
 ## Authoritative references

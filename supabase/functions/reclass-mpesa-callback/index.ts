@@ -1,5 +1,31 @@
 import { getServiceClient } from '../_shared/supabase.ts';
-import { handleOptions, internalError, json } from '../_shared/response.ts';
+import { handleOptions, internalError, json, badRequest, unauthorized } from '../_shared/response.ts';
+import { getPlatformConfig } from '../_shared/platform-config.ts';
+import { verifySecret } from '../_shared/auth.ts';
+
+type DbError = { message: string; code?: string };
+type ReclassPaybillTransaction = {
+  id: string;
+  status: string;
+  amount: number;
+  phone: string;
+  student_id: string;
+  obligation_id: string;
+  checkout_id: string;
+};
+type QueryBuilder<T> = {
+  select: (columns: string) => QueryBuilder<T>;
+  eq: (column: string, value: unknown) => QueryBuilder<T>;
+  maybeSingle: () => Promise<{ data: T | null; error: DbError | null }>;
+};
+type ReclassCallbackClient = {
+  from: (table: 'reclass_paybill_transactions') => QueryBuilder<ReclassPaybillTransaction>;
+  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: { status?: string } | null; error: DbError | null }>;
+};
+
+const serviceClient = getServiceClient();
+const supabase = serviceClient as unknown as ReclassCallbackClient;
+const MAX_BODY_BYTES = 10_240;
 
 type CallbackItem = { Name?: string; Value?: string | number };
 type StkCallback = {
@@ -21,17 +47,42 @@ function metadataValue(stk: StkCallback | undefined, name: string): string | num
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return handleOptions(req);
-  if (req.method !== 'POST') return json({ error: 'METHOD_NOT_ALLOWED' }, 405, req);
+  if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, req);
 
   try {
-    const raw = await req.json();
+    const { mpesa_callback_secret: callbackSecret } = await getPlatformConfig(serviceClient, ['mpesa_callback_secret']);
+    if (!callbackSecret) {
+      console.error('[reclass-mpesa-callback] MPESA_CALLBACK_SECRET not configured');
+      return internalError(req);
+    }
+
+    const actualSecret = req.headers.get('x-callback-secret') ?? '';
+    if (!(await verifySecret(actualSecret, callbackSecret))) {
+      return unauthorized(req);
+    }
+
+    const contentLength = parseInt(req.headers.get('content-length') ?? '0', 10);
+    if (contentLength > MAX_BODY_BYTES) return badRequest('body_too_large', req);
+
+    const rawText = await req.text().catch(() => null);
+    if (rawText === null) return badRequest('invalid_callback', req);
+    if (new TextEncoder().encode(rawText).length > MAX_BODY_BYTES) {
+      return badRequest('body_too_large', req);
+    }
+
+    let raw: unknown;
+    try {
+      raw = JSON.parse(rawText);
+    } catch {
+      return badRequest('invalid_callback', req);
+    }
+
     const body = parseCallback(raw);
     const stk = body.Body?.stkCallback;
     const checkout = typeof stk?.CheckoutRequestID === 'string' ? stk.CheckoutRequestID.trim() : '';
     const code = stk?.ResultCode;
-    if (!checkout || typeof code !== 'number') return json({ error: 'INVALID_CALLBACK' }, 400, req);
+    if (!checkout || typeof code !== 'number') return badRequest('invalid_callback', req);
 
-    const supabase = getServiceClient();
     const { data: tx, error: lookupError } = await supabase
       .from('reclass_paybill_transactions')
       .select('id,status,amount,phone,student_id,obligation_id,checkout_id')
@@ -59,7 +110,9 @@ Deno.serve(async (req) => {
     const receipt = metadataValue(stk, 'MpesaReceiptNumber');
     const amount = metadataValue(stk, 'Amount');
     const phone = metadataValue(stk, 'PhoneNumber');
-    if (typeof receipt !== 'string' || !receipt.trim() || typeof amount !== 'number') {
+    const callbackAmount = typeof amount === 'number' ? amount : Number(amount);
+    const callbackPhone = phone === null ? tx.phone : String(phone);
+    if (typeof receipt !== 'string' || !receipt.trim() || !Number.isFinite(callbackAmount)) {
       console.error('[reclass-mpesa-callback] successful callback missing required payment metadata');
       return json({ error: 'INCOMPLETE_CALLBACK' }, 400, req);
     }
@@ -68,8 +121,8 @@ Deno.serve(async (req) => {
       p_transaction_id: tx.id,
       p_checkout_id: checkout,
       p_mpesa_receipt: receipt.trim(),
-      p_amount: amount,
-      p_phone: typeof phone === 'string' ? phone : tx.phone,
+      p_amount: callbackAmount,
+      p_phone: callbackPhone,
       p_student_id: tx.student_id,
       p_obligation_id: tx.obligation_id,
     });

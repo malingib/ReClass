@@ -11,5 +11,19 @@ export default defineConfig({
     },
   },
   server: { port: 5173 },
-  build: { outDir: 'dist' },
+  build: {
+    outDir: 'dist',
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          query: ['@tanstack/react-query'],
+          table: ['@tanstack/react-table'],
+          charts: ['recharts'],
+          notify: ['sonner'],
+        },
+      },
+    },
+  },
 });

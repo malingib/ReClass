@@ -50,3 +50,19 @@ export function truncateId(id: unknown, len = 8): string {
   const s = String(id ?? '');
   return s.length > len ? `${s.slice(0, len)}…` : s || '—';
 }
+
+/**
+ * Money domain: school fees and remedial (ReClass) fees share the `payments`
+ * ledger but are paid, managed and logged differently. Legacy rows may carry
+ * NULL; legacy callbacks wrote 'remedial' while the ReClass reconciler writes
+ * 'reclass' — both mean remedial money.
+ */
+export function paymentDomainLabel(domain: unknown): 'School' | 'Remedial' {
+  const d = String(domain ?? '').toLowerCase();
+  return d === 'remedial' || d === 'reclass' ? 'Remedial' : 'School';
+}
+
+/** School-fee money only: NULL (legacy) and 'school'. Excludes remedial. */
+export function isSchoolPayment(domain: unknown): boolean {
+  return paymentDomainLabel(domain) === 'School';
+}
