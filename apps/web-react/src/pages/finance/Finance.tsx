@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFeeCollection, useInvoices, useReceipts, useUnmatchedPayments } from '@/hooks/useFinance';
+import { useFeeCollection, useFinancialReport, useInvoices, useReceipts, useUnmatchedPayments } from '@/hooks/useFinance';
 import { useSchool } from '@/hooks/useSchool';
 import { DataTable } from '@/components/DataTable';
 import { FeeManager } from '@/components/FeeManager';
@@ -1308,51 +1308,42 @@ export function PaymentHistory() {
    ================================================================ */
 
 export function FinancialReports() {
-  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'cashflow'>('pnl');
-  const pnlData = [
-    { item: 'Student Fees Income', amount: 2450000 },
-    { item: 'Other Income', amount: 140000 },
-    { item: 'Total Revenue', amount: 2590000 },
-    { item: 'Salaries & Wages', amount: -1520000 },
-    { item: 'Utilities', amount: -180000 },
-    { item: 'Supplies', amount: -65000 },
-    { item: 'Maintenance', amount: -42000 },
-    { item: 'Transport', amount: -36000 },
-    { item: 'Total Expenses', amount: -1843000 },
-    { item: 'Net Profit', amount: 747000 },
-  ];
+  const [activeReport, setActiveReport] = useState<'pnl' | 'position' | 'cashflow'>('pnl');
+  const { data: report, isLoading, isError } = useFinancialReport();
 
-  const balanceData = [
-    { category: 'Assets', items: [
-      { name: 'Cash & Bank', amount: 420000 },
-      { name: 'M-Pesa', amount: 85000 },
-      { name: 'Receivables', amount: 320000 },
-    ]},
-    { category: 'Liabilities', items: [
-      { name: 'Accrued Expenses', amount: 45000 },
-      { name: 'Payables', amount: 28000 },
-    ]},
-    { category: 'Equity', items: [
-      { name: 'Retained Earnings', amount: 752000 },
-    ]},
-  ];
+  const pnlRows = useMemo(() => {
+    if (!report) return [];
+    const rows: { item: string; amount: number }[] = [
+      { item: 'Student Fees Income', amount: report.feesCollected },
+      { item: 'Other Income', amount: report.otherIncome },
+      { item: 'Total Revenue', amount: report.totalRevenue },
+      ...report.expensesByCategory.map((c) => ({ item: c.category, amount: -c.amount })),
+      { item: 'Total Expenses', amount: -report.totalExpenses },
+      { item: 'Net Profit', amount: report.net },
+    ];
+    return rows;
+  }, [report]);
 
-  const cashflowData = [
-    { month: 'Jan', inflow: 520000, outflow: 380000, net: 140000 },
-    { month: 'Feb', inflow: 480000, outflow: 350000, net: 130000 },
-    { month: 'Mar', inflow: 610000, outflow: 420000, net: 190000 },
-  ];
+  const cashflowData = useMemo(() => (report?.months ?? []).map((m) => ({
+    month: monthLabel(m.key), inflow: m.inflow, outflow: m.outflow, net: m.net,
+  })), [report]);
 
   function exportActiveCsv() {
+    if (!report) return;
     const stamp = new Date().toISOString().slice(0, 10);
     if (activeReport === 'pnl') {
       downloadCsv(`pnl-statement-${stamp}.csv`, ['Item', 'Amount'],
-        pnlData.map((row) => [row.item, num(row.amount).toFixed(2)]));
+        pnlRows.map((row) => [row.item, num(row.amount).toFixed(2)]));
       toast.success('P&L statement downloaded as CSV');
-    } else if (activeReport === 'balance') {
-      downloadCsv(`balance-sheet-${stamp}.csv`, ['Category', 'Item', 'Amount'],
-        balanceData.flatMap((cat) => cat.items.map((item) => [cat.category, item.name, num(item.amount).toFixed(2)])));
-      toast.success('Balance sheet downloaded as CSV');
+    } else if (activeReport === 'position') {
+      downloadCsv(`position-${stamp}.csv`, ['Item', 'Amount'], [
+        ['Fees collected', num(report.feesCollected).toFixed(2)],
+        ['Other income', num(report.otherIncome).toFixed(2)],
+        ['Expenses paid', num(report.totalExpenses).toFixed(2)],
+        ['Net cash position', num(report.net).toFixed(2)],
+        ['Outstanding receivables', num(report.feesOutstanding).toFixed(2)],
+      ]);
+      toast.success('Position report downloaded as CSV');
     } else {
       downloadCsv(`cashflow-${stamp}.csv`, ['Month', 'Inflow', 'Outflow', 'Net'],
         cashflowData.map((row) => [row.month, num(row.inflow).toFixed(2), num(row.outflow).toFixed(2), num(row.net).toFixed(2)]));
@@ -1360,83 +1351,98 @@ export function FinancialReports() {
     }
   }
 
+  const hasData = !!report && (report.paymentCount > 0 || report.expenseCount > 0 || report.feesDue > 0);
+
   return (
     <div className="space-y-4">
-      <PageHeader title="Financial Reports" description="Detailed financial statements and analysis. Sample figures — live wiring pending." action={<Badge variant="outline">Sample data</Badge>} />
+      <PageHeader title="Financial Reports" description="Live statements from invoices, payments, expenses and other income." action={<Badge variant="outline">Live data</Badge>} />
       <div className="flex gap-2">
         <Button variant={activeReport === 'pnl' ? 'default' : 'outline'} size="sm" onClick={() => setActiveReport('pnl')}>P&L Statement</Button>
-        <Button variant={activeReport === 'balance' ? 'default' : 'outline'} size="sm" onClick={() => setActiveReport('balance')}>Balance Sheet</Button>
+        <Button variant={activeReport === 'position' ? 'default' : 'outline'} size="sm" onClick={() => setActiveReport('position')}>Position</Button>
         <Button variant={activeReport === 'cashflow' ? 'default' : 'outline'} size="sm" onClick={() => setActiveReport('cashflow')}>Cash Flow</Button>
       </div>
 
-      {activeReport === 'pnl' && (
-        <Card>
-          <CardHeader><CardTitle>Profit & Loss Statement</CardTitle><p className="text-xs text-muted-foreground">Period: Jan 2026 – Mar 2026</p></CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              {pnlData.map((row, i) => (
-                <div key={i} className={`flex justify-between py-2 px-2 text-sm ${row.item.startsWith('Total') || row.item === 'Net Profit' ? 'border-t font-semibold' : ''} ${row.item === 'Net Profit' ? 'bg-muted/50 rounded' : ''}`}>
-                  <span>{row.item}</span>
-                  <span className={row.amount < 0 ? 'text-destructive' : 'text-success-foreground'}>{moneyKES(Math.abs(num(row.amount)))}</span>
+      {isLoading ? <TableSkeleton rows={6} /> : isError ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">Could not load financial data.</p>
+      ) : !hasData ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">No financial records yet — reports fill in once invoices, payments or expenses exist.</p>
+      ) : (
+        <>
+          {activeReport === 'pnl' && (
+            <Card>
+              <CardHeader><CardTitle>Profit & Loss Statement</CardTitle><p className="text-xs text-muted-foreground">Live · all recorded periods · fees on invoice collections basis</p></CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  {pnlRows.map((row, i) => (
+                    <div key={i} className={`flex justify-between py-2 px-2 text-sm ${row.item.startsWith('Total') || row.item === 'Net Profit' ? 'border-t font-semibold' : ''} ${row.item === 'Net Profit' ? 'bg-muted/50 rounded' : ''}`}>
+                      <span>{row.item}</span>
+                      <span className={row.amount < 0 ? 'text-destructive' : 'text-success-foreground'}>{moneyKES(Math.abs(num(row.amount)))}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
 
-      {activeReport === 'balance' && (
-        <Card>
-          <CardHeader><CardTitle>Balance Sheet</CardTitle><p className="text-xs text-muted-foreground">As of March 31, 2026</p></CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {balanceData.map((cat) => (
-                <div key={cat.category}>
-                  <h4 className="text-sm font-semibold mb-2">{cat.category}</h4>
-                  <div className="space-y-1 ml-4">
-                    {cat.items.map((item) => (
-                      <div key={item.name} className="flex justify-between text-sm py-1">
-                        <span className="text-muted-foreground">{item.name}</span>
-                        <span className="font-medium">{moneyKES(item.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
+          {activeReport === 'position' && report && (
+            <Card>
+              <CardHeader><CardTitle>Financial Position</CardTitle><p className="text-xs text-muted-foreground">Derived from live tables — not audited statements</p></CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  {[
+                    { name: 'Fees collected', amount: report.feesCollected },
+                    { name: 'Other income', amount: report.otherIncome },
+                    { name: 'Expenses paid', amount: report.totalExpenses },
+                    { name: 'Net cash position', amount: report.net, strong: true },
+                    { name: 'Outstanding receivables', amount: report.feesOutstanding },
+                  ].map((item) => (
+                    <div key={item.name} className={`flex justify-between text-sm py-2 px-2 ${item.strong ? 'border-t font-semibold bg-muted/50 rounded' : ''}`}>
+                      <span className={item.strong ? '' : 'text-muted-foreground'}>{item.name}</span>
+                      <span className="font-medium">{moneyKES(item.amount)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
 
-      {activeReport === 'cashflow' && (
-        <Card>
-          <CardHeader><CardTitle>Cash Flow Report</CardTitle><p className="text-xs text-muted-foreground">Quarterly summary</p></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={cashflowData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" className="text-xs" />
-                <YAxis className="text-xs" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => moneyKES(v)} />
-                <Bar dataKey="inflow" fill="#10b981" radius={[4, 4, 0, 0]} name="Inflow" />
-                <Bar dataKey="outflow" fill="#ef4444" radius={[4, 4, 0, 0]} name="Outflow" />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="mt-4 space-y-2">
-              {cashflowData.map((row) => (
-                <div key={row.month} className="flex justify-between text-sm py-1 border-b last:border-0">
-                  <span>{row.month}</span>
-                  <span className="text-success-foreground">{moneyKES(row.inflow)}</span>
-                  <span className="text-destructive">{moneyKES(row.outflow)}</span>
-                  <span className="font-medium">{moneyKES(row.net)}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          {activeReport === 'cashflow' && (
+            <Card>
+              <CardHeader><CardTitle>Cash Flow Report</CardTitle><p className="text-xs text-muted-foreground">Receipted payments vs expenses · last 6 months with dated rows</p></CardHeader>
+              <CardContent>
+                {cashflowData.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">No dated transactions yet.</p>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={cashflowData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="month" className="text-xs" />
+                        <YAxis className="text-xs" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip formatter={(v: number) => moneyKES(v)} />
+                        <Bar dataKey="inflow" fill="#10b981" radius={[4, 4, 0, 0]} name="Inflow" />
+                        <Bar dataKey="outflow" fill="#ef4444" radius={[4, 4, 0, 0]} name="Outflow" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 space-y-2">
+                      {cashflowData.map((row) => (
+                        <div key={row.month} className="flex justify-between text-sm py-1 border-b last:border-0">
+                          <span>{row.month}</span>
+                          <span className="text-success-foreground">{moneyKES(row.inflow)}</span>
+                          <span className="text-destructive">{moneyKES(row.outflow)}</span>
+                          <span className="font-medium">{moneyKES(row.net)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-      <Button variant="outline" onClick={exportActiveCsv}><Download className="h-3 w-3 mr-1" /> Export to CSV</Button>
+          <Button variant="outline" onClick={exportActiveCsv}><Download className="h-3 w-3 mr-1" /> Export to CSV</Button>
+        </>
+      )}
     </div>
   );
 }

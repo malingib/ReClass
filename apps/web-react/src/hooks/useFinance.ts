@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { summarizeFinancialReport, type FinancialReport as ReportSummary } from '@/lib/finance';
+
+export type FinancialReport = ReportSummary;
 
 export function useFeeTypes() {
   return useQuery({
@@ -100,6 +103,34 @@ export function useUnmatchedPayments() {
       const { data, error } = await supabase.from('unmatched_payments').select('*').order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
       return (data ?? []) as Record<string, unknown>[];
+    },
+  });
+}
+
+/** Live P&L inputs: paid school-fee invoices + other income vs categorized expenses.
+ *  Paid = invoice amount_paid (same basis as FinanceOverview "Total Collected"),
+ *  so the two pages always agree. Cash-flow months come from receipted
+ *  payments (status paid) and expense incurred dates. */
+export function useFinancialReport() {
+  return useQuery({
+    queryKey: ['financial-report'],
+    queryFn: async (): Promise<FinancialReport> => {
+      const [invoices, other, expenses, payments] = await Promise.all([
+        supabase.from('invoices').select('amount_due,amount_paid').is('deleted_at', null).limit(5000),
+        supabase.from('other_income').select('amount,received_at').is('deleted_at', null).limit(2000),
+        supabase.from('expenses').select('amount,category,incurred_at').is('deleted_at', null).limit(5000),
+        supabase.from('payments').select('amount,status,created_at').limit(5000),
+      ]);
+      if (invoices.error) throw invoices.error;
+      if (other.error) throw other.error;
+      if (expenses.error) throw expenses.error;
+      if (payments.error) throw payments.error;
+      return summarizeFinancialReport(
+        (invoices.data ?? []) as { amount_due?: number; amount_paid?: number }[],
+        (other.data ?? []) as { amount?: number }[],
+        (expenses.data ?? []) as { amount?: number; category?: string | null; incurred_at?: string | null }[],
+        (payments.data ?? []) as { amount?: number; status?: string | null; created_at?: string | null }[],
+      );
     },
   });
 }

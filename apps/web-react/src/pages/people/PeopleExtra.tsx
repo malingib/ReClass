@@ -208,7 +208,7 @@ export function StudentDocuments() {
   };
   return (
     <div className="space-y-4">
-      <PageHeader eyebrow="People" title="Student documents" description="Track which admission documents each learner has submitted." />
+      <PageHeader eyebrow="People" title="Student documents" description="Track which admission documents each learner has submitted. Records are kept in this browser only." />
       <Card>
         <CardHeader><CardTitle>Select student</CardTitle></CardHeader>
         <CardContent>

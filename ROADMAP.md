@@ -86,6 +86,11 @@ The current delivery sequence intentionally excludes:
 - LMS/online classes;
 - learning-resource/library systems;
 - clubs and activities.
+- examinations (exam types, scheduling, admit cards, marks entry, grading,
+  report cards, rankings): exam tables never shipped and the legacy exam UI
+  was removed; the `/admin/exams*` routes redirect to classes. Re-entry
+  requires a migration for exam tables plus RLS, then a minimal marks-entry
+  journey — not UI-first.
 
 Existing historical data/code may remain where required for compatibility, but no new scope should be added in these areas without an explicit product decision.
 

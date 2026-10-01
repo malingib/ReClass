@@ -95,6 +95,10 @@ test.describe('journey 2 — finance collections (bursar)', () => {
 
     await page.goto('/finance/expenses');
     await heading(page, 'Expenses');
+
+    await page.goto('/finance/financial-reports');
+    await heading(page, 'Financial Reports');
+    await expect(page.getByText('No financial records yet')).toBeVisible();
   });
 });
 
