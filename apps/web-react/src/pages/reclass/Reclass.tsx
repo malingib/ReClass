@@ -10,14 +10,154 @@ import { KpiCard } from '@/components/KpiCard';
 import { DataTable } from '@/components/DataTable';
 import { Button, ButtonLink, Card, CardContent, CardHeader, CardTitle, ConfirmDialog, Field, LoadingButton, Textarea, useDisclosure } from '@/components/ui';
 import { StatusPill, TableSkeleton } from '@/components/ui';
-import { fullName } from '@/lib/format';
+import { fullName, isSchoolPayment } from '@/lib/format';
 import { FeeManager } from '@/components/FeeManager';
 
 const money = (value: unknown) => { const amount = Number(value ?? 0); return Number.isFinite(amount) ? `KES ${amount.toLocaleString()}` : '—'; };
 const dateLabel = (value: unknown) => { if (!value) return '—'; const date = new Date(String(value)); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' }); };
 function PageHeading({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) { return <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">ReClass operations</p><h1 className="text-2xl font-semibold tracking-tight">{title}</h1><p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p></div>{action}</div>; }
 
-export function ReclassDashboard() { const { data } = useRemedialDashboard(); const { data: pendingCount } = useQuery({ queryKey: ['attendance-pending-count'], queryFn: async () => { const { count } = await supabase.from('teacher_attendance').select('id', { count: 'exact', head: true }).eq('approval_status', 'pending').is('deleted_at', null); return count ?? 0; } }); const sessions = data?.sessions ?? []; const attendance = data?.attendance ?? []; return <div className="space-y-6"><PageHeading title="ReClass dashboard" description="A live view of remedial enrolment, sessions and attendance." /><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><KpiCard label="Active enrollments" value={data?.activeEnrollments ?? '…'} icon={UsersRound} /><KpiCard label="Recent sessions" value={sessions.length} icon={CalendarCheck2} /><KpiCard label="Attendance rows" value={attendance.length} icon={CheckCircle2} /><KpiCard label="Awaiting approval" value={pendingCount ?? '…'} icon={Clock3} trend="Oldest first in the review queue" /></div><div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]"><Card><CardHeader><CardTitle>Recent sessions</CardTitle></CardHeader><CardContent className="p-0"><DataTable columns={['Session','Status','Scheduled']} rows={sessions.slice(0,8).map((s) => { const r = s as { id?: string; status?: string; scheduled_for?: string }; return [r.id ?? '—', <StatusPill key={r.id} status={r.status} />, dateLabel(r.scheduled_for)]; })} empty="No remedial sessions found." /></CardContent></Card><Card><CardHeader><CardTitle>Operational focus</CardTitle></CardHeader><CardContent className="space-y-3"><ButtonLink to="/admin/attendance/review"><div className="flex items-center gap-3 rounded-md border p-3 text-left"><div className="rounded-md bg-secondary p-2 text-secondary-foreground"><CalendarCheck2 className="size-4" /></div><div><p className="text-sm font-medium">Attendance review</p><p className="text-xs text-muted-foreground">{pendingCount ? `${pendingCount} awaiting approval` : 'Keep teacher attendance current.'}</p></div></div></ButtonLink><ButtonLink to="/admin/remedial-fees"><div className="flex items-center gap-3 rounded-md border p-3 text-left"><div className="rounded-md bg-accent p-2 text-accent-foreground"><CircleDollarSign className="size-4" /></div><div><p className="text-sm font-medium">Fee follow-up</p><p className="text-xs text-muted-foreground">Review unpaid remedial obligations.</p></div></div></ButtonLink></CardContent></Card></div></div>; }
+export function ReclassDashboard() {
+  const { data } = useRemedialDashboard();
+  const { data: pendingCount } = useQuery({
+    queryKey: ['attendance-pending-count'],
+    queryFn: async () => {
+      const { count } = await supabase.from('teacher_attendance').select('id', { count: 'exact', head: true }).eq('approval_status', 'pending').is('deleted_at', null);
+      return count ?? 0;
+    },
+  });
+  const { data: receiptsData } = useReceipts(1, 5);
+  const sessions = data?.sessions ?? [];
+  const attendance = data?.attendance ?? [];
+  const recentRemedialPayments = (receiptsData?.rows ?? []).filter((r) => !isSchoolPayment(r.domain)).slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      <PageHeading title="ReClass dashboard" description="A live view of remedial enrolment, sessions and attendance." />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Active enrollments" value={data?.activeEnrollments ?? '…'} icon={UsersRound} />
+        <KpiCard label="Recent sessions" value={sessions.length} icon={CalendarCheck2} />
+        <KpiCard label="Attendance rows" value={attendance.length} icon={CheckCircle2} />
+        <KpiCard label="Awaiting approval" value={pendingCount ?? '…'} icon={Clock3} trend="Oldest first in the review queue" />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(310px,0.95fr)]">
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b bg-gradient-to-r from-primary/5 via-background to-background pb-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>Operations focus</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">Latest remedial activity and scheduling health</p>
+              </div>
+              <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-primary">Live</span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 p-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border bg-muted/20 p-3 shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">This week</p>
+                <p className="mt-2 text-2xl font-semibold">{Math.min(sessions.length, 12)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">scheduled sessions</p>
+              </div>
+              <div className="rounded-2xl border bg-muted/20 p-3 shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Approval queue</p>
+                <p className="mt-2 text-2xl font-semibold">{pendingCount ?? 0}</p>
+                <p className="mt-1 text-xs text-muted-foreground">items waiting</p>
+              </div>
+              <div className="rounded-2xl border bg-muted/20 p-3 shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Payments</p>
+                <p className="mt-2 text-2xl font-semibold">{recentRemedialPayments.length}</p>
+                <p className="mt-1 text-xs text-muted-foreground">recent receipts</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-muted/20 p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Upcoming sessions</h3>
+                <span className="text-xs text-muted-foreground">{sessions.slice(0, 6).length} listed</span>
+              </div>
+
+              <div className="space-y-2">
+                {sessions.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">No remedial sessions found.</p>
+                ) : (
+                  sessions.slice(0, 6).map((s) => {
+                    const r = s as { id?: string; status?: string; scheduled_for?: string };
+                    return (
+                      <div key={r.id ?? 'session'} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background p-3 shadow-sm transition-colors hover:border-primary/40">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{r.id ?? 'Session'}</p>
+                          <p className="text-xs text-muted-foreground">{dateLabel(r.scheduled_for)}</p>
+                        </div>
+                        <StatusPill status={r.status} />
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Recent remedial payments</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {recentRemedialPayments.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No recent remedial payments.</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentRemedialPayments.map((payment) => {
+                    const studentName = payment.student ? fullName(payment.student.first_name, payment.student.last_name) : 'Parent payment';
+                    return (
+                      <div key={payment.id} className="flex items-start justify-between gap-3 rounded-xl border bg-muted/20 p-3 transition-colors hover:bg-muted/30">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">{studentName}</p>
+                          <p className="text-xs text-muted-foreground">{dateLabel(payment.created_at)}</p>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums">{money(payment.amount)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ButtonLink to="/admin/attendance/review">
+                <div className="flex items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-muted/30">
+                  <div className="rounded-lg bg-secondary p-2 text-secondary-foreground"><CalendarCheck2 className="size-4" /></div>
+                  <div>
+                    <p className="text-sm font-medium">Attendance review</p>
+                    <p className="text-xs text-muted-foreground">{pendingCount ? `${pendingCount} awaiting approval` : 'Keep teacher attendance current.'}</p>
+                  </div>
+                </div>
+              </ButtonLink>
+
+              <ButtonLink to="/admin/remedial-fees">
+                <div className="flex items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-muted/30">
+                  <div className="rounded-lg bg-accent p-2 text-accent-foreground"><CircleDollarSign className="size-4" /></div>
+                  <div>
+                    <p className="text-sm font-medium">Fee follow-up</p>
+                    <p className="text-xs text-muted-foreground">Review unpaid remedial obligations.</p>
+                  </div>
+                </div>
+              </ButtonLink>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Attendance() { const [page, setPage] = useState(1); const { data, isLoading, isError } = useAttendance(page, 50); return <div className="space-y-6"><PageHeading title="Remedial attendance" description="Record and review teacher attendance for remedial sessions." /><Card><CardHeader><CardTitle>Attendance register</CardTitle></CardHeader><CardContent className="p-0">{isLoading ? <div className="p-6 text-sm text-muted-foreground">Loading attendance…</div> : isError ? <div className="p-6 text-sm text-destructive">Unable to load attendance.</div> : <DataTable columns={['Teacher','Marked','Review','Date']} rows={(data?.rows ?? []).map((r, ri) => { const t = (r.teachers ?? {}) as { first_name?: string; last_name?: string }; return [`${t.first_name ?? ''} ${t.last_name ?? ''}`.trim() || '—', r.status ?? '—', <StatusPill key={ri} status={(r as { approval_status?: string }).approval_status ?? 'pending'} />, dateLabel(r.marked_at)]; })} pagination="server" empty="No attendance records found." />}</CardContent></Card><div className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-sm"><span className="text-muted-foreground">Page {page} · {data?.total ?? 0} records</span><div className="flex gap-2"><Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button><Button variant="outline" disabled={(data?.rows?.length ?? 0) < 50} onClick={() => setPage((p) => p + 1)}>Next</Button></div></div></div>; }
 

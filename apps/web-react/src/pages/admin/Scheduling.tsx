@@ -7,7 +7,7 @@ export function SchedulingCalendar() {
       <PageHeader
         eyebrow="Scheduling"
         title="Scheduling Calendar"
-        description="Remedial and class session slots plus school events. Select a day to see its slots."
+        description="Plan subjects, assign teachers, reserve time slots, and manage the school timetable alongside remedial programming."
       />
       <ScheduleCalendar />
     </div>

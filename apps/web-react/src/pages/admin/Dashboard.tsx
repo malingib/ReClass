@@ -99,37 +99,13 @@ export default function AdminDashboard() {
     day: 'numeric',
   });
 
-  const recentActivities = useMemo(() => {
-    if (!data) return [];
-    const activities: { id: string; text: string; time: string; type: 'admission' | 'payment' | 'attendance' | 'notice' }[] = [];
-    if (data.recentPayments.length > 0) {
-      data.recentPayments.slice(0, 3).forEach((p, i) => {
-        activities.push({
-          id: `pay-${i}`,
-          text: `Fee payment of ${moneyKES(p.amount)} received`,
-          time: String(p.created_at).slice(0, 10),
-          type: 'payment',
-        });
-      });
-    }
-    if (data.kpis.admissions > 0) {
-      activities.push({
-        id: 'adm-1',
-        text: `${data.kpis.admissions} new student${data.kpis.admissions === 1 ? '' : 's'} admitted this period`,
-        time: 'This month',
-        type: 'admission',
-      });
-    }
-    if (data.kpis.attendanceRate > 0) {
-      activities.push({
-        id: 'att-1',
-        text: `Teacher attendance: ${data.kpis.attendanceRate.toFixed(1)}% marked across remedial and normal classes`,
-        time: '90-day average',
-        type: 'attendance',
-      });
-    }
-    return activities;
-  }, [data]);
+  const recentRemedialPayments = useMemo(
+    () =>
+      (receiptPage?.rows ?? [])
+        .filter((r) => r.status === 'paid' && !isSchoolPayment(r.domain))
+        .slice(0, 5),
+    [receiptPage],
+  );
 
   const monthlyRevenueData = useMemo(() => data?.monthlyRevenue ?? [], [data?.monthlyRevenue]);
   const attendanceTrend = useMemo(() => data?.attendanceTrend ?? [], [data?.attendanceTrend]);
@@ -244,9 +220,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Revenue Chart + Teacher Attendance */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2.2fr)_minmax(300px,0.9fr)]">
+        <div className="min-w-0">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle>School Fee Collection</CardTitle>
             </CardHeader>
@@ -255,7 +231,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarCheck className="h-4 w-4" />
@@ -296,56 +272,42 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Recent Activities + Upcoming Events */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card>
+      {/* Recent remedial payments + schedule */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2.2fr)_minmax(300px,0.9fr)]">
+        <div className="min-w-0">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Recent Activities
+                <DollarSign className="h-4 w-4" />
+                Recent Remedial Payments
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {recentActivities.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">No recent activities.</p>
+              {recentRemedialPayments.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No recent remedial payments.</p>
               ) : (
                 <div className="space-y-3">
-                  {recentActivities.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
-                      <div
-                        className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                          activity.type === 'payment'
-                            ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                            : activity.type === 'admission'
-                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                              : activity.type === 'attendance'
-                                ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
-                                : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
-                        }`}
-                      >
-                        {activity.type === 'payment' ? (
-                          <DollarSign className="h-4 w-4" />
-                        ) : activity.type === 'admission' ? (
-                          <UserPlus className="h-4 w-4" />
-                        ) : activity.type === 'attendance' ? (
-                          <CalendarCheck className="h-4 w-4" />
-                        ) : (
-                          <Bell className="h-4 w-4" />
-                        )}
+                  {recentRemedialPayments.map((payment) => {
+                    const studentName = payment.student
+                      ? [payment.student.first_name, payment.student.last_name].filter(Boolean).join(' ') || 'Parent payment'
+                      : 'Parent payment';
+
+                    return (
+                      <div key={payment.id} className="flex items-start justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">{studentName}</p>
+                          <p className="text-xs text-muted-foreground">{String(payment.created_at ?? '').slice(0, 10)}</p>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums">{moneyKES(payment.amount)}</span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">{activity.text}</p>
-                        <p className="text-xs text-muted-foreground">{activity.time}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
@@ -361,29 +323,6 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Recent Payments */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Payments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="divide-y">
-            {data.recentPayments.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">No payments yet.</p>
-            ) : (
-              data.recentPayments.map((p, i) => (
-                <div key={`${p.created_at}-${p.amount}-${i}`} className="flex items-center justify-between gap-4 py-3 text-sm">
-                  <div>
-                    <p className="font-medium">{String(p.created_at).slice(0, 10)}</p>
-                    <p className="text-xs text-muted-foreground">Payment</p>
-                  </div>
-                  <span className="font-semibold tabular-nums">{moneyKES(p.amount)}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

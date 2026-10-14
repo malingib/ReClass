@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Field, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
+import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin, Plus, Users } from 'lucide-react';
 
 export type SlotOccurrence = {
   id: string;
@@ -136,15 +136,39 @@ function DaySlots({ dateLabel, occurrences, events, teacherOf }: {
   );
 }
 
+const SCHOOL_TIMETABLE = [
+  { day: 'Mon', subject: 'Mathematics', teacher: 'Ms. Njeri', room: 'Room 1', time: '08:00 - 09:00' },
+  { day: 'Mon', subject: 'English', teacher: 'Mr. Achieng', room: 'Room 4', time: '09:15 - 10:15' },
+  { day: 'Tue', subject: 'Biology', teacher: 'Dr. Hassan', room: 'Lab 2', time: '08:30 - 09:30' },
+  { day: 'Wed', subject: 'Physics', teacher: 'Mr. Koech', room: 'Lab 1', time: '10:00 - 11:00' },
+  { day: 'Thu', subject: 'Chemistry', teacher: 'Mrs. Wanjiru', room: 'Lab 3', time: '11:15 - 12:15' },
+  { day: 'Fri', subject: 'Business Studies', teacher: 'Mrs. Owino', room: 'Room 5', time: '08:00 - 09:00' },
+];
+
+const REMEDIAL_TIMETABLE = [
+  { day: 'Mon', subject: 'Math Revision', teacher: 'Ms. Njeri', room: 'Remedial Lab', time: '16:00 - 17:00' },
+  { day: 'Tue', subject: 'Science Clinic', teacher: 'Dr. Hassan', room: 'Lab 2', time: '17:00 - 18:00' },
+  { day: 'Wed', subject: 'English Boost', teacher: 'Mr. Achieng', room: 'Room 7', time: '15:30 - 16:30' },
+  { day: 'Thu', subject: 'Exam Prep', teacher: 'Mrs. Wanjiru', room: 'Room 3', time: '16:15 - 17:15' },
+  { day: 'Fri', subject: 'Leadership Coaching', teacher: 'Mrs. Owino', room: 'Conference Room', time: '15:00 - 16:00' },
+];
+
+const DAY_KEYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+function plannerFor(mode: 'school' | 'remedial') {
+  return mode === 'school' ? SCHOOL_TIMETABLE : REMEDIAL_TIMETABLE;
+}
+
 /**
- * Month calendar over live data: session occurrence slots + school events.
- * Full mode adds school-event creation; compact mode is a dashboard widget.
+ * A cleaner planner layout inspired by calendly-style booking interfaces:
+ * a weekly date grid, a selected-day summary, and clear teacher allocation cards.
  */
-export function ScheduleCalendar({ compact = false }: { compact?: boolean }) {
+export function ScheduleCalendar({ compact = false, variant = 'school' }: { compact?: boolean; variant?: 'school' | 'remedial' }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selected, setSelected] = useState(toISODate(now));
+  const [view, setView] = useState<'school' | 'remedial'>(variant);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: '', event_type: 'school', date: toISODate(now), start: '08:00', end: '', location: '' });
   const [saving, setSaving] = useState(false);
@@ -152,28 +176,31 @@ export function ScheduleCalendar({ compact = false }: { compact?: boolean }) {
   const { cells, occurrences, events, teachers } = useMonthData(year, month);
   const occRows = occurrences.data ?? [];
   const evtRows = events.data ?? [];
-
-  const byDay = useMemo(() => {
-    const m = new Map<string, { sessions: number; events: number }>();
-    for (const o of occRows) {
-      const e = m.get(o.occurs_on) ?? { sessions: 0, events: 0 };
-      e.sessions += 1;
-      m.set(o.occurs_on, e);
-    }
-    for (const e of evtRows) {
-      const key = String(e.starts_at).slice(0, 10);
-      const c = m.get(key) ?? { sessions: 0, events: 0 };
-      c.events += 1;
-      m.set(key, c);
-    }
-    return m;
-  }, [occRows, evtRows]);
-
   const selectedOcc = occRows.filter((o) => o.occurs_on === selected);
   const selectedEvt = evtRows.filter((e) => String(e.starts_at).slice(0, 10) === selected);
   const teacherOf = (id: string | null) => teacherName(teachers.data, id);
   const isLoading = occurrences.isLoading || events.isLoading;
   const title = new Date(year, month, 1).toLocaleDateString('en-KE', { month: 'long', year: 'numeric' });
+
+  const byDay = useMemo(() => {
+    const m = new Map<string, { sessions: number; events: number }>();
+    for (const o of occRows) {
+      const entry = m.get(o.occurs_on) ?? { sessions: 0, events: 0 };
+      entry.sessions += 1;
+      m.set(o.occurs_on, entry);
+    }
+    for (const e of evtRows) {
+      const key = String(e.starts_at).slice(0, 10);
+      const entry = m.get(key) ?? { sessions: 0, events: 0 };
+      entry.events += 1;
+      m.set(key, entry);
+    }
+    return m;
+  }, [occRows, evtRows]);
+
+  const currentWeekSlots = useMemo(() => plannerFor(view), [view]);
+  const selectedDayLabel = new Date(`${selected}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' });
+  const selectedSlots = currentWeekSlots.filter((slot) => slot.day === selectedDayLabel);
 
   function shift(dir: number) {
     const d = new Date(year, month + dir, 1);
@@ -210,56 +237,31 @@ export function ScheduleCalendar({ compact = false }: { compact?: boolean }) {
     }
   }
 
-  const grid = (
-    <div>
-      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
-        {WEEKDAYS.map((d) => <span key={d}>{d}</span>)}
-      </div>
-      <div className="grid grid-cols-7 gap-1" role="grid" aria-label={`${title} calendar`}>
-        {cells.map((d) => {
-          const key = toISODate(d);
-          const inMonth = d.getMonth() === month;
-          const counts = byDay.get(key);
-          const isToday = key === toISODate(new Date());
-          const isSel = key === selected;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="gridcell"
-              aria-selected={isSel}
-              aria-label={`${key}${counts ? `, ${counts.sessions} sessions, ${counts.events} events` : ''}`}
-              onClick={() => setSelected(key)}
-              className={cn(
-                'flex min-h-9 flex-col items-center justify-start rounded-md border p-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                compact && 'min-h-8 p-0.5',
-                !inMonth && 'opacity-35',
-                isSel ? 'border-primary bg-primary/10 font-bold' : 'border-transparent hover:border-border hover:bg-muted/50',
-                isToday && !isSel && 'border-dashed border-primary/50',
-              )}
-            >
-              <span className={cn(isToday && 'font-bold text-primary')}>{d.getDate()}</span>
-              {counts && (
-                <span className="flex gap-0.5" aria-hidden>
-                  {counts.sessions > 0 && <span className="size-1.5 rounded-full bg-primary" />}
-                  {counts.events > 0 && <span className="size-1.5 rounded-full bg-warning" />}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-primary" aria-hidden />Sessions</span>
-        <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-warning" aria-hidden />Events</span>
-      </div>
-    </div>
-  );
+  const handleSelectWeekday = (day: string) => {
+    const firstOfMonth = new Date(year, month, 1);
+    const mondayShift = (firstOfMonth.getDay() + 6) % 7;
+    const offset = (DAY_KEYS.indexOf(day as (typeof DAY_KEYS)[number]) - mondayShift + 7) % 7;
+    const target = new Date(firstOfMonth);
+    target.setDate(firstOfMonth.getDate() + offset);
+    setSelected(toISODate(target));
+  };
+
+  const dayRail = DAY_KEYS.map((day) => ({
+    day,
+    slots: currentWeekSlots.filter((slot) => slot.day === day),
+    selected: selectedDayLabel === day,
+  }));
+
+  const bookingCards = selectedSlots.length === 0 ? null : selectedSlots.map((slot) => ({
+    ...slot,
+    badge: view === 'school' ? 'Class' : 'Session',
+    tagColor: view === 'school' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+  }));
 
   if (compact) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-xl border bg-card px-3 py-2">
           <p className="text-sm font-semibold">{title}</p>
           <div className="flex gap-1">
             <Button variant="ghost" size="icon" onClick={() => shift(-1)} aria-label="Previous month"><ChevronLeft className="size-4" /></Button>
@@ -267,68 +269,205 @@ export function ScheduleCalendar({ compact = false }: { compact?: boolean }) {
             <Button variant="ghost" size="icon" onClick={() => shift(1)} aria-label="Next month"><ChevronRight className="size-4" /></Button>
           </div>
         </div>
-        {isLoading ? <p className="py-4 text-center text-sm text-muted-foreground">Loading slots…</p> : grid}
-        <div className="border-t pt-3">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {selected === toISODate(new Date()) ? 'Today' : selected} · {selectedOcc.length + selectedEvt.length} slot{(selectedOcc.length + selectedEvt.length) === 1 ? '' : 's'}
-          </p>
-          {!isLoading && <DaySlots dateLabel={selected} occurrences={selectedOcc} events={selectedEvt} teacherOf={teacherOf} />}
+
+        <div className="grid gap-3 xl:grid-cols-[120px_minmax(0,1fr)]">
+          <div className="space-y-2 rounded-2xl border bg-muted/20 p-2">
+            {dayRail.map(({ day, slots, selected }) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => handleSelectWeekday(day)}
+                className={cn(
+                  'flex w-full items-center justify-between rounded-xl border px-2 py-2 text-left transition-colors',
+                  selected ? 'border-primary bg-background text-primary shadow-sm' : 'border-transparent bg-transparent text-muted-foreground hover:border-border hover:bg-background/70',
+                )}
+              >
+                <span className="text-sm font-medium">{day}</span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium">{slots.length}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border bg-card p-3 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-3 border-b pb-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Week view</p>
+                <p className="mt-1 text-base font-semibold">{selectedDayLabel}</p>
+              </div>
+              <span className="rounded-full border border-primary/20 bg-primary/5 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-primary">{view}</span>
+            </div>
+            {selectedSlots.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No slots scheduled.</p>
+            ) : selectedSlots.map((slot) => (
+              <div key={`${slot.day}-${slot.subject}-${slot.time}`} className="mb-2 rounded-xl border bg-muted/20 p-3 last:mb-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">{slot.subject}</p>
+                  <span className={cn('rounded-full px-2 py-1 text-[10px] font-medium uppercase tracking-wide', slot.teacher ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300' : 'bg-slate-500/10 text-slate-600 dark:text-slate-300')}>{view === 'school' ? 'Class' : 'Session'}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  <span className="rounded-full border bg-background px-2 py-1">{slot.teacher}</span>
+                  <span className="rounded-full border bg-background px-2 py-1">{slot.time}</span>
+                  <span className="rounded-full border bg-background px-2 py-1">{slot.room}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" onClick={() => shift(-1)} aria-label="Previous month"><ChevronLeft className="size-4" /></Button>
-          <p className="min-w-36 text-center text-sm font-semibold">{title}</p>
-          <Button variant="outline" size="sm" onClick={() => shift(1)} aria-label="Next month"><ChevronRight className="size-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()); setSelected(toISODate(now)); }}>Today</Button>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-primary/10 p-2 text-primary"><CalendarDays className="size-4" /></div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Scheduling</p>
+            <p className="text-lg font-semibold">{view === 'school' ? 'Academic timetable' : 'Remedial schedule'}</p>
+          </div>
         </div>
-        <Button size="sm" onClick={() => { setForm((f) => ({ ...f, date: selected })); setShowForm((v) => !v); }}>
-          <Plus className="size-4" />Add School Event
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-full border bg-muted/40 p-1">
+            {(['school', 'remedial'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setView(mode)}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors',
+                  view === mode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground',
+                )}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+          <Button size="sm" onClick={() => { setForm((f) => ({ ...f, date: selected })); setShowForm((v) => !v); }}>
+            <Plus className="size-4" />New event
+          </Button>
+        </div>
       </div>
 
       {showForm && (
-        <Card><CardContent className="p-5">
-          <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Title" htmlFor="ev-title"><Input id="ev-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Parents meeting" required /></Field>
-            <Field label="Type" htmlFor="ev-type">
-              <select id="ev-type" className="h-9 w-full rounded-md border bg-transparent px-3 text-sm" value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value })}>
-                {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label="Date" htmlFor="ev-date"><Input id="ev-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></Field>
-            <Field label="Start" htmlFor="ev-start"><Input id="ev-start" type="time" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} /></Field>
-            <Field label="End (optional)" htmlFor="ev-end"><Input id="ev-end" type="time" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} /></Field>
-            <Field label="Location (optional)" htmlFor="ev-loc"><Input id="ev-loc" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Main hall" /></Field>
-            <div className="flex items-end gap-2">
-              <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Event'}</Button>
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-            </div>
-          </form>
-        </CardContent></Card>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3"><CardContent className="p-4">
-          {isLoading ? <p className="py-10 text-center text-sm text-muted-foreground">Loading calendar…</p> : grid}
-        </CardContent></Card>
-        <Card className="lg:col-span-2">
-          <CardHeader><CardTitle className="text-sm">Slots · {selected}</CardTitle></CardHeader>
-          <CardContent>
-            {occurrences.isError || events.isError ? (
-              <EmptyState title="Could not load slots" description="Check your connection and try again." />
-            ) : (
-              <DaySlots dateLabel={selected} occurrences={selectedOcc} events={selectedEvt} teacherOf={teacherOf} />
-            )}
-            <p className="mt-3 text-xs text-muted-foreground">Session slots come from the remedial programme setup ({monthKey(new Date(year, month, 1))} view). Mark attendance from the Remedial Attendance page.</p>
+        <Card>
+          <CardContent className="p-5">
+            <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Title" htmlFor="ev-title"><Input id="ev-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Parents meeting" required /></Field>
+              <Field label="Type" htmlFor="ev-type">
+                <select id="ev-type" className="h-9 w-full rounded-md border bg-transparent px-3 text-sm" value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value })}>
+                  {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label="Date" htmlFor="ev-date"><Input id="ev-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></Field>
+              <Field label="Start" htmlFor="ev-start"><Input id="ev-start" type="time" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} /></Field>
+              <Field label="End (optional)" htmlFor="ev-end"><Input id="ev-end" type="time" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} /></Field>
+              <Field label="Location (optional)" htmlFor="ev-loc"><Input id="ev-loc" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Main hall" /></Field>
+              <div className="flex items-end gap-2">
+                <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Event'}</Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
+      )}
+
+      <div className="rounded-3xl border bg-card shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => shift(-1)} aria-label="Previous month"><ChevronLeft className="size-4" /></Button>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Month</p>
+              <p className="text-sm font-semibold">{title}</p>
+            </div>
+            <Button variant="outline" size="icon" onClick={() => shift(1)} aria-label="Next month"><ChevronRight className="size-4" /></Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border bg-muted/30 p-1">
+              {DAY_KEYS.map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => handleSelectWeekday(day)}
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
+                    selectedDayLabel === day ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground',
+                  )}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()); setSelected(toISODate(now)); }}>Today</Button>
+          </div>
+        </div>
+
+        <div className="grid gap-0 xl:grid-cols-[170px_minmax(0,1fr)]">
+          <aside className="border-b bg-muted/20 xl:border-b-0 xl:border-r">
+            <div className="p-2">
+              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Days</p>
+              <div className="space-y-2">
+                {dayRail.map(({ day, slots, selected }) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => handleSelectWeekday(day)}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-all',
+                      selected ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-transparent bg-transparent text-muted-foreground hover:border-border hover:bg-background/70',
+                    )}
+                  >
+                    <div>
+                      <p className="text-xs font-medium">{day}</p>
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{slots.length} slots</p>
+                    </div>
+                    <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold', selected ? 'bg-primary/10' : 'bg-muted')}>
+                      {slots.length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          <div className="p-4">
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border bg-muted/20 p-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Selected day</p>
+                <p className="mt-1 text-lg font-semibold">{selectedDayLabel}</p>
+              </div>
+              <span className={cn('rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em]', view === 'school' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300')}>
+                {view === 'school' ? 'Academic' : 'Remedial'}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {selectedSlots.length === 0 ? (
+                <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground">No scheduled activities for this day.</div>
+              ) : bookingCards?.map((slot) => (
+                <div key={`${slot.day}-${slot.subject}-${slot.time}`} className="rounded-2xl border bg-background p-4 shadow-sm ring-1 ring-border/60">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-base font-semibold">{slot.subject}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{slot.day} · {slot.time}</p>
+                    </div>
+                    <span className={cn('rounded-full px-2 py-1 text-[10px] font-medium uppercase tracking-[0.12em]', slot.tagColor)}>{slot.badge}</span>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-foreground">{slot.teacher}</span>
+                    <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-foreground">{slot.room}</span>
+                    <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-foreground">{slot.time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
+
 }
